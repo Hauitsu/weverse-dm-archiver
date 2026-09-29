@@ -45,6 +45,19 @@ export function readItems(jsonlPath) {
   return out;
 }
 
+// Where a referenced file would land, and whether it is already there.
+const onDiskAt = (dir, x) => { try { return fs.statSync(path.join(dir, mediaRel(x.iso, x.mid, x.idx, x.kind, x.url))).size > 0; } catch (e) { return false; } };
+
+// The files a run would actually fetch: referenced by the export, of the requested kind, and not
+// on disk yet. Exported so the command line can skip opening a browser when the answer is "none".
+export function pendingItems(o) {
+  const opts = o || {};
+  let items = readItems(opts.jsonl);
+  if (opts.kind && opts.kind !== "all") items = items.filter((x) => x.kind === opts.kind);
+  if (opts.limit > 0) items = items.slice(0, opts.limit);
+  return items.filter((x) => !onDiskAt(opts.mediaDir, x));
+}
+
 async function withRetry(url, headers, tries) {
   let wait = 1500;
   for (let a = 0; a < (tries || 4); a++) {
@@ -82,9 +95,8 @@ export async function downloadMedia(opts) {
   if (o.limit > 0) todo = todo.slice(0, o.limit);
   // Anything already on disk is not work. When nothing is missing this asks for no session at
   // all, which keeps "wdm media" usable as a spot check long after the first run.
-  const onDisk = (x) => { try { return fs.statSync(path.join(dir, mediaRel(x.iso, x.mid, x.idx, x.kind, x.url))).size > 0; } catch (e) { return false; } };
-  const already = todo.filter(onDisk).length;
-  todo = todo.filter((x) => !onDisk(x));
+  const already = todo.filter((x) => onDiskAt(dir, x)).length;
+  todo = todo.filter((x) => !onDiskAt(dir, x));
   log("media: " + found + " item(s) referenced, " + already + " already on disk, " + todo.length + " to fetch");
   if (!todo.length) return { ok: 0, skip: already, failed: 0, bytes: 0, total: 0, referenced: found };
 

@@ -3,7 +3,7 @@
 //   node src/cli.mjs rooms                       list the rooms in rooms.unis.json
 //   node src/cli.mjs harvest --room yunha        walk the history (starts the private browser)
 //   node src/cli.mjs render  --room yunha        build html/md/jsonl from what is on disk
-//   node src/cli.mjs media   --room yunha        download the photos and video
+//   node src/cli.mjs media   --room yunha        download the photos and video (no browser if complete)
 //   node src/cli.mjs share   --room yunha        one zip in dist/, ready to send
 //   node src/cli.mjs all     --room yunha --share
 //   node src/cli.mjs doctor                      check node, browser, rooms and folders
@@ -11,7 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { loadConfig } from "./config.mjs";
 import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor } from "./pipeline.mjs";
-import { downloadMedia } from "./media.mjs";
+import { downloadMedia, pendingItems } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser } from "./browser.mjs";
 import { readArchive } from "./harvest.mjs";
@@ -79,10 +79,12 @@ const commands = {
   },
   media: async () => {
     const r = pick();
-    await withSession(async (s) => {
-      const res = await downloadMedia({ jsonl: path.join(d.rooms, r.slug + ".jsonl"), mediaDir: d.media, roomId: r.roomId, cdp: s.cdp, kind: String(flag("kind", "all")), onLog: log, shouldStop: stopSignal() });
-      log(JSON.stringify(res, null, 1));
-    });
+    const jsonl = path.join(d.rooms, r.slug + ".jsonl");
+    const kind = String(flag("kind", "all"));
+    const fetchAll = (cdp) => downloadMedia({ jsonl: jsonl, mediaDir: d.media, roomId: r.roomId, cdp: cdp, kind: kind, onLog: log, shouldStop: stopSignal() });
+    // A room whose files are all on disk needs no login, and no window should open for it.
+    if (!pendingItems({ jsonl: jsonl, mediaDir: d.media, kind: kind }).length) { log(JSON.stringify(await fetchAll(undefined), null, 1)); return; }
+    await withSession(async (s) => { log(JSON.stringify(await fetchAll(s.cdp), null, 1)); });
   },
   share: async () => {
     const r = pick();

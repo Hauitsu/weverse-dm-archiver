@@ -45,6 +45,13 @@ deliberately not part of this release.
 If you only want to *send* the archive to someone, use the share zip: it is the same data, but
 one file per room instead of thousands.
 
+## I stopped halfway. What happens if I run it again?
+
+Nothing is redone. Pages already on disk are kept and the walk continues from the oldest message
+it has, photos and videos already downloaded are skipped, and once a room is complete the media
+step does not even open a browser. Running it again is the cheapest way to confirm that an
+archive is still whole.
+
 ## What timezone are the timestamps in?
 
 Yours, detected from your machine (`auto`). The API only sends absolute UTC timestamps, and the
