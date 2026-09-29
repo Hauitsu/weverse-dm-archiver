@@ -1,0 +1,12 @@
+{
+  "_note": "Copy to config.json and edit. These are the defaults, so config.json only needs the keys you want to change. The export always points at the original media, so there is no quality setting here.",
+  "language": "auto",
+  "tz": "auto",
+  "roomsFile": "rooms.unis.json",
+  "output": "rooms",
+  "pacing": {
+    "minMs": 1500,
+    "maxMs": 3000
+  },
+  "textOnly": false
+}

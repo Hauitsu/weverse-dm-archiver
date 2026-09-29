@@ -1,0 +1,64 @@
+{
+  "group": "UNIS",
+  "label": "F&F",
+  "tz": "auto",
+  "_note": "roomId: read from the DM room list (from React props, no network request). rowLabel: the row text visible when the id was captured, for convenience only - the tool still reads the real room name from the room itself. roomName: filled automatically on the first harvest. tz: auto follows the machine zone; set an IANA zone name such as Asia/Jakarta to pin one zone, and a room-level tz wins over the group tz.",
+  "rooms": [
+    {
+      "slug": "yunha",
+      "nameKo": "윤하",
+      "nameEn": "Yunha",
+      "roomId": "WRA2W0P",
+      "rowLabel": "윤하땅 별땅"
+    },
+    {
+      "slug": "gehlee",
+      "nameKo": "글리",
+      "nameEn": "Gehlee",
+      "roomId": "WR8VF44",
+      "rowLabel": "k4ng_j3h33"
+    },
+    {
+      "slug": "elisia",
+      "nameKo": "엘리시아",
+      "nameEn": "Elisia",
+      "roomId": "WROQI91",
+      "rowLabel": "이시아"
+    },
+    {
+      "slug": "seowon",
+      "nameKo": "서원",
+      "nameEn": "Seowon",
+      "roomId": "WRJV08H",
+      "rowLabel": "서워니"
+    },
+    {
+      "slug": "nana",
+      "nameKo": "나나",
+      "nameEn": "Nana",
+      "roomId": "WRXEZ3H",
+      "rowLabel": "나나다요"
+    },
+    {
+      "slug": "kotoko",
+      "nameKo": "코토코",
+      "nameEn": "Kotoko",
+      "roomId": "WRKR0AC",
+      "rowLabel": "토코토코토"
+    },
+    {
+      "slug": "hyeonju",
+      "nameKo": "현주",
+      "nameEn": "Hyeonju",
+      "roomId": "WR3YJRZ",
+      "rowLabel": "더큰더큰정언니 진현주"
+    },
+    {
+      "slug": "yoona",
+      "nameKo": "윤아",
+      "nameEn": "Yoona",
+      "roomId": "WRKR8AC",
+      "rowLabel": "옹융앙"
+    }
+  ]
+}

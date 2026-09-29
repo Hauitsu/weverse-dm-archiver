@@ -1,0 +1,4 @@
+# Keep bytes as-is (no CRLF/LF conversion) so exports stay byte-exact.
+# This file deliberately lives inside the public repo folder, not at the private repo root:
+# if this folder is ever split into its own repo, the attributes travel with it.
+* -text

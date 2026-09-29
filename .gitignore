@@ -1,0 +1,19 @@
+# work output / large files
+media/
+downloads/
+rooms/
+dist/
+*.zip
+*.log
+
+# secrets / local machine
+.env
+.env.*
+config.json
+profile/
+node_modules/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
