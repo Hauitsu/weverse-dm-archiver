@@ -45,13 +45,6 @@ deliberately not part of this release.
 If you only want to *send* the archive to someone, use the share zip: it is the same data, but
 one file per room instead of thousands.
 
-## I stopped halfway. What happens if I run it again?
-
-Nothing is redone. Pages already on disk are kept and the walk continues from the oldest message
-it has, photos and videos already downloaded are skipped, and once a room is complete the media
-step does not even open a browser. Running it again is the cheapest way to confirm that an
-archive is still whole.
-
 ## What timezone are the timestamps in?
 
 Yours, detected from your machine (`auto`). The API only sends absolute UTC timestamps, and the
@@ -60,9 +53,30 @@ app. You can pin a zone in the page or with `DM_TZ=Asia/Jakarta` if you want a f
 
 ## Does the zip contain my nickname?
 
-No. An export keeps only the **artist side** of the conversation by default, so your own messages
-and nickname are not in `rooms/<room>.jsonl`, and therefore not in the zip either. What is in the
-zip is the artist messages, the media they sent, and a `README.txt` explaining the folder.
+Your own messages are not in it: an export keeps only the **artist side** of the conversation by
+default, so your messages never appear and your nickname is never used as a sender. The artist's
+messages are stored word for word, though - if the artist typed your nickname in a message, that
+sentence contains it, exactly as it appears in the app.
+
+## What is inside the zip?
+
+One folder per room, holding the page and everything it needs:
+
+```
+weverse-dm-<room>/
+  index.html          opens the page (or double-click chat/<room>.html yourself)
+  README.txt          what this is, in English, Korean and Indonesian
+  manifest.json       room, artist, file counts, media size
+  chat/<room>.html    the readable archive
+  chat/<room>.md      the same conversation as plain text
+  chat/<room>.jsonl   one JSON object per message, for scripts
+  chat/summary.json   counts, date range, per-month totals
+  chat/fonts/         the emoji font the page uses
+  media/photos/       photos, exactly as Weverse served them
+  media/video/        videos and voice messages
+```
+
+Everything is offline: the page reads the files next to it and never touches the network.
 
 ## Can I reuse an archive I made earlier?
 
@@ -90,7 +104,8 @@ name, and they show up in the page and in `wdm rooms`.
 
 Run it again. Each page is appended to `downloads/<room>/` as it arrives, and the next run starts
 from the oldest message already on disk. Duplicate messages are dropped by id, so finishing a
-half-done room never doubles anything.
+half-done room never doubles anything. Photos and videos already downloaded are skipped too, and
+once a room is complete the media step does not even open a browser. Finishing later stays cheap.
 
 ## Is anything uploaded?
 

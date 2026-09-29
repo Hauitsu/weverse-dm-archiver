@@ -29,7 +29,23 @@ export function sha256File(file) {
 }
 
 // Never overwrite a package the user may already have sent to someone.
-export function freeName(dir, base) {
+export // The engine reports where its input and output live, so summary.json carries absolute paths. In a
+// zip that is at best noise and at worst the sender folder layout, so the packaged copy gets
+// relative paths instead. The copy on disk is left exactly as the renderer wrote it.
+function packageSummary(src, dest, slug) {
+  let j = null;
+  try { j = JSON.parse(fs.readFileSync(src, "utf8")); } catch (e) { j = null; }
+  if (!j || typeof j !== "object") { try { fs.copyFileSync(src, dest); } catch (e) {} return; }
+  const rel = { sumber: "downloads/" + slug, out: "chat", mediaDir: "../media", media: "../media" };
+  for (const k of Object.keys(j)) {
+    const v = j[k];
+    if (typeof v !== "string") continue;
+    if (/^[A-Za-z]:[\\/]/.test(v) || /^[\\/]{1,2}/.test(v) || v.indexOf(":\\") >= 0) j[k] = rel[k] || "";
+  }
+  fs.writeFileSync(dest, JSON.stringify(j, null, 2) + NL, "utf8");
+}
+
+function freeName(dir, base) {
   for (let n = 1; n < 100; n++) {
     const name = n === 1 ? base + ".zip" : base + "-v" + n + ".zip";
     if (!fs.existsSync(path.join(dir, name))) return name;
@@ -108,6 +124,7 @@ export async function bundle(opts) {
     // The per-room copy wins: summary.json on its own is whatever room was rendered last.
     const own = name === "summary.json" && fs.existsSync(path.join(roomDir, slug + ".summary.json")) ? slug + ".summary.json" : name;
     const abs = path.join(roomDir, own);
+    if (name === "summary.json" && fs.existsSync(abs)) { packageSummary(abs, path.join(root, "chat", name), slug); chatFiles++; continue; }
     if (!fs.existsSync(abs)) { if (name === slug + ".html") throw new Error("bundle: " + abs + " is missing; render the room first"); continue; }
     link(abs, path.join(root, "chat", name));
     chatFiles++;
