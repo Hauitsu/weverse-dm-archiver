@@ -1,5 +1,5 @@
 {
-  "_note": "Copy to config.json and edit. These are the defaults, so config.json only needs the keys you want to change. The export always points at the original media, so there is no quality setting here.",
+  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published.",
   "language": "auto",
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
@@ -8,5 +8,9 @@
     "minMs": 1500,
     "maxMs": 3000
   },
-  "textOnly": false
+  "textOnly": false,
+  "browserPath": "",
+  "guiPort": 8787,
+  "estimateGb": 2.5,
+  "credit": ""
 }

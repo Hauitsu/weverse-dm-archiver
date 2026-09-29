@@ -1,23 +1,68 @@
 # Weverse DM Archiver
 
-Back up your own Weverse artist chat (DM) into **one offline HTML file** plus a Markdown
-copy: every message, photo, video and timestamp, in your own timezone.
+Back up your own Weverse artist chat (DM) into **one offline HTML file**, plus a Markdown copy
+and a data file: every message, photo, video and timestamp, in your own timezone.
 
-The tool reads your DM history the way you would read it yourself - read-only GET
-requests, human pacing, one room at a time. It never posts, never deletes, never follows,
-and never touches your login tokens.
+It reads the history the way you would read it yourself - read-only GET requests, human
+pacing, one room at a time. It never posts, never deletes, never follows, never reads your
+login tokens, and never touches the tab you are logged in on.
 
-> **Status: work in progress.** The export engine and the three-language UI (English,
-> Korean, Indonesian) are finished and have already produced a 9,574-message, 18-month
-> archive with 1,496 media files. The double-click launcher and the local GUI are next - see
-> `docs/ROADMAP.md`.
+> **Status: ready to use.** Double-click `START.bat`, log in once, pick a room, press Start.
+> A real room has already been through it: 9,574 unique messages across 18 months, 4,119 of them
+> from the artist side, 1,478 media files (1,444 photos, 30 videos, 4 audio), about 2.5 GB.
 
 ## What you get
 
-- one self-contained `.html` that opens offline in any browser, plus a `.md` copy
-- photos, videos and audio downloaded next to it at original quality
-- timestamps in **your** timezone (auto-detected; no question asked)
-- day sections, member highlighting, deleted-message markers, bookmarks
+- `rooms/<room>.html` - one self-contained page that opens offline in any browser, with day
+  sections, artist highlighting, deleted-message markers and bookmarks
+- `rooms/<room>.md` and `rooms/<room>.jsonl` - the same conversation as text and as data
+- `media/` - every photo, video and audio file the conversation links to, at the quality
+  Weverse served
+- timestamps in **your** timezone, detected from the machine
+- optionally `dist/weverse-dm-<room>.zip` - one file per room with the chat and its media
+  inside, plus a three-language `README.txt` for whoever you send it to
+
+## Quick start
+
+1. Install **Node.js 20 or newer** if you do not have it. `START.bat` opens the download page
+   when it cannot find Node.
+2. Double-click **`START.bat`**. Two windows appear: a browser using its own private profile, and
+   the local page (usually `http://127.0.0.1:8787`; if that port is taken by the system, the tool
+   picks another one and the console prints the address it used).
+3. Log in to Weverse once in that browser window.
+4. Tick a room, press **Start**. Progress streams page by page.
+5. When it finishes: **Open chat**, **Open folder**, or tick "shareable zip" next time.
+
+Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
+so running it again continues where it stopped instead of starting over. The full walkthrough,
+including what each message means, is in `docs/QUICK-START.md`.
+
+## Command line
+
+`wdm.bat` (or `node src/cli.mjs`) does the same work without the page:
+
+| command | what it does |
+| --- | --- |
+| `wdm rooms` | list the rooms in `rooms.unis.json` and what is already archived |
+| `wdm harvest --room yunha` | walk the history backwards (starts the private browser) |
+| `wdm render --room yunha` | build html/md/jsonl from what is already on disk |
+| `wdm media --room yunha` | download the photos and video the export points at |
+| `wdm share --room yunha` | one zip in `dist/`, ready to send |
+| `wdm all --room yunha --share` | all of the above, in order |
+| `wdm doctor` | check node, browser, rooms and folders |
+
+## Output layout
+
+```
+rooms/               <room>.html, <room>.md, <room>.jsonl, summary.json, fonts/
+media/               photos/, video/, avatars/, fonts/ at original quality
+downloads/<room>/    one JSONL line per page of history (this is what makes it resumable)
+dist/                share zips: weverse-dm-<room>.zip, .sha256, .manifest.json
+```
+
+Rooms never share a folder under `downloads/`, so one room history can never leak into another
+room export. The export always points at the original media, so there is no quality knob: one
+room is roughly 2.5 GB, almost all of it photos and video.
 
 ## Safety rules this tool follows
 
@@ -27,40 +72,34 @@ and never touches your login tokens.
 | pacing 1.5-3 s apart with jitter, one room at a time | it looks like a human scrolling |
 | stop on HTTP 429/403, no forced retry | never hammer the API |
 | never read or copy tokens/cookies | an archive cannot leak what was never read |
-| never reload, close or navigate your tab | your session stays exactly as you left it |
+| its own browser window and profile | the session you browse with is never reloaded, closed or navigated |
 
-Nothing can promise zero risk. `docs/FAQ.md` has the honest version, including what to do
-if you are nervous.
-
-## Quick start (coming with M2)
-
-1. Double-click `START.bat`. A browser window opens with its own profile, plus a local page.
-2. Log in to Weverse once, pick a member (or "all members"), press Start.
-3. Wait. When it is done, press "Open result" - the HTML opens offline.
-
-No terminal, no DevTools, no editing of config files. See `docs/QUICK-START.md`.
-
-## Output layout
-
-```
-rooms/            <room>.html, <room>.md, <room>.jsonl, summary.json, fonts/
-media/            photos, videos and audio at original quality
-downloads/        one JSONL per page of history (resumable)
-```
-
-The export always points at the original media, so there is no quality knob: one room is
-roughly 2.5 GB, mostly photos and video.
+Nothing can promise zero risk. `docs/FAQ.md` has the honest version, including what to do if you
+are nervous.
 
 ## Privacy
 
-Everything stays on your computer. Nothing is uploaded anywhere, there is no telemetry,
-and the archive is plain files you can copy to a drive or delete. If you choose to share an
-export with other fans, the renderer can replace nicknames with neutral ones first.
+Everything stays on your computer. Nothing is uploaded, there is no telemetry and no account of
+ours; the archive is plain files you can copy to a drive, share or delete.
+
+The share zip is built from your export, and an export keeps only the **artist side** of the
+conversation by default, so your own nickname does not end up in the file you send to someone.
+If you would rather not share anything, `dist/` is just a folder you can delete.
+
+## Limits
+
+- Node.js 20 or newer, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; point
+  `browserPath` in `config.json` at anything unusual).
+- Only rooms your own account can already read - this bypasses no membership and no paywall.
+- One room is around 2.5 GB at full quality. A compact variant is deliberately **not** part of
+  this build; see `docs/ROADMAP.md`.
+- Windows is the tested path (`START.bat`, `wdm.bat`). The JavaScript modules run wherever Node
+  runs; only the launchers are Windows-specific.
 
 ## Contributing
 
-Room ids for other groups, UI translations (English, Korean and Indonesian ship today) and
-bug reports are welcome once M2 lands - see `docs/ROADMAP.md`.
+Room ids for other groups, UI translations (English, Korean and Indonesian ship today) and bug
+reports are welcome - see `docs/ROADMAP.md`.
 
 ## License
 

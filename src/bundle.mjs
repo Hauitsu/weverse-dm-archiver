@@ -1,0 +1,167 @@
+// src/bundle.mjs -- pack one finished room into a single zip that a friend can just open.
+//
+// Layout inside the zip, arranged so the chat still finds its own media:
+//
+//   weverse-dm-<slug>/
+//     README.txt          what this is, in English, Korean and Indonesian
+//     index.html          double-click entry point, forwards to chat/<slug>.html
+//     manifest.json       what was packed, and the checksum of the zip
+//     chat/               the export itself: html, markdown, messages.jsonl, fonts
+//     media/              photos and video, at the quality they were saved in
+//
+// Files are hard-linked into a staging folder, so packing a 2.5 GB room costs no extra disk
+// space and the original archive is never modified.
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { createHash } from "node:crypto";
+import { writeZip, collect } from "./zip.mjs";
+
+const NL = String.fromCharCode(10);
+
+export function sha256File(file) {
+  const h = createHash("sha256");
+  const fd = fs.openSync(file, "r");
+  const buf = Buffer.allocUnsafe(1 << 20);
+  try { for (;;) { const n = fs.readSync(fd, buf, 0, buf.length, null); if (n <= 0) break; h.update(buf.subarray(0, n)); } }
+  finally { fs.closeSync(fd); }
+  return h.digest("hex");
+}
+
+// Never overwrite a package the user may already have sent to someone.
+export function freeName(dir, base) {
+  for (let n = 1; n < 100; n++) {
+    const name = n === 1 ? base + ".zip" : base + "-v" + n + ".zip";
+    if (!fs.existsSync(path.join(dir, name))) return name;
+  }
+  return base + "-" + Date.now() + ".zip";
+}
+
+function link(src, dest) {
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  try { fs.linkSync(src, dest); return; } catch (e) { fs.copyFileSync(src, dest); }
+}
+
+function readme(o, generatedAt) {
+  const L = [];
+  L.push("Weverse DM archive - " + o.roomName);
+  L.push("packed " + generatedAt + " with weverse-dm-archiver");
+  L.push("");
+  L.push("English");
+  L.push("  index.html          double-click this one; it opens the chat");
+  L.push("  chat/" + o.slug + ".html   every message, photo and video in one page");
+  L.push("  chat/" + o.slug + ".md     the same messages as plain text");
+  L.push("  media/              the photos and videos the chat shows");
+  L.push("  The chat works offline. Keep the folder together: if you move the HTML file");
+  L.push("  out on its own, its photos will not load.");
+  L.push("");
+  L.push("한국어");
+  L.push("  index.html 을 두 번 클릭하면 채팅이 열립니다.");
+  L.push("  chat/" + o.slug + ".html 안에 모든 메시지와 사진, 영상이 들어 있습니다.");
+  L.push("  인터넷 없이 열립니다. 폴더 전체를 그대로 두세요. HTML 파일만 따로 옮기면");
+  L.push("  사진이 보이지 않습니다.");
+  L.push("");
+  L.push("Bahasa Indonesia");
+  L.push("  index.html          klik dua kali untuk membuka obrolannya");
+  L.push("  chat/" + o.slug + ".html   semua pesan, foto, dan video dalam satu halaman");
+  L.push("  chat/" + o.slug + ".md     isi pesan yang sama dalam bentuk teks");
+  L.push("  media/              foto dan video yang ditampilkan obrolan");
+  L.push("  Bisa dibuka tanpa internet. Simpan foldernya utuh: kalau file HTML-nya dipindah");
+  L.push("  sendirian, fotonya tidak akan muncul.");
+  L.push("");
+  if (o.credit) { L.push(o.credit); L.push(""); }
+  return L.join(NL);
+}
+
+function indexHtml(o) {
+  return [
+    "<!doctype html>",
+    "<html lang=\"en\"><head><meta charset=\"utf-8\">",
+    "<title>" + String(o.roomName).replace(/[<>&]/g, "") + "</title>",
+    "<meta http-equiv=\"refresh\" content=\"0; url=chat/" + o.slug + ".html\">",
+    "<style>body{font-family:system-ui,Segoe UI,sans-serif;margin:48px;line-height:1.6}</style>",
+    "</head><body>",
+    "<h1>" + String(o.roomName).replace(/[<>&]/g, "") + "</h1>",
+    "<p>Opening the archive: <a href=\"chat/" + o.slug + ".html\">chat/" + o.slug + ".html</a></p>",
+    "</body></html>",
+  ].join(NL);
+}
+
+// Pack one room. Returns the paths it wrote, or throws with a readable reason.
+export async function bundle(opts) {
+  const o = opts || {};
+  const log = o.onLog || (() => {});
+  const slug = o.slug;
+  const roomDir = o.roomDir;
+  const mediaDir = o.mediaDir;
+  const distDir = o.distDir;
+  const generatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
+  const rootName = "weverse-dm-" + slug;
+  const stageParent = path.join(os.tmpdir(), "wdm-share-" + slug + "-" + process.pid);
+  const root = path.join(stageParent, rootName);
+  fs.rmSync(stageParent, { recursive: true, force: true });
+  fs.mkdirSync(path.join(root, "chat"), { recursive: true });
+
+  const want = [slug + ".html", slug + ".md", slug + ".jsonl", "summary.json"];
+  let chatFiles = 0;
+  for (const name of want) {
+    // The per-room copy wins: summary.json on its own is whatever room was rendered last.
+    const own = name === "summary.json" && fs.existsSync(path.join(roomDir, slug + ".summary.json")) ? slug + ".summary.json" : name;
+    const abs = path.join(roomDir, own);
+    if (!fs.existsSync(abs)) { if (name === slug + ".html") throw new Error("bundle: " + abs + " is missing; render the room first"); continue; }
+    link(abs, path.join(root, "chat", name));
+    chatFiles++;
+  }
+  const fontsDir = path.join(roomDir, "fonts");
+  const hasFonts = fs.existsSync(fontsDir);
+  if (hasFonts) for (const e of collect(fontsDir, "")) if (!e.dir) { link(e.abs, path.join(root, "chat", "fonts", path.relative(fontsDir, e.abs))); chatFiles++; }
+
+  let mediaFiles = 0;
+  let mediaBytes = 0;
+  if (fs.existsSync(mediaDir)) {
+    for (const e of collect(mediaDir, "")) {
+      if (e.dir) continue;
+      if (e.name === "media-manifest.json") continue;
+      if (hasFonts && e.name.indexOf("fonts/") === 0) continue;
+      const dest = path.join(root, "media", e.name);
+      link(e.abs, dest);
+      mediaFiles++;
+      try { mediaBytes += fs.statSync(e.abs).size; } catch (err) {}
+    }
+  }
+  log("bundle: " + chatFiles + " archive file(s) and " + mediaFiles + " media file(s), " + (mediaBytes / 1048576).toFixed(1) + " MB");
+
+  fs.writeFileSync(path.join(root, "README.txt"), readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "" }, generatedAt), "utf8");
+  fs.writeFileSync(path.join(root, "index.html"), indexHtml({ slug: slug, roomName: o.roomName || slug }), "utf8");
+
+  fs.mkdirSync(distDir, { recursive: true });
+  const zipName = freeName(distDir, rootName);
+  const zipPath = path.join(distDir, zipName);
+
+  // A manifest travels inside the zip too, so whoever receives it can see what it is without
+  // unpacking anything. The checksum cannot be in there (it is taken of the finished file), so it
+  // lives in the .sha256 and .manifest.json alongside the zip.
+  const inside = {
+    archive: rootName, slug: slug, roomId: o.roomId || "", roomName: o.roomName || "", artist: o.artist || "",
+    generatedAt: generatedAt, chatFiles: chatFiles, mediaFiles: mediaFiles, mediaBytes: mediaBytes,
+    checksum: "see " + zipName + ".sha256 next to this archive",
+  };
+  const manifestPath = path.join(root, "manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify(inside, null, 2) + NL, "utf8");
+  const top = [rootName + "/manifest.json", rootName + "/README.txt", rootName + "/index.html"];
+  const entries = [{ name: rootName + "/", abs: root, dir: true },
+    { name: top[0], abs: manifestPath, dir: false },
+    { name: top[1], abs: path.join(root, "README.txt"), dir: false },
+    { name: top[2], abs: path.join(root, "index.html"), dir: false }]
+    .concat(collect(root, rootName + "/").filter((e) => e.dir || top.indexOf(e.name) < 0));
+  const zip = writeZip(zipPath, entries, { onLog: log });
+  const sum = sha256File(zipPath);
+  fs.writeFileSync(zipPath + ".sha256", sum + "  " + zipName + NL, "utf8");
+
+  const manifest = Object.assign({}, inside, { entries: zip.entries, zipBytes: zip.zipBytes, zip: zipName, sha256: sum });
+  delete manifest.checksum;
+  fs.writeFileSync(zipPath + ".manifest.json", JSON.stringify(manifest, null, 2) + NL, "utf8");
+  fs.rmSync(stageParent, { recursive: true, force: true });
+  log("bundle: " + zipName + " (" + (zip.zipBytes / 1048576).toFixed(1) + " MB) sha256 " + sum.slice(0, 16) + "...");
+  return { zip: zipPath, sha256: sum, bytes: zip.zipBytes, entries: zip.entries, mediaFiles: mediaFiles, manifest: manifest };
+}

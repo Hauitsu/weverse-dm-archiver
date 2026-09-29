@@ -2,61 +2,93 @@
 
 ## Can my account get banned for this?
 
-Honest answer: nobody outside Weverse can promise anything. What this tool does is stay
-inside what a normal reader does - it only GETs the same two endpoints the app itself
-calls, paces requests 1.5-3 seconds apart with jitter, one room at a time, and stops
-immediately on 429/403 instead of retrying. It never posts, never deletes, never follows,
-never reads your tokens, and never touches the tab you are logged in on.
+Honest answer: nobody outside Weverse can promise anything. What this tool does is stay inside
+what a normal reader does - it only GETs the same two endpoints the app itself calls, paces
+requests 1.5-3 seconds apart with jitter, reads one room at a time, and stops immediately on
+429/403 instead of retrying. It never posts, never deletes, never follows, never reads your
+tokens, and never touches the tab you are logged in on.
 
-If you are nervous, use the slow pace profile (or archive one room per day). A backup can
-always be finished later: every page is written to disk as it arrives, so stopping and
-resuming costs you nothing.
+If you are nervous, archive one room per day, or stop and continue later. A backup can always be
+finished later: every page is written to disk as it arrives, so stopping costs you nothing.
 
 ## Do I need to know how to code, or open DevTools?
 
-No. That is exactly what M2 (see `docs/ROADMAP.md`) is for: you double-click one file, a
-browser opens, you log in, you pick a member, you press Start. Everything else is a
-progress bar.
+No. You double-click `START.bat`, a browser window and a local page open, you log in once, you
+tick a room and press Start. Everything else is a progress bar. There is a command line too
+(`wdm ...`) if you happen to like typing.
+
+## Why does it need Node.js installed?
+
+The tool is JavaScript, and Node is the engine that runs it. Shipping Node inside the zip would
+add about 90 MB to the download; `START.bat` checks for it and opens the download page if it is
+missing. That is the only prerequisite.
 
 ## Will it close my browser or log me out?
 
-No. The tool opens its **own** browser profile with its own window. The tab and profile you
-normally use are not touched or read.
+No. It starts its **own** browser window with its own profile under
+`%LOCALAPPDATA%\weverse-dm-archiver\profile`. The window and profile you normally use are never
+read, reloaded, navigated or closed by this tool.
 
 ## Can I keep using Weverse while it runs?
 
-Yes, for reading. The tool works on its own profile, so nothing you do in your normal
-window interferes. Just avoid running two archives of the same room at the same time.
+Yes. The tool works in its own window, so nothing you do in your normal browser interferes. Just
+do not run two archives of the same room at the same time from two copies of the tool.
 
 ## How big is the result?
 
-About 2.5 GB for a full-quality archive with all media (measured on a 9,574-message,
-16-month room with 1,496 media files). The compact mode - 480p video and webp photos -
-brings the same archive to ~86 MB, which is what you normally share with friends.
+About 2.5 GB for a room at full quality. Measured on an 18-month room: 9,574 unique messages,
+4,119 of them kept after the artist-only filter, 1,478 media files. The page alone is 2.5 MB of
+HTML, plus 970 KB of Markdown and 8.2 MB of JSONL. Photos and videos are saved exactly as Weverse served them - there is no quality
+knob in this build. A compact variant (480p video, webp photos) is on the roadmap but is
+deliberately not part of this release.
+
+If you only want to *send* the archive to someone, use the share zip: it is the same data, but
+one file per room instead of thousands.
 
 ## What timezone are the timestamps in?
 
-Yours, detected automatically from your machine. The API only sends absolute UTC
-timestamps, and the Weverse app itself renders them in the viewer device zone, so this is
-the same thing you already see in the app. Advanced users can pin a zone with the `DM_TZ`
-environment variable (for example `DM_TZ=Asia/Jakarta`).
+Yours, detected from your machine (`auto`). The API only sends absolute UTC timestamps, and the
+Weverse app renders them in the viewer device zone, so this matches what you already see in the
+app. You can pin a zone in the page or with `DM_TZ=Asia/Jakarta` if you want a fixed one.
+
+## Does the zip contain my nickname?
+
+No. An export keeps only the **artist side** of the conversation by default, so your own messages
+and nickname are not in `rooms/<room>.jsonl`, and therefore not in the zip either. What is in the
+zip is the artist messages, the media they sent, and a `README.txt` explaining the folder.
+
+## Can I reuse an archive I made earlier?
+
+Yes. Put the old part files in their own folder under `downloads/`, named after the room:
+
+```
+downloads/yunha/   <- every weverse-dm-*-part*.jsonl that belongs to that room
+```
+
+then run `wdm render --room yunha`. The renderer merges every part file in that folder and drops
+duplicate messages by id, and a later harvest resumes from the oldest message it finds there.
 
 ## Do I need a Weverse account with DM access?
 
-Yes - you can only archive rooms you are already a member of, using your own account.
-The tool does not bypass any membership or paywall.
-
-## Will my nickname / user id end up in the archive?
-
-Your own messages carry your nickname, because that is what the room shows. If you share
-an export, run the public builder first: it replaces your nickname with a neutral one and
-drops everything that is not the artist side of the conversation.
+Yes - you can only archive rooms you are already a member of, with your own account. The tool
+does not bypass any membership or paywall.
 
 ## Does it work for other artists or groups?
 
-The engine is generic - it needs a room id, which you can read from the DM list with a
-small read-only snippet (see `docs/room-id.md`). The repo ships 8 UNIS room ids as an example
-in `rooms.unis.json`.
+The engine is generic: it needs a room id (`WR` + five characters). The repo ships 8 UNIS rooms in
+`rooms.unis.json` as an example - add your own entries with a `slug`, a `roomId` and the visible
+name, and they show up in the page and in `wdm rooms`.
+
+## What if it stops halfway?
+
+Run it again. Each page is appended to `downloads/<room>/` as it arrives, and the next run starts
+from the oldest message already on disk. Duplicate messages are dropped by id, so finishing a
+half-done room never doubles anything.
+
+## Is anything uploaded?
+
+No. Everything stays on your computer: no telemetry, no server of ours, no account of ours. The
+archive is plain files - copy them to a drive, share them, or delete them.
 
 ## Is this affiliated with Weverse?
 

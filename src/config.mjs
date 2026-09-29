@@ -42,6 +42,16 @@ function put(name, value) {
   process.env[name] = String(value);
 }
 
+// Write settings back to config.json. The page uses this when the user switches language or picks
+// a time zone; an environment variable still wins, so a one-off run is never overridden.
+export function saveConfig(patch, file) {
+  const f = file || CONFIG_FILE;
+  const cfg = readConfig(f);
+  for (const k of Object.keys(patch || {})) if (patch[k] !== undefined) cfg[k] = patch[k];
+  fs.writeFileSync(f, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+  return cfg;
+}
+
 // Called once, before anything else reads a setting.
 export function loadConfig(file) {
   const cfg = readConfig(file);
