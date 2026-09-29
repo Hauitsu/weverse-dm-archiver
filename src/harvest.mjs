@@ -60,6 +60,9 @@ export async function harvest(opts) {
   fs.mkdirSync(dir, { recursive: true });
 
   const before = readArchive(dir);
+  // The starting count has to be taken now: before.seen is the dedup set and grows during the walk,
+  // so comparing it with the re-read archive at the end would always report zero new messages.
+  const seenAtStart = before.seen.size;
   let cursor = before.deepest != null ? String(before.deepest) : SENTINEL;
   let partIdx = before.maxPart + 1;
   let partPages = 0;
@@ -123,7 +126,7 @@ export async function harvest(opts) {
   }
 
   const after = readArchive(dir);
-  const summary = { roomId: roomId, pages: pages, written: written, ids: after.seen.size, newIds: after.seen.size - before.seen.size, deepest: after.deepest, newest: after.newest, endReached: endReached, partIdx: partIdx, elapsedMs: Date.now() - t0 };
+  const summary = { roomId: roomId, pages: pages, written: written, ids: after.seen.size, newIds: after.seen.size - seenAtStart, deepest: after.deepest, newest: after.newest, endReached: endReached, partIdx: partIdx, elapsedMs: Date.now() - t0 };
   log("harvest done: " + summary.pages + " page(s), " + summary.newIds + " new message(s), " + (summary.endReached ? "start of room reached" : "stopped early"));
   return summary;
 }
