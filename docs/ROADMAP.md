@@ -18,7 +18,7 @@ the page (`src/gui.mjs`), the command line (`src/cli.mjs`) and a dependency-free
 (`src/zip.mjs`).
 
 Every render writes two exports from the same archive: `rooms/` (private - both sides, bookmarks
-per your setting) and `rooms/public/` (artist side only, your nickname replaced by EverAfter,
+per your setting) and `rooms-public/` (artist side only, your nickname replaced by EverAfter,
 bookmarks off). The zip is always built from the public one, and its media can be re-compressed on
 the way in.
 

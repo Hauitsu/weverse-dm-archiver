@@ -68,11 +68,11 @@ Yours, detected from your machine (`auto`). The API only sends absolute UTC time
 Weverse app renders them in the viewer device zone, so this matches what you already see in the
 app. You can pin a zone in the page or with `DM_TZ=Asia/Jakarta` if you want a fixed one.
 
-## What is the difference between `rooms/` and `rooms/public/`?
+## What is the difference between `rooms/` and `rooms-public/`?
 
 Every render writes both, from the same archive, so there is nothing to choose up front:
 
-| | `rooms/` (private) | `rooms/public/` (public) |
+| | `rooms/` (private) | `rooms-public/` (public) |
 | --- | --- | --- |
 | messages | both sides | artist side only |
 | bookmarks | whatever your settings say | never |
@@ -111,7 +111,7 @@ weverse-dm-<room>/
   media/video/        videos and voice messages
 ```
 
-It is always built from `rooms/public/<room>.html`, so the other side of the conversation can never
+It is always built from `rooms-public/<room>.html`, so the other side of the conversation can never
 end up in it, and only the media that page really points at is copied in: files nothing references
 are left out.
 

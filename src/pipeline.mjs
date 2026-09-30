@@ -2,7 +2,7 @@
 //
 //   harvest  signed GETs, one page at a time, appended to downloads/<slug>/
 //   render   turns those pages into two exports: rooms/<slug>.* (private, both sides) and
-//            rooms/public/<slug>.* (artist messages only, nickname hidden, safe to send)
+//            rooms-public/<slug>.* (artist messages only, nickname hidden, safe to send)
 //   media    downloads the photos and video the private export points at
 //   render   again, so both pages link to the files that are actually on disk
 //   bundle   optional: one zip per room, built from the public export
@@ -32,6 +32,7 @@ export function dirs(cfg) {
   const c = cfg || loadConfig();
   return {
     rooms: path.resolve(REPO, c.output || "rooms"),
+    roomsPublic: path.resolve(REPO, (c.output || "rooms") + "-public"),
     media: path.join(REPO, "media"),
     downloads: path.join(REPO, "downloads"),
   share: path.join(REPO, "share"),
@@ -97,7 +98,7 @@ function savedBytes(cfg, slug) {
   }
   if (!total) return null;
   const seen = new Set();
-  for (const dir of [d.rooms, path.join(d.rooms, "public")]) {
+  for (const dir of [d.rooms, d.roomsPublic]) {
     let html = "";
     try { html = fs.readFileSync(path.join(dir, slug + ".html"), "utf8"); } catch (e) { continue; }
     for (const hit of html.match(/\.\.\/media\/[^"'\s)\\<>]+/g) || []) {
@@ -221,13 +222,14 @@ export function hurryMode(st, now) {
   return t - Number(st.hurryFirstAt) >= HURRY_RETRY_AFTER_MS ? "retry" : "ready";
 }
 
-// The public export is the shareable twin of the private one, and lives next to it so the relative
-// "../media" links keep working from both.
-export const publicDirFor = (cfg) => path.join(dirs(cfg).rooms, "public");
+// The public export is the shareable twin of the private one. It sits at the repo root as
+// rooms-public/ instead of inside rooms/, because its pages link media as "../media" and that only
+// resolves when exactly one level separates the page from media/.
+export const publicDirFor = (cfg) => dirs(cfg).roomsPublic;
 
 // Two exports per room, because they answer two different questions:
 //   rooms/<slug>.*         private - every message, for the person who owns the account
-//   rooms/public/<slug>.*  public  - artist messages only, nickname hidden, safe to hand to anyone
+//   rooms-public/<slug>.*  public  - artist messages only, nickname hidden, safe to hand to anyone
 // The private one is the archive of record and is also what the media download works from, so nothing
 // the user sent goes missing from their own copy. The public one is what gets packed.
 export async function renderBoth(o) {

@@ -96,7 +96,7 @@ message already on disk.
 When it finishes, the Result panel offers:
 
 - **Open chat** - `rooms/<room>.html` in your normal browser. It works offline. That is your own
-  copy (both sides, your harvested nickname); the shareable twin is `rooms/public/<room>.html`,
+  copy (both sides, your harvested nickname); the shareable twin is `rooms-public/<room>.html`,
   where that nickname reads `EverAfter`.
 - **Open folder** - the folder holding the archive.
 - **Open share folder** - where the share zips live.
@@ -138,7 +138,7 @@ does not work.
 
 ```
 rooms/               the private export: html, md, jsonl, summary.json, fonts/ (both sides)
-rooms/public/        the public export: artist side only, nickname hidden, no bookmarks
+rooms-public/        the public export: artist side only, nickname hidden, no bookmarks
 media/               photos/, video/, avatars/, fonts/
 downloads/<room>/    the raw pages, one JSONL line each - delete only if you want to start over
 share/                the zips you send, one per room
