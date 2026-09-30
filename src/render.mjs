@@ -424,7 +424,8 @@ for (const x of norm) {
   const day = x.isoWib.slice(0, 10);
   const mo = x.isoWib.slice(0, 7);
   if (mo !== lastMonth) { h.push('<div id="mo-' + mo + '"></div>'); lastMonth = mo; }
-  if (day !== lastDay) { h.push('<div class="day">' + day + ' (' + TZ_LABEL + ')</div>'); lastDay = day; prevType = null; }
+  // The day divider carries the date only: the zone is stated once, in the header at the top.
+  if (day !== lastDay) { h.push('<div class="day">' + day + '</div>'); lastDay = day; prevType = null; }
   const me = x.userType !== 'ARTIST';
   const cont = prevType === x.userType;
   prevType = x.userType;
