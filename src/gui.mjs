@@ -373,6 +373,28 @@ async function handle(req, res) {
   json(404, { error: "not found" });
 }
 
+// Double-clicking START.bat twice used to leave two servers and two tabs behind, and a click on the
+// stale tab then went nowhere - the run in the other tab never heard about it. So: one GUI per
+// machine. It writes down where it listens, and a second start finds the first one and just opens
+// its page. An explicit --port (what the tests use) skips this entirely.
+const APP_DIR = path.join(process.env.LOCALAPPDATA || process.env.HOME || ".", "weverse-dm-archiver");
+const GUI_FILE = path.join(APP_DIR, "gui.json");
+function liveGui() {
+  try {
+    const j = JSON.parse(fs.readFileSync(GUI_FILE, "utf8"));
+    if (!j || !j.pid || !j.url) return null;
+    process.kill(Number(j.pid), 0);   // throws when that pid is gone
+    return j;
+  } catch (e) { return null; }
+}
+if (!argv.includes("--port")) {
+  const twin = liveGui();
+  if (twin) {
+    console.log("gui: already running at " + twin.url);
+    if (!argv.includes("--no-open")) openExternal(twin.url);
+    process.exit(0);
+  }
+}
 const wantPort = Number(flag("port", cfg.guiPort || 8787)) || 8787;
 const server = http.createServer((req, res) => {
   handle(req, res).catch((e) => { try { res.writeHead(500, { "content-type": "text/plain" }); res.end(String((e && e.message) || e)); } catch (err) {} });
@@ -398,6 +420,11 @@ server.listen(ladder[0], "127.0.0.1", () => {
   console.log("gui: config " + CONFIG_FILE);
   console.log("gui: repo " + REPO);
   if (!argv.includes("--no-open")) openExternal(url);
+  // Remember where this one listens, so the next double-click opens this page instead of a new server.
+  try { fs.mkdirSync(APP_DIR, { recursive: true }); fs.writeFileSync(GUI_FILE, JSON.stringify({ pid: process.pid, port: port, url: url, at: Date.now() })); } catch (e) {}
 });
 
+// Leave no stale note behind: a pid that is gone is ignored anyway, but a clean exit is cheaper.
+function forgetGui() { try { const j = JSON.parse(fs.readFileSync(GUI_FILE, "utf8")); if (j && Number(j.pid) === process.pid) fs.rmSync(GUI_FILE, { force: true }); } catch (e) {} }
+process.on("exit", forgetGui);
 process.on("SIGINT", () => { push("closing"); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 800); });
