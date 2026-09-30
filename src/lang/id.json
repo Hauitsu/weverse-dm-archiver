@@ -151,5 +151,6 @@
   "html.roomIds": "room {ids}",
   "html.panelBm": "Bookmark saya",
   "html.panelClose": "Tutup",
-  "html.panelJump": "Lompat ke tanggal"
+  "html.panelJump": "Lompat ke tanggal",
+  "html.panelOpen": "Lompat tanggal & bookmark"
 }

@@ -1,70 +1,63 @@
-/* The side panel: the month jump and your bookmarks, out of the reading column until you press one of
-   the two icon buttons in the top-right corner. Plain ES5 like src/ui.js and src/bm.js; the panel only
-   shows and hides what the renderer already wrote, and the bookmark list itself stays bm.js' business. */
+/* The side panel: the month jump and your bookmarks, out of the reading column until you press the
+   button in the top-right corner. Plain ES5 like src/ui.js and src/bm.js; the panel only shows and
+   hides what the renderer already wrote, and the bookmark list itself stays bm.js' business. */
 (function () {
-  var p = document.getElementById("panel");
-  if (!p) return;
-  var bj = document.getElementById("pj"), bb = document.getElementById("pb"), bt = document.getElementById("pcl");
-  var tab = { j: document.getElementById("tabj"), b: document.getElementById("tabb") };
-  var pane = { j: document.getElementById("panej"), b: document.getElementById("paneb") };
+  var panel = document.getElementById("panel");
+  if (!panel) return;
+  var menu = document.getElementById("pmenu"), closer = document.getElementById("pcl");
+  var tabs = { j: document.getElementById("tabj"), b: document.getElementById("tabb") };
+  var panes = { j: document.getElementById("panej"), b: document.getElementById("paneb") };
+  var last = "j";   // the tab the next open starts on, so a switch is remembered
 
-  function pilih(k) {
-    for (var q in tab) {
-      if (!tab[q]) continue;
+  function isOpen() { return panel.classList.contains("buka"); }
+  function select(k) {
+    for (var q in tabs) {
+      if (!tabs[q]) continue;
       var on = q === k;
-      tab[q].setAttribute("aria-selected", on ? "true" : "false");
-      if (pane[q]) pane[q].hidden = !on;
+      tabs[q].setAttribute("aria-selected", on ? "true" : "false");
+      if (panes[q]) panes[q].hidden = !on;
     }
   }
-  function tandaBuka(k) {
-    if (bj) bj.setAttribute("aria-expanded", k === "j" ? "true" : "false");
-    if (bb) bb.setAttribute("aria-expanded", k === "b" ? "true" : "false");
-  }
-  function buka(k) {
-    pilih(k);
-    p.classList.add("buka");
-    p.setAttribute("aria-hidden", "false");
+  function show(k) {
+    last = k || last;
+    select(last);
+    panel.classList.add("buka");
+    panel.setAttribute("aria-hidden", "false");
     document.body.classList.add("pnel");
-    tandaBuka(k);
-    p.tabIndex = -1;
-    try { p.focus({ preventScroll: true }); } catch (e) { p.focus(); }
+    if (menu) menu.setAttribute("aria-expanded", "true");
+    panel.tabIndex = -1;
+    try { panel.focus({ preventScroll: true }); } catch (e) { panel.focus(); }
   }
-  function tutup() {
-    if (!p.classList.contains("buka")) return;
-    p.classList.remove("buka");
-    p.setAttribute("aria-hidden", "true");
+  function hide() {
+    if (!isOpen()) return;
+    panel.classList.remove("buka");
+    panel.setAttribute("aria-hidden", "true");
     document.body.classList.remove("pnel");
-    tandaBuka("");
+    if (menu) menu.setAttribute("aria-expanded", "false");
   }
-  function alih(k, ev) {
+  function toggle(ev) {
     if (ev) ev.preventDefault();
-    var lagi = tab[k] && tab[k].getAttribute("aria-selected") === "true";
-    if (p.classList.contains("buka") && lagi) tutup(); else buka(k);
+    if (isOpen()) hide(); else show();
   }
-  if (bj) bj.onclick = function (ev) { alih("j", ev); };
-  if (bb) bb.onclick = function (ev) { alih("b", ev); };
-  if (bt) bt.onclick = tutup;
-  if (tab.j) tab.j.onclick = function () { pilih("j"); };
-  if (tab.b) tab.b.onclick = function () { pilih("b"); };
-  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") tutup(); });
+  if (menu) menu.onclick = toggle;
+  if (closer) closer.onclick = hide;
+  if (tabs.j) tabs.j.onclick = function () { last = "j"; select("j"); };
+  if (tabs.b) tabs.b.onclick = function () { last = "b"; select("b"); };
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") hide(); });
   // Anything else on the page - a message, a photo, the theme switch - puts the panel away again. The
-  // two icons are left alone: they carry their own toggle, so clicking them must not close twice.
+  // corner button is left alone: it carries its own toggle, so one click must never open and close.
   var bar = document.getElementById("icons");
   document.addEventListener("click", function (ev) {
-    if (!p.classList.contains("buka")) return;
+    if (!isOpen()) return;
     var el = ev.target;
-    if (!el || p.contains(el)) return;
+    if (!el || panel.contains(el)) return;
     if (bar && bar.contains(el)) return;
-    // Belt and braces: whatever the lookup above returns, a click on one of the two icons must never
-    // close the panel that same click just opened.
-    if (el === bj || el === bb) return;
-    if (bj && bj.contains(el)) return;
-    if (bb && bb.contains(el)) return;
-    tutup();
+    if (menu && (el === menu || menu.contains(el))) return;
+    hide();
   });
   // A month chip or a bookmark link is meant to be followed: get the panel out of the way first.
-  p.addEventListener("click", function (ev) {
+  panel.addEventListener("click", function (ev) {
     var a = ev.target && ev.target.closest ? ev.target.closest("a[href^='#']") : null;
-    if (a) tutup();
+    if (a) hide();
   });
 })();

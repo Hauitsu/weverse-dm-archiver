@@ -151,5 +151,6 @@
   "html.roomIds": "room {ids}",
   "html.panelBm": "내 북마크",
   "html.panelClose": "닫기",
-  "html.panelJump": "날짜로 이동"
+  "html.panelJump": "날짜로 이동",
+  "html.panelOpen": "날짜 이동 및 북마크"
 }

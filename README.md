@@ -26,12 +26,13 @@ login tokens, and never touches the tab you are logged in on.
   page behind them pure black (`#000`) - the sticky day band wears the same black, so nothing shows through
   under the date; one nickname grey (`#666666`) on both sides in both themes, and the choice is remembered
   per browser - dark stays the default
-- two round icon buttons in the top-right corner open one panel from the right: the date jump first,
-  your bookmarks second (the ★ carries the count as a small badge, both carry a tooltip). The panel
-  closes on its own button, on ✕, on Esc, and on any click outside it. The month chips are a list of
-  links there instead of a row under the title, the bookmark tab carries the JSON export and import, and
-  on a wide window the page box narrows by the width of the panel so the reading column recentres to the
-  left of it instead of sitting behind it (the column keeps its auto margins - a fixed width would only
+- one round ⋯ button in the top-right corner opens a panel from the right: the date jump as its first
+  tab, your bookmarks as its second (the bookmark count rides on the button as a small badge, the
+  button and the tabs carry tooltips). The panel closes on that button, on ✕, on Esc, and on any click
+  outside it. The month chips are a list of links there instead of a row under the title, the bookmark
+  tab carries the JSON export and import, and on a wide window the page box narrows by the width of the
+  panel so the reading column recentres to the left of it instead of sitting behind it (the column
+  keeps its auto margins - a fixed width would only push it right and leave the gap on the left)
   push it right and leave the gap on the left)
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
   scrolls, parking just under the day header so the two read as one HUD. The number is **live** -
@@ -245,8 +246,8 @@ Bookmarks are yours to make, inside the page. Every message carries the same thr
 app has - it fades in when the pointer is on that row (and stays out of the way otherwise, with the
 space always reserved so nothing shifts), and on a touch screen, where there is no hover, it is
 always there. It offers
-
-* **Bookmark this message** - the message gets a star and a line in the bookmarks panel, the ★ button in
+* **Bookmark this message** - the message gets a star and a line in the bookmarks panel, behind the ⋯
+  button in the top-right corner (that panel's second tab, its first is the date jump),
   the top-right corner (its first tab is the date jump),
 * **Copy text** - the words to the clipboard (or the media link, or what kind of media it was),
 * **Copy date and time** - the stamp, for quoting a message somewhere else.

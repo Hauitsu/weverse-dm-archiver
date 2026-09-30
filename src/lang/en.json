@@ -151,5 +151,6 @@
   "html.roomIds": "room {ids}",
   "html.panelBm": "My bookmarks",
   "html.panelClose": "Close",
-  "html.panelJump": "Jump to date"
+  "html.panelJump": "Jump to date",
+  "html.panelOpen": "Date jump and bookmarks"
 }

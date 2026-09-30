@@ -574,7 +574,7 @@ h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
    not move; the message column only shifts aside when the window is really wide. bm.js keeps
    #bmlist and #bmnota up to date, this file only shows and hides them. */
 h.push('.icons{position:fixed;top:10px;right:12px;z-index:41;display:flex;gap:6px}');
-h.push('.ico{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-family:inherit;font-size:15px;line-height:1;border-radius:11px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
+h.push('.ico{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-family:inherit;font-size:19px;line-height:1;border-radius:11px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
 h.push('.ico:hover{filter:brightness(1.08)}');
 h.push('.ico:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('.ico[aria-expanded="true"]{border-color:#4da3ff;background:#1d2531}');
@@ -725,12 +725,12 @@ h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-s
 h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
 h.push('html{color-scheme:dark}');
 h.push('</style></head><body' + (BM_ON ? ' class="has-icons"' : '') + '><div class="wrap">');
-// Two icon buttons in the top-right corner open the panel (src/panel.js); the theme switch keeps its
-// own pill in the bottom-right. The public export has no panel, so it gets no icons either.
+// One button in the top-right corner opens the panel (src/panel.js): the date jump first, your
+// bookmarks second, both switched by the tabs inside. The theme switch keeps its own pill in the
+// bottom-right. The public export has no panel, so it gets no button either.
 if (BM_ON) {
   h.push('<div class="icons" id="icons">');
-  h.push('<button class="ico" id="pj" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelJump")) + '" aria-label="' + esc(t("html.panelJump")) + '">&#128197;</button>');
-  h.push('<button class="ico" id="pb" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelBm")) + '" aria-label="' + esc(t("html.panelBm")) + '">&#9733;<span class="n" data-bmn-n>0</span></button>');
+  h.push('<button class="ico" id="pmenu" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelOpen")) + '" aria-label="' + esc(t("html.panelOpen")) + '">&#8943;<span class="n" data-bmn-n>0</span></button>');
   h.push('</div>');
 }
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
@@ -828,7 +828,7 @@ h.push('lb.addEventListener("click",function(e){if(e.target===lb)tutup();});');
 h.push('document.addEventListener("keydown",function(e){if(!lb.classList.contains("on"))return;if(e.key==="Escape")tutup();if(e.key==="ArrowLeft")show(i-1);if(e.key==="ArrowRight")show(i+1);});');
 if (giftAda) h.push('var gfc=[].slice.call(document.querySelectorAll(".bub.gift .gfc"));gfc.forEach(function(c){c.addEventListener("click",function(){c.parentNode.classList.add("open");c.setAttribute("aria-expanded","true");});});if(location.hash==="#gift-open")gfc.forEach(function(c){c.parentNode.classList.add("open");});');
 h.push('</script>');
-// The panel itself: the month jump and your bookmarks, out of the way until the corner buttons ask
+// The panel itself: the month jump and your bookmarks, out of the way until the corner button asks
 // for it. bm.js keeps #bmlist and #bmnota up to date; src/panel.js is only the on/off switch.
 if (BM_ON) {
   h.push('<div class="pnl" id="panel" aria-hidden="true">');
@@ -846,7 +846,7 @@ if (BM_ON) h.push('<div class="mx" id="mx" role="menu" hidden></div>');
 if (BM_ON) h.push('<script>' + BMSKRIP.split('{{BK}}').join(JSON.stringify(bkData)) + '</script>');
 // Always on, in both exports: the chip is a reader-side preference, not personal chat data.
 h.push('<script>' + UISKRIP + '</script>');
-// The two corner buttons and the panel they open: same script in both exports whenever bookmarks are on.
+// The corner button and the panel it opens: same script in both exports whenever bookmarks are on.
 if (BM_ON) h.push('<script>' + PANELSKRIP + '</script>');
 h.push('</div></body></html>');
 fs.writeFileSync(path.join(OUT, BASE + '.html'), h.join(NL), 'utf8');
