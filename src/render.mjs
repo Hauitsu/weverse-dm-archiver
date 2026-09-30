@@ -327,7 +327,11 @@ for (const x of norm) x.media.forEach((im, i) => { mediaTot++; if (mediaFile(x, 
 const h = [];
 h.push('<!doctype html><html lang="' + t.lang + '"><head><meta charset="utf-8">');
 h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
-h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title><style>');
+h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title>');
+// Runs before the first paint: a remembered theme is on the page before anything is drawn, so
+// nobody sees a dark flash on the way to light.
+h.push('<script>try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")document.documentElement.setAttribute("data-tema",m);}catch(e){}</script>');
+h.push('<style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
 h.push('body{font-family:-apple-system,Segoe UI,Roboto,sans-serif,NotoEmojiWeb;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
@@ -422,7 +426,50 @@ h.push('.bml a{display:block;color:#9ecbff;text-decoration:none;padding:3px 0;bo
 h.push('.bml a:hover{background:#1a212c}');
 h.push('.bml .bn{color:#8b93a1}');
 h.push('.del{color:#8b93a1;font-style:italic}');
+h.push('/* Light theme. Nothing above is touched: dark stays exactly as it was, light overrides it.');
+h.push('   The :not(.gift):not(.bare) guards matter - a gift keeps its pink cover and a photo keeps no');
+h.push('   bubble at all, in either theme. */');
+h.push('html[data-tema="light"]{color-scheme:light}');
+h.push('html[data-tema="light"] body{background:#f7f8fa;color:#17181c}');
+h.push('html[data-tema="light"] .meta{color:#6b7280}');
+h.push('html[data-tema="light"] .nav a{color:#1f6feb;background:#fff;border-color:#dde3ea}');
+h.push('html[data-tema="light"] .nav a:hover{background:#eef3fb}');
+h.push('html[data-tema="light"] .day{background:#f7f8fa;color:#6b7280;border-bottom-color:#e3e7ec}');
+h.push('html[data-tema="light"] .who{color:#6b7280}');
+h.push('html[data-tema="light"] .m.artist .who{color:#1a73e8}');
+h.push('html[data-tema="light"] .m.me .who{color:#3c6f9e}');
+h.push('html[data-tema="light"] .bub:not(.gift):not(.bare){background:#fff;border-color:#e2e6eb}');
+h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:#eef0f3;border-color:#e2e6eb}');
+h.push('html[data-tema="light"] .m.me .bub:not(.gift):not(.bare){background:#d3e6ff;border-color:#b6d3f7}');
+h.push('html[data-tema="light"] .tm{color:#98a1ad}');
+h.push('html[data-tema="light"] .en{color:#3f5568;opacity:1}');
+h.push('html[data-tema="light"] .im a{color:#1f6feb}');
+h.push('html[data-tema="light"] .av{background:#dfe3e8}');
+h.push('html[data-tema="light"] .media img{background:#e8ebef}');
+h.push('html[data-tema="light"] .media video{background:#e8ebef}');
+h.push('html[data-tema="light"] .vwrap video{background:#e8ebef}');
+h.push('html[data-tema="light"] .vfull2{color:#2f6fb3}');
+h.push('html[data-tema="light"] .aud{background:#fff;border-color:#dde3ea}');
+h.push('html[data-tema="light"] .adur{color:#6b7280}');
+h.push('html[data-tema="light"] .gf{color:#9a6b00}');
+h.push('html[data-tema="light"] .m.bm .bub:not(.gift){border-color:#e0c063}');
+h.push('html[data-tema="light"] .bmk{color:#9a6b00}');
+h.push('html[data-tema="light"] .bml{background:#f1f3f6;border-color:#e2e6eb}');
+h.push('html[data-tema="light"] .bml summary{color:#9a6b00}');
+h.push('html[data-tema="light"] .bml a{color:#1f6feb;border-top-color:#e6e9ee}');
+h.push('html[data-tema="light"] .bml a:hover{background:#e9eef6}');
+h.push('html[data-tema="light"] .bml .bn{color:#6b7280}');
+h.push('html[data-tema="light"] .del{color:#8b93a1}');
+h.push('/* The theme switch itself: fixed in the corner, above the page, below the lightbox. */');
+h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 13px;border-radius:999px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
+h.push('.tt:hover{filter:brightness(1.08)}');
+h.push('.tt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
+h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
+h.push('html{color-scheme:dark}');
 h.push('</style></head><body><div class="wrap">');
+h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
+// Sits next to the button so the right label is there before the message list is parsed.
+h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
 h.push('<h1>' + esc(t("html.title", { room: ROOM_NAME })) + '</h1>');
 h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), room: esc(ROOM_NAME), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
 h.push('<div class="nav">' + (bmList.length ? '<a href="#bmk-1" title="' + t("html.navBookmarkTitle") + '">' + t("html.navBookmark", { n: bmList.length }) + '</a>' : '') + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
