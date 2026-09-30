@@ -168,6 +168,6 @@ No. It is an unofficial fan tool, MIT licensed, with no affiliation to Weverse o
 Only the `.zip`. It is self-contained: `index.html`, `README.txt` and `manifest.json` are already
 inside it, so the recipient just unpacks it and opens `index.html`.
 
-The `.sha256` and `.manifest.json` in `share/verify/` are for you, not for them. The checksum is
+The `.sha256` and `.manifest.json` in `verify/` (next to `share/`) are for you, not for them. The checksum is
 worth keeping when a big zip travels through cloud storage or a slow connection: re-check it on the
 other end and you know the file arrived complete instead of truncated. Nothing in the zip needs it.

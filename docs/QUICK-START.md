@@ -142,7 +142,7 @@ rooms/public/        the public export: artist side only, nickname hidden, no bo
 media/               photos/, video/, avatars/, fonts/
 downloads/<room>/    the raw pages, one JSONL line each - delete only if you want to start over
 share/                the zips you send, one per room
-share/verify/         .sha256 + .manifest.json of each zip (nothing to send)
+verify/               .sha256 + .manifest.json of each zip (nothing to send)
 config.json          optional settings (language, tz, browserPath, output, publicRename, pacing)
 ```
 

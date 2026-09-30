@@ -92,7 +92,7 @@ const commands = {
   },
   share: async () => {
     const r = pick();
-    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.share, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
+    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.share, verifyDir: d.verify, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
     log(b.zip);
     log("sha256 " + b.sha256);
   },
