@@ -20,7 +20,9 @@ login tokens, and never touches the tab you are logged in on.
   and your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
 - day headings read the way the app writes them - `Sat, Sep 26, 2026`, in the page and in the
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
-- a light theme for the page itself, switched from the round button in the bottom-right corner;
+- a light theme for the page itself, switched from the round button in the bottom-right corner: there the artist
+  bubble is mint (`#bbf3f6`) and yours near-white (`#f2f3f7`), and the dark theme keeps the same pair the other
+  way round (`#1c3b5e` for the artist, `#141b2b` for yours);
   the choice is remembered per browser and dark stays the default (and unchanged)
 - a message that is nothing but a photo or a video gets no bubble at all - the rounded media is
   the message, like in the app. A voice note keeps its bubble (the player needs a body), and so do
