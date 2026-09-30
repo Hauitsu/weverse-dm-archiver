@@ -23,7 +23,7 @@ function flag(name, fallback) {
 
 let cfg = loadConfig();
 const state = {
-  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null,
+  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false,
   log: [], result: null, error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -101,6 +101,7 @@ function page() {
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
+    "<button id=\"bAuthed\" style=\"display:none\">" + esc(tr("gui.authed")) + "</button>",
     "<span id=\"phase\" class=\"muted\"></span></div>",
     "<div id=\"bar\"><i id=\"fill\"></i></div></section>",
     // The same sentence that sits under the buttons, repeated as a confirmation: starting really does
@@ -158,6 +159,7 @@ function page() {
     "  el(\"#fill\").style.width=(s.percent||0)+\"%\";",
     "  var box=el(\"#log\"); box.textContent=s.log.join(String.fromCharCode(10)); box.scrollTop=box.scrollHeight;",
     "  el(\"#start\").disabled=s.running; el(\"#stop\").disabled=!s.running;",
+    "  el(\"#bAuthed\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "}",
@@ -171,6 +173,7 @@ function page() {
     "el(\"#modal\").addEventListener(\"click\",function(e){if(e.target===el(\"#modal\"))hideModal();});",
     "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\")hideModal();});",
     "el(\"#stop\").addEventListener(\"click\",stop);",
+    "el(\"#bAuthed\").addEventListener(\"click\",function(){fetch(\"/api/hurry\",{method:\"POST\"});});",
     "el(\"#bChat\").addEventListener(\"click\",function(){openIt(\"chat\");});",
     "el(\"#bFolder\").addEventListener(\"click\",function(){openIt(\"folder\");});",
     "el(\"#bZip\").addEventListener(\"click\",function(){openIt(\"zip\");});",
@@ -223,7 +226,13 @@ async function startJob(body) {
   try {
     setPhase("browser");
     push(tr("gui.loginHint"));
-    const session = await openSession({ cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000 });
+    // The login wait is automatic; the button only shortens the pause before the next check.
+    state.hurry = false;
+    const session = await openSession({
+      cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
+      hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
+      hurryLog: tr("gui.checkNow"),
+    });
     if (session.error) {
       state.error = session.error === "no-browser" ? tr("gui.noBrowser") : session.error;
       setPhase("error");
@@ -283,6 +292,7 @@ async function handle(req, res) {
   if (req.method === "GET" && url === "/api/state") { json(200, stateJson()); return; }
   if (req.method === "POST" && url === "/api/start") { const b = await readBody(req); startJob(b); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/stop") { stopFlag = true; push("stop requested, finishing the current step"); json(200, { ok: true }); return; }
+  if (req.method === "POST" && url === "/api/hurry") { state.hurry = true; json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/config") {
     const b = await readBody(req);
     if (b.language) { try { cfg = saveConfig({ language: String(b.language) }); } catch (e) {} }

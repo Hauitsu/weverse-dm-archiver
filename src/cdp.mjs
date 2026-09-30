@@ -76,6 +76,10 @@ export async function ensureAuth(cdp, opts) {
   const log = o.onLog || (() => {});
   const stop = o.shouldStop || (() => false);
   const until = Date.now() + (o.timeoutMs || 120000);
+  // The page shows an "I'm logged in" button while this waits. It cannot sign anyone in and cannot
+  // skip the token check below - it only asks for the next look right now, so someone who just
+  // finished signing in does not sit through the rest of a 2.5 s pause wondering if it noticed.
+  const hurry = o.hurry || (() => false);
   let round = 0;
   for (;;) {
     if (stop()) return false;
@@ -86,7 +90,9 @@ export async function ensureAuth(cdp, opts) {
       if (round % 2 === 1) await cdp.evaluate(NUDGE, 15000);
       else await cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: 640, y: 420, deltaX: 0, deltaY: round % 4 === 0 ? -700 : 900, pointerType: "mouse" }, 10000);
     } catch (e) {}
-    await sleep(o.stepMs || 2500);
+    const asked = hurry() === true;
+    if (asked && o.hurryLog) log(o.hurryLog);
+    await sleep(asked ? 250 : (o.stepMs || 2500));
     try { if (await cdp.evaluate(AUTH_READY, 15000) === true) return true; } catch (e) {}
     if (round % 8 === 0) log("waiting for a Weverse login in the browser window... (" + Math.round((Date.now() - (until - (o.timeoutMs || 120000))) / 1000) + "s)");
     if (Date.now() > until) return false;

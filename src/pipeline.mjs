@@ -250,7 +250,10 @@ export async function openSession(o) {
   const target = await waitPage(started.port, "weverse.io", 30000);
   if (!target) return { error: "no-page" };
   const cdp = await attach(target.webSocketDebuggerUrl);
-  const ok = await ensureAuth(cdp, { onLog: log, shouldStop: opts.shouldStop, timeoutMs: opts.authTimeoutMs || 300000 });
+  const ok = await ensureAuth(cdp, {
+    onLog: log, shouldStop: opts.shouldStop, timeoutMs: opts.authTimeoutMs || 300000,
+    hurry: opts.hurry, hurryLog: opts.hurryLog,
+  });
   if (!ok) return { error: "no-auth", cdp: cdp, browser: started };
   return { cdp: cdp, browser: started, name: found.name };
 }

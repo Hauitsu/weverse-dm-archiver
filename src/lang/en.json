@@ -81,6 +81,8 @@
   "gui.start": "Start",
   "gui.stop": "Stop",
   "gui.cancel": "Cancel",
+  "gui.authed": "I'm logged in - continue",
+  "gui.checkNow": "Looking at the browser window again now...",
   "gui.result": "Result",
   "gui.openChat": "Open chat",
   "gui.openFolder": "Open folder",

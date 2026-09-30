@@ -81,6 +81,8 @@
   "gui.start": "Mulai",
   "gui.stop": "Stop",
   "gui.cancel": "Batal",
+  "gui.authed": "Saya sudah login - lanjut",
+  "gui.checkNow": "Melihat lagi jendela browser sekarang...",
   "gui.result": "Hasil",
   "gui.openChat": "Buka obrolan",
   "gui.openFolder": "Buka folder",
