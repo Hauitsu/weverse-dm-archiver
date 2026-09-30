@@ -38,6 +38,10 @@ const setPhaseSilent = (p) => { state.phase = p; };
 const t = () => makeT(cfg.language);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]));
 
+// **word** in a translation becomes real emphasis, so the popup can number its lines and bold the
+// words that matter without putting markup into the language files beyond those two asterisks.
+const bold = (s) => esc(String(s)).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
 function zones() {
   try { return Intl.supportedValuesOf("timeZone"); } catch (e) { return ["UTC", "Asia/Jakarta", "Asia/Seoul", "Asia/Tokyo"]; }
 }
@@ -108,7 +112,7 @@ function page() {
     // open its own browser window, so the click waits here until the user has read that.
     "<div id=\"modal\" style=\"display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;padding:20px;z-index:9\">",
     "<div style=\"max-width:540px;background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:12px;padding:18px 20px\">",
-    "<p style=\"margin:0 0 16px\">" + esc(tr("gui.startNote")).split(NL).join("<br>") + "</p>",
+    "<ol style=\"margin:0 0 16px;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li>" + bold(s) + "</li>").join("") + "</ol>",
     "<div class=\"grid\"><button id=\"mGo\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"mNo\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
 
