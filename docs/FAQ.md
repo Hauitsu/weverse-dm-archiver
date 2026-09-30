@@ -40,6 +40,9 @@ with an ordinary window - and once you press the button on the page (or close th
 closes it and takes over the session it left behind in the same profile. The archive itself is
 unchanged: same session, still kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` for next time.
 ## Can I keep using Weverse while it runs?
+If the session still is not there when you press the button, the sign-in window simply opens again - the
+tool cycles instead of failing, and only **Stop** ends it, so a login that never arrives is never reported
+as an error.
 
 Yes. The tool works in its own window, so nothing you do in your normal browser interferes. Just
 do not run two archives of the same room at the same time from two copies of the tool.

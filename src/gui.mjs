@@ -290,7 +290,7 @@ async function startJob(body) {
       // While the plain sign-in window is up nothing here can see inside it, so that button is the
       // only way to say "done". The same click means "look again" once the automated window is back.
       saidDone: () => { if (!state.hurry) return false; state.hurry = false; return true; },
-      onPlainWait: (on) => { state.plainWait = !!on; if (on) { state.hurry = false; state.hurryFirstAt = 0; } },
+      onPlainWait: (on) => { state.plainWait = !!on; if (on) state.hurry = false; },
     });
     state.loginWait = false;
     if (session.error === "stopped" || stopFlag) { setPhase("stopped"); running(false); return; }

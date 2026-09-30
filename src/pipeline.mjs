@@ -17,6 +17,9 @@ import { harvest, readArchive } from "./harvest.mjs";
 import { downloadMedia } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser, launch, launchPlain, killBrowser, waitExit, profileDir } from "./browser.mjs";
+
+// Small pause helper - used by the login wait and the browser hand-over.
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
 import { loadRooms } from "./rooms.mjs";
 
@@ -264,7 +267,6 @@ async function waitForGo(proc, opts, log) {
   const o = opts || {};
   const stop = o.shouldStop || (() => false);
   const said = o.saidDone;
-  const until = Date.now() + (o.plainWaitMs || 1800000);
   let typed = false;
   if (!said) {
     try {
@@ -272,12 +274,15 @@ async function waitForGo(proc, opts, log) {
     } catch (e) {}
   }
   log("browser: sign in there, then " + (said ? "press the button on the page" : "close that window (or press Enter here)"));
+  // No deadline: the window is open, the page has a button, and only the person in front of it knows
+  // whether the signing in is done. Stop is the way out, so this can afford to wait.
+  let seen = Date.now();
   for (;;) {
     if (stop()) return "stopped";
     if (said && said()) return "done";
     if (typed) return "done";
     if (!proc || proc.exitCode !== null) return "closed";
-    if (Date.now() > until) return "timeout";
+    if (Date.now() - seen > 300000) { seen = Date.now(); log("browser: still waiting for that sign-in window"); }
     await sleep(400);
   }
 }
@@ -288,7 +293,8 @@ export async function openSession(o) {
   const cfg = opts.cfg || loadConfig();
   const found = findBrowser(cfg);
   if (!found) return { error: "no-browser" };
-  const open = () => launch({ browserPath: found.path, profile: profileDir(), url: "https://weverse.io/", onLog: log });
+  const prof = opts.profile || profileDir();
+  const open = () => launch({ browserPath: found.path, profile: prof, url: "https://weverse.io/", onLog: log });
   const use = async (started, ms) => {
     if (!started.port) return { error: "no-port" };
     const target = await waitPage(started.port, "weverse.io", 30000);
@@ -303,30 +309,42 @@ export async function openSession(o) {
   // The session already in the profile is what every run after the first lives on, so look for it
   // first: this is the window that can read the page, and opening a second one for nothing would be
   // a pointless extra step.
-  let started = await open();
-  let got = await use(started, opts.probeMs || 15000);
-  if (got.error) return got;
-  if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
+  const started = await open();
+  const probe = await use(started, opts.probeMs || 15000);
+  if (probe.error) return probe;
+  if (probe.auth) return { cdp: probe.cdp, browser: probe.browser, name: probe.name };
   // Nothing in the profile yet - and the browser that can read the page is exactly the one Google
-  // refuses. Hand the typing to a normal window, then take over the session it leaves behind.
+  // refuses. From here it is a cycle, not a countdown: hand the typing to a normal window, take over
+  // the session it leaves behind, and if there is still nothing, open the sign-in window again. The
+  // button on the page is a real check because pressing it runs that whole hand-over, and a login
+  // that never arrives is nobody's error - Stop is the only way out, and the tool keeps the window
+  // open until then.
+  let current = started;   // the automated browser we are holding right now
   log("browser: no Weverse session in this profile yet");
-  log("browser: opening a normal window to sign in - Google refuses a browser that is driven over DevTools");
-  killBrowser(started.proc);
-  await waitExit(started.proc, 15000);
-  const plain = await launchPlain({ browserPath: found.path, profile: profileDir(), url: "https://weverse.io/", onLog: log });
-  if (opts.onPlainWait) opts.onPlainWait(true);
-  const why = await waitForGo(plain.proc, opts, log);
-  if (opts.onPlainWait) opts.onPlainWait(false);
-  killBrowser(plain.proc);
-  await waitExit(plain.proc, 15000);
-  if (why === "stopped") return { error: "stopped", cdp: null, browser: plain };
-  if (why === "timeout") { log("browser: nobody signed in within the time allowed"); return { error: "no-auth", cdp: null, browser: plain }; }
-  log("browser: taking over the session the sign-in window left behind");
-  started = await open();
-  got = await use(started, opts.authTimeoutMs || 300000);
-  if (got.error) return got;
-  if (!got.auth) return { error: "no-auth", cdp: got.cdp, browser: got.browser };
-  return { cdp: got.cdp, browser: got.browser, name: got.name };
+  for (;;) {
+    if (opts.shouldStop && opts.shouldStop()) return { error: "stopped", cdp: null, browser: null };
+    // The automated window holds the profile lock, and a second launch would only hand its arguments
+    // to that running instance - so it has to be gone before the sign-in window opens, or the window
+    // meant to be plain would inherit the very debug port Google refuses.
+    killBrowser(current.proc);
+    await waitExit(current.proc, 15000);
+    log("browser: opening a normal window to sign in - Google refuses a browser that is driven over DevTools");
+    const plain = await launchPlain({ browserPath: found.path, profile: prof, url: "https://weverse.io/", onLog: log });
+    if (opts.onPlainWait) opts.onPlainWait(true);
+    const why = await waitForGo(plain.proc, opts, log);
+    if (opts.onPlainWait) opts.onPlainWait(false);
+    killBrowser(plain.proc);
+    await waitExit(plain.proc, 15000);
+    if (why === "stopped") return { error: "stopped", cdp: null, browser: plain };
+    log("browser: taking over the session the sign-in window left behind");
+    const again = await open();
+    current = again;
+    const got = await use(again, opts.authTimeoutMs || 300000);
+    if (got.error) return got;
+    if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
+    log("browser: the profile still has no session - opening the sign-in window again");
+    await sleep(1500);
+  }
 }
 
 // One room, start to finish.

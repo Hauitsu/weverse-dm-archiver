@@ -34,6 +34,8 @@ Weverse's: Google refuses to sign anyone in from a browser that is being automat
 app may not be secure"). So when the profile has no live session, the tool opens a normal window with
 no debugging port - sign in **there**, press the button on the page (or close that window) when you are
 done, and the tool takes over the session it left in the profile.
+If that session still is not there, the tool does not give up and it does not fail: it opens the sign-in
+window again, and again, until you press **Stop**. A login that never arrives is your call, never an error.
 The page shows "Waiting for a Weverse login" until the session is live. You only do this once:
 the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile`.
 
@@ -61,7 +63,7 @@ Options:
   press simply keeps waiting. A minute after that press the button turns into **Retry** - nothing
   retries on its own, you decide when it is worth another look.
 - **Signing in with Google** - the button above is also the "done" signal for the normal sign-in
-  window; the moment you press it the tool closes that window and takes the session over.
+  window; the moment you press it the tool closes that window and takes the session over - and if that session still is not there, the sign-in window comes back instead of the run ending.
 - **Also make a shareable zip** - three choices, remembered in `config.json`. **Yes** (the default)
   writes `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three
   languages; only artist messages and media are inside, your own messages are left out. **Yes but Low
