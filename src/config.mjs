@@ -31,10 +31,14 @@ export const DEFAULTS = {
   shareMode: "yes",
   // Empty means "the ffmpeg on PATH". Set it when ffmpeg lives somewhere unusual.
   ffmpegPath: "",
-  // "Share to <name>": one link the page opens in the browser when someone wants to hand their zip
-  // over - a social profile, a chat invite or a cloud folder. Empty hides the button, and only this
-  // one value is ever opened (never anything the page itself sends).
+  // "Share to <name>": where a zip can be handed over - a chat invite, a cloud folder. The build
+  // ships one, hidden from a search box but not from a reader (see src/collect.mjs); setting this
+  // replaces it. Only this one value is ever opened (never anything the page itself sends).
+  // collectOwned lists rooms the author already has, so they are never asked for; collectSeen
+  // remembers that the once-per-install popup has been shown.
   collectName: "Hauitsu",
+  collectOwned: "yunha",
+  collectSeen: false,
   collectUrl: "",
 };
 
@@ -56,6 +60,9 @@ export function readConfig(file) {
   if (SHARE_MODES.indexOf(String(cfg.shareMode)) < 0) cfg.shareMode = DEFAULTS.shareMode;
   if (typeof cfg.collectUrl !== "string") cfg.collectUrl = DEFAULTS.collectUrl;
   cfg.collectUrl = cfg.collectUrl.trim();
+  if (typeof cfg.collectOwned !== "string") cfg.collectOwned = DEFAULTS.collectOwned;
+  cfg.collectOwned = cfg.collectOwned.trim();
+  cfg.collectSeen = !!cfg.collectSeen;
   if (typeof cfg.collectName !== "string" || !cfg.collectName.trim()) cfg.collectName = DEFAULTS.collectName;
   cfg.collectName = cfg.collectName.trim();
   return cfg;

@@ -12,6 +12,7 @@ import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
+import { canOffer, collectReady, driveUrl, eligibleRooms, memberName } from "./collect.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
 import { openExternal } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
@@ -246,11 +247,18 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "<button id=\"shTo\" style=\"display:none\">" + esc(tr("gui.shareTo", { name: cfg.collectName })) + "</button>",
 "<button id=\"shClose\">" + esc(tr("gui.cancel")) + "</button></div>",
 // The link opens in the normal browser; the zip itself travels the way the two of them agree on.
-"<div id=\"shToHint\" class=\"muted\" style=\"display:none;margin-top:8px\">" + esc(tr("gui.shareToHint", { name: cfg.collectName })) + "</div>",
 "<div id=\"shBar\" style=\"display:none\"><i id=\"shFill\"></i></div>",
 "<div id=\"shLog\" style=\"display:none\"></div>",
 "</div></div>",
-
+// Once a room is complete the author asks for it himself: a short chat, then the one button that
+// matters. The room name is filled in when the popup opens, because the same popup also comes up on
+// its own carrying several rooms at once.
+"<div id=\"toModal\" style=\"display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;padding:20px;z-index:11\">",
+"<div style=\"max-width:520px;width:100%;background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:12px;padding:18px 20px\">",
+"<div id=\"toTitle\" style=\"font-size:16px;font-weight:600;margin-bottom:12px\"></div>",
+"<div id=\"toChat\" style=\"display:flex;flex-direction:column;gap:8px;align-items:flex-start\"></div>",
+"<div class=\"grid\" style=\"margin-top:16px\"><button id=\"toGo\" class=\"primary\">" + esc(tr("gui.toDrive")) + "</button>",
+"<button id=\"toClose\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
     "<div id=\"under\" style=\"display:none\">",
     "<section>",
     "<div class=\"grid\" style=\"margin-top:8px;position:relative\"><span id=\"total\" class=\"muted\"></span>",
@@ -287,6 +295,10 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     // it. em() below calls esc(), so esc() is inlined here the same way fmtSize() is further down -
     // without it every estimate threw "esc is not defined" and #total stayed empty.
     "var esc=" + esc.toString() + ";",
+    // The author own message, one bubble per line; {v} is filled with the room - or the rooms -
+    // this popup is about, so the same message covers the surprise that lists several at once.
+    "MSG.toTitle=" + JSON.stringify(tr("gui.toTitle")) + ";",
+    "var TO=[" + [tr("gui.toL1"), tr("gui.toL2"), tr("gui.toL3"), tr("gui.toL4"), tr("gui.toL5"), tr("gui.toL6"), tr("gui.toL7")].map(function(s){return JSON.stringify(s);}).join(",") + "];",
     "function em(s){return esc(String(s)).replace(/\\*\\*([^*]+)\\*\\*|\\*([^*]+)\\*/g,function(m,b,i){return b!==undefined?\"<strong>\"+b+\"</strong>\":\"<em>\"+i+\"</em>\";});}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var fmtSize=" + fmtSize.toString() + ";",
@@ -335,7 +347,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 // added to rooms.unis.json while the window was open - only a fresh page can show that row.
 "var ROWSIG=" + JSON.stringify(listSignature(list)) + ";",
 "var lastReload=0;",
-"var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,lastCollect=false;",
+"var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,toSurprise=false;",
     "function roomInfo(slug){for(var i=0;i<lastRooms.length;i++){if(lastRooms[i].slug===slug)return lastRooms[i];}return null;}",
     "function hideShare(){el(\"#shModal\").style.display=\"none\";}",
     "function paintShare(info,sh){",
@@ -351,9 +363,8 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#shQ\").disabled=busy;",
     "  el(\"#shFolder\").style.display=(info&&info.zip)?\"\":\"none\";",
     "  el(\"#shFolder\").disabled=busy;",
-    "  el(\"#shTo\").style.display=(lastCollect&&info&&info.zip)?\"\":\"none\";",
+    "  el(\"#shTo\").style.display=(info&&info.canShare&&info.zip)?\"\":\"none\";",
     "  el(\"#shTo\").disabled=busy;",
-    "  el(\"#shToHint\").style.display=(lastCollect&&info&&info.zip)?\"\":\"none\";",
     "  if(busy){el(\"#shBar\").style.display=\"\";el(\"#shLog\").style.display=\"\";}",
     "}",
     "function paintEst(){",
@@ -383,6 +394,21 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  loadEst(slug);",
     "  el(\"#shModal\").style.display=\"flex\";",
     "}",
+    // Every bubble is a plain div filled with textContent, so nothing in the message can turn into
+    // markup, and the room list is substituted in only here.
+    "function showCollect(names){",
+    "  var box=el(\"#toChat\");box.textContent=\"\";",
+    "  TO.forEach(function(t){",
+    "    var d=document.createElement(\"div\");",
+    "    d.style.cssText=\"background:#8882;border-radius:14px;padding:8px 12px;max-width:92%;white-space:pre-wrap\";",
+    "    d.textContent=t.replace(\"{v}\",names.join(\", \"));",
+    "    box.appendChild(d);",
+    "  });",
+    "  el(\"#toTitle\").textContent=MSG.toTitle;",
+    "  el(\"#toModal\").style.display=\"flex\";",
+    "  fetch(\"/api/collect-seen\",{method:\"POST\"});",
+    "}",
+    "function hideCollect(){el(\"#toModal\").style.display=\"none\";}",
     "async function genZip(){",
     "  if(!shSlug)return;",
     "  var info=roomInfo(shSlug)||{};",
@@ -412,6 +438,11 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function tick(){",
     "  var s=null;",
     "  try{ s=await (await fetch(\"/api/state\")).json(); }catch(e){ return; }",
+    // The very first run that leaves them holding a room worth asking about puts the message on
+    // screen by itself - once per install, and never on top of the Share popup.
+    "  if(s.surprise&&s.surprise.length&&!toSurprise&&el(\"#shModal\").style.display===\"none\"){",
+    "    toSurprise=true;showCollect(s.surprise);",
+    "  }",
     "  el(\"#phase\").textContent=s.phaseText;",
     "  el(\"#fill\").style.width=(s.percent||0)+\"%\";",
     "  logTo(el(\"#log\"),s.log.join(String.fromCharCode(10)));",
@@ -423,7 +454,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  under(!!s.running||!!s.result);",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open;b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
-    "  lastRooms=s.rooms||[];lastShare=s.share||null;lastCollect=!!s.collect;",
+    "  lastRooms=s.rooms||[];lastShare=s.share||null;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
     "  el(\"#start\").disabled=sbusy;",
     "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
@@ -453,7 +484,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#mGo\").addEventListener(\"click\",start);",
     "el(\"#mNo\").addEventListener(\"click\",hideModal);",
     "el(\"#modal\").addEventListener(\"click\",function(e){if(e.target===el(\"#modal\"))hideModal();});",
-    "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\"){hideModal();hideShare();}});",
+    "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\"){hideModal();hideShare();hideCollect();}});",
     "el(\"#stop\").addEventListener(\"click\",stop);",
     "el(\"#bAuthed\").addEventListener(\"click\",function(){fetch(\"/api/hurry\",{method:\"POST\"});});",
     "el(\"#bChat\").addEventListener(\"click\",function(){openIt(\"chat\");});",
@@ -465,7 +496,10 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#shQ\").addEventListener(\"change\",paintEst);",
     "el(\"#shClose\").addEventListener(\"click\",hideShare);",
     "el(\"#shFolder\").addEventListener(\"click\",function(){if(shSlug)openItSlug(\"shareFolder\",shSlug);});",
-    "el(\"#shTo\").addEventListener(\"click\",function(){fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"collect\"})});});",
+    "el(\"#shTo\").addEventListener(\"click\",function(){var h=roomInfo(shSlug)||{};showCollect([h.name||h.label||shSlug]);});",
+    "el(\"#toGo\").addEventListener(\"click\",function(){openIt(\"collect\");});",
+    "el(\"#toClose\").addEventListener(\"click\",hideCollect);",
+    "el(\"#toModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#toModal\"))hideCollect();});",
     "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))hideShare();});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
@@ -492,14 +526,15 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   const list = rooms(cfg);
   return {
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
-    // Whether this build ships a "share to <name>" link; the page shows the button only then.
-    collect: !!String(cfg.collectUrl || "").trim(),
+    // The once-per-install popup: a finished run that left them holding a complete room puts the
+    // author own message on screen without a click. Empty means there is nothing to show.
+    surprise: state.surprise || null,
     log: state.log, result: state.result, error: state.error,
     // Only what the rows need to keep their Open button honest while a run goes on.
     // The room set itself: the page patches numbers when they move, but a row it never had needs a
     // fresh page.
     rowsig: listSignature(list),
-    rooms: list.map(function (x) { const si = shareInfo(x.slug); const er = rowNumbers(cfg, x, tr); return { slug: x.slug, label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip, text: er.text, full: er.full, saved: er.saved }; }),
+    rooms: list.map(function (x) { const si = shareInfo(x.slug); const er = rowNumbers(cfg, x, tr); return { slug: x.slug, name: memberName(x, pickLang(cfg.language)), canShare: canOffer(cfg, er, x.slug), label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip, text: er.text, full: er.full, saved: er.saved }; }),
     // The Share popup packs one room on its own: no browser, no login, its own small progress log.
     share: { running: shareJob.running, slug: shareJob.slug, low: shareJob.low, percent: shareJob.percent, error: shareJob.error, result: shareJob.result, log: shareJob.log.slice(-40) },
   };
@@ -592,6 +627,16 @@ async function startJob(body) {
       push(tr("gui.doneText", { n: ids, v: last.roomName }));
       if (zip) push("zip: " + zip);
     }
+    // The surprise: the first finished run that leaves them holding a room worth offering shows the
+    // author own message without being asked. The flag is written down, so it happens once.
+    if (!cfg.collectSeen && collectReady(cfg)) {
+      const names = eligibleRooms(cfg, rooms(cfg), tr).map((r) => memberName(r, pickLang(cfg.language)));
+      if (names.length) {
+        state.surprise = names;
+        push(tr("gui.collectOffer", { name: cfg.collectName, v: names.join(", ") }));
+        try { cfg = saveConfig({ collectSeen: true }); } catch (e) {}
+      }
+    }
     setPhase(stopFlag ? "stopped" : "done");
   } catch (e) {
     state.error = String((e && e.message) || e);
@@ -626,6 +671,8 @@ async function handle(req, res) {
     json(200, { ok: !!est, bytes: est ? est.bytes : 0, mediaBytes: est ? est.mediaBytes : 0, mediaFiles: est ? est.mediaFiles : 0, entries: est ? est.entries : 0, missing: est ? est.missing : 0 });
     return;
   }
+  // The page has shown the author own message, so it will not appear again in this session.
+  if (req.method === "POST" && url === "/api/collect-seen") { state.surprise = null; json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/start") { const b = await readBody(req); startJob(b); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/share") { const b = await readBody(req); startShare(b); json(200, { ok: true, running: shareJob.running, slug: shareJob.slug }); return; }
   if (req.method === "POST" && url === "/api/stop") { stopFlag = true; push("stop requested, finishing the current step"); json(200, { ok: true }); return; }
@@ -642,10 +689,11 @@ async function handle(req, res) {
     const b = await readBody(req);
     const r = state.result || {};
     if (b.what === "shareFolder" && b.slug) { json(200, { ok: openShareFolder(String(b.slug)), target: dirs(cfg).share }); return; }
-    // "Share to <name>": the one link this build ships. Only that value is opened, and only when
-    // it is a real http(s) address - the page cannot ask for any other target.
+    // "Share to <name>": the one link this build knows about, stitched together here rather than
+    // written down in the page. Only that value is opened, and only when it is a real http(s)
+    // address - the page cannot ask for any other target.
     if (b.what === "collect") {
-      const u = String(cfg.collectUrl || "").trim();
+      const u = driveUrl(cfg);
       const ok = /^https?:\/\//i.test(u) ? openExternal(u) : false;
       json(200, { ok: ok, target: ok ? u : "" });
       return;

@@ -108,9 +108,11 @@ already exists.
 
 ## How do I send a finished room to someone else?
 
-Use **Share** on the room row, then **Share to Hauitsu** if the build ships that link (`collectUrl`
-in `config.json`): it opens the collector's page - a social profile or a chat - and you hand the zip
-over however the two of you agree, usually as a cloud link. Send the **Low quality** zip: one room is
+Use **Share** on the room row. A room is only offered onward when its archive really starts at the
+beginning of the group's history (April 2025) and still reaches the current month; the collector
+already holds one of the eight rooms himself, so only the others are worth asking about. When the room
+qualifies, the popup shows **Share to Hauitsu**: pressing it brings up his short message and a button
+that opens the shared drive folder, and you drop the zip in there. Send the **Low quality** zip: one room is
 about 2.5 GB at full quality and about 350 MB re-compressed, and eight rooms at full size come to
 roughly 20 GB, more than a free Drive holds.
 

@@ -47,6 +47,9 @@ export function rowNumbers(cfg, room, tr) {
     text: e.measured ? tr("gui.sizeSaved", { v: fmtSize(e.saved) }) : tr("gui.sizeGuess", { v: fmtSize(e.bytes) }),
     full: e.full,
     saved: e.saved || 0,
+    months: e.months || 0,
+    firstMonth: e.firstMonth || null,
+    lastMonth: e.lastMonth || null,
   };
   cache.set(room.slug, row);
   return row;

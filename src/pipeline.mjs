@@ -84,9 +84,9 @@ export function keepSummary(slug, outDir) {
 // The DM history of this group begins in April 2025, so "the whole conversation" has a known window.
 export const DM_START_MONTH = "2025-04";
 export const GIB = 1073741824;
-const monthIndex = (ym) => Number(ym.slice(0, 4)) * 12 + (Number(ym.slice(5, 7)) - 1);
+export const monthIndex = (ym) => Number(ym.slice(0, 4)) * 12 + (Number(ym.slice(5, 7)) - 1);
 const monthsBetween = (a, b) => monthIndex(b) - monthIndex(a) + 1;
-const thisMonth = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+export const thisMonth = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
 
 // What one room has really used: its three chat files plus every media file its own page points at.
 // The shared emoji font is left out on purpose - it is about 2 MB and belongs to no single room.
@@ -119,6 +119,7 @@ export function estimateFor(cfg, room) {
   const guess = Math.round(Number(c.estimateGb || 3) * GIB);
   let months = null;
   let firstMonth = null;
+  let lastMonth = null;
   // rooms/summary.json belongs to whichever room was rendered last, so it only counts when it really
   // describes this room; the per-room copy is the reliable one.
   for (const n of [room.slug + ".summary.json", "summary.json"]) {
@@ -127,7 +128,11 @@ export function estimateFor(cfg, room) {
       const from = String(j.sumber || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop();
       const ids = Array.isArray(j.roomIds) ? j.roomIds : [j.roomIds];
       if (n === "summary.json" && from !== room.slug && ids.indexOf(room.roomId) < 0) continue;
-      if (Array.isArray(j.perBulan) && j.perBulan.length) { months = j.perBulan.length; firstMonth = String((j.perBulan[0] || {}).bulan || "") || null; }
+      if (Array.isArray(j.perBulan) && j.perBulan.length) {
+        months = j.perBulan.length;
+        firstMonth = String((j.perBulan[0] || {}).bulan || "") || null;
+        lastMonth = String((j.perBulan[j.perBulan.length - 1] || {}).bulan || "") || null;
+      }
       else if (Number(j.bulan) > 0) months = Number(j.bulan);
       break;
     } catch (e) {}
@@ -135,13 +140,13 @@ export function estimateFor(cfg, room) {
   const saved = savedBytes(c, room.slug);
   if (!saved) {
     const archived = readArchive(srcFor(room.slug));
-    return { known: false, measured: false, saved: null, months: months, full: guess, bytes: guess, messages: archived.seen.size || null };
+    return { known: false, measured: false, saved: null, months: months, firstMonth: firstMonth, lastMonth: lastMonth, full: guess, bytes: guess, messages: archived.seen.size || null };
   }
   // April 2025 is the floor of the window; a room whose history starts later projects from there.
   const start = firstMonth && monthIndex(firstMonth) > monthIndex(DM_START_MONTH) ? firstMonth : DM_START_MONTH;
   const totalMonths = Math.max(monthsBetween(start, thisMonth()), months || 1);
   const full = Math.max(Math.round(saved * (totalMonths / Math.max(months || 1, 1))), saved);
-  return { known: true, measured: true, saved: saved, months: months, firstMonth: firstMonth, totalMonths: totalMonths, full: full, bytes: full, messages: null };
+  return { known: true, measured: true, saved: saved, months: months, firstMonth: firstMonth, lastMonth: lastMonth, totalMonths: totalMonths, full: full, bytes: full, messages: null };
 }
 
 export function rooms(cfg) {

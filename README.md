@@ -81,9 +81,16 @@ the folder that holds it. The popup also says what that zip is expected to weigh
 files that would go in, and the number follows the quality choice. A room that was never run says so
 instead, because a zip is built from the public export and nothing else.
 
-If the build ships a contact link (`collectUrl` in `config.json`), the same popup offers **Share to
-Hauitsu**: one click opens that page - a social profile, a chat invite or a cloud folder - so a room
-can be handed back to whoever collects them.
+A room backed up from the very start of the group's history can be handed back to the person who
+collects them. The **Share** popup then grows a **Share to Hauitsu** button; pressing it shows his own
+short message and a single button that opens the shared drive folder, where the zip can be dropped.
+Only a room whose archive starts at April 2025 and still reaches the current month is offered - a
+backup that stops three months ago is missing exactly the part nobody can fetch back later - and a
+room the collector already has (`collectOwned`) is never asked for. The link itself is not written out
+in this repository: it is stitched together when the button is pressed, which keeps it out of a search
+box, though not away from anyone who reads the source. `collectUrl` in `config.json` replaces it.
+After the first run that leaves you holding such a room, that message also comes up on its own - once
+per install.
 
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,
