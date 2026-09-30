@@ -73,7 +73,7 @@
   "gui.browserHint": "Menekan Start membuka jendela browser terpisah dengan profilnya sendiri. Login ke Weverse di jendela itu sekali saja; browser yang biasa kamu pakai tidak disentuh.",
   "gui.share": "Sekalian buat zip untuk dibagikan",
   "gui.shareHint": "hanya pesan artist dan medianya yang masuk ke folder berbagi. pesan fan (pesanmu) tidak disertakan.",
-  "gui.startNote": "Setelah menekan tombol **Start**, **jendela browser terpisah** akan terbuka dengan **profil baru**.\n**Login** ke Weverse sekali di sana.\nSetelah berhasil login, pastikan kamu berada di **halaman Home**, **jangan ditutup** lalu **kembali ke sini**.",
+  "gui.startNote": "Setelah menekan tombol **Start**, **jendela browser terpisah** akan menampilkan halaman **Weverse** yang baru.\n**Login** ke Weverse sekali di sana.\nSetelah berhasil login, pastikan kamu berada di **halaman Home**, **jangan ditutup** lalu **kembali ke sini**.",
   "gui.advanced": "Pengaturan lanjutan: zona waktu",
   "gui.langHint": "halaman ini dan obrolan hasil ekspor memakai bahasa ini",
   "gui.tz": "Zona waktu",
