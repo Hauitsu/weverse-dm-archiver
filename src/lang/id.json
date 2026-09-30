@@ -73,6 +73,8 @@
   "gui.browserHint": "Menekan Start membuka jendela browser terpisah dengan profilnya sendiri. Login ke Weverse di jendela itu sekali saja; browser yang biasa kamu pakai tidak disentuh.",
   "gui.share": "Sekalian buat zip untuk dibagikan",
   "gui.shareHint": "satu berkas per ruang di dist/, berisi obrolan beserta medianya",
+  "gui.advanced": "Pengaturan lanjutan: zona waktu",
+  "gui.langHint": "halaman ini dan obrolan hasil ekspor memakai bahasa ini",
   "gui.tz": "Zona waktu",
   "gui.tzHint": "tanggal di arsip mengikuti {v}; tulis nama zona IANA untuk memakukannya",
   "gui.language": "Bahasa",

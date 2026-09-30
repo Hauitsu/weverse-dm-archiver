@@ -35,12 +35,16 @@ The tool never sees or stores your password, and never reads your login token.
 
 ## 3. Pick rooms and press Start
 
-Each row is one DM room. The size is a rough guess (about 2.5 GB) until a room has been archived
-once. Tick one or more rooms and press **Start**. Rooms are archived one after another, never at
-the same time, with 1.5-3 seconds between pages.
+Each row is one DM room, with its size. A room that has been archived once shows what it really
+uses; the rest show a rough guess of a whole conversation (about 2.5 GB). Tick one or more rooms
+and press **Start**. Rooms are archived one after another, never at the same time, with 1.5-3
+seconds between pages.
 
 Options:
 
+- **Language (top of the page)** - English, Korean or Indonesian. It switches the whole tool at
+  once: the page, the log lines and the exported chat all follow it. `auto` in `config.json`
+  follows the Windows language instead.
 - **Also make a shareable zip** - after the room is done, write `dist/weverse-dm-<room>.zip`
   containing the public chat, its media and a README in three languages.
 - **Hide this name in the public export** - optional, format `old=new`. Only the public export
@@ -49,9 +53,9 @@ Options:
   whole conversation, which starts April 2025: a room that has never been saved counts as the
   reference size, a saved room is projected from its own measured rate, and ticking the shareable
   zip adds roughly the same amount again.
-- **Time zone** - `auto` follows the machine. Type an IANA name (`Asia/Jakarta`) to pin one; the
-  timestamps in the archive are the only thing this changes.
-- **Language** - English, Korean or Indonesian for the page you are looking at.
+- **Advanced settings** - collapsed, so you can ignore it. The time zone lives there: `auto`
+  follows the machine, or type an IANA name (`Asia/Jakarta`) to pin one. The timestamps in the
+  archive are the only thing it changes.
 
 ## 4. Watch, or walk away
 

@@ -281,9 +281,9 @@ for (const x of norm) x.media.forEach((im, i) => { mediaTot++; if (mediaFile(x, 
 
 // ---- 3) HTML ----
 const h = [];
-h.push('<!doctype html><html lang="id"><head><meta charset="utf-8">');
+h.push('<!doctype html><html lang="' + t.lang + '"><head><meta charset="utf-8">');
 h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
-h.push('<title>Backup DM Weverse - ' + esc(ROOM_NAME) + ' (' + esc([...roomIds].join(', ')) + ')</title><style>');
+h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title><style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + (rangeKurasi ? ';unicode-range:' + rangeKurasi : '') + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
 h.push('body{font-family:NotoEmojiWeb,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
@@ -345,7 +345,7 @@ h.push('.bml a:hover{background:#1a212c}');
 h.push('.bml .bn{color:#8b93a1}');
 h.push('.del{color:#8b93a1;font-style:italic}');
 h.push('</style></head><body><div class="wrap">');
-h.push('<h1>Backup DM Weverse - ' + esc(ROOM_NAME) + '</h1>');
+h.push('<h1>' + esc(t("html.title", { room: ROOM_NAME })) + '</h1>');
 h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), room: esc(ROOM_NAME), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
 h.push('<div class="nav">' + (bmList.length ? '<a href="#bmk-1" title="' + t("html.navBookmarkTitle") + '">' + t("html.navBookmark", { n: bmList.length }) + '</a>' : '') + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
 if (bmList.length) {

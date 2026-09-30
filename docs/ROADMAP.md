@@ -2,7 +2,7 @@
 
 | # | milestone | content | status |
 | --- | --- | --- | --- |
-| M1 | i18n | `src/i18n.mjs` + EN/KO/ID dictionaries, renderer ported to `src/render.mjs` | **done** (3 languages x 94 keys; render byte-identical to the reference) |
+| M1 | i18n | `src/i18n.mjs` + EN/KO/ID dictionaries, renderer ported to `src/render.mjs` | **done** (3 languages x 101 keys; render byte-identical to the reference) |
 | M2 | launcher | `START.bat` + local GUI (defaults to `127.0.0.1:8787`, walks to the next free port when the system reserves it), private browser profile, live log | **done** |
 | M3 | batch | several rooms from the picker, one at a time, resumable per room | **done** |
 | M4 | share | one zip per room (full quality, `store`), built from the public export, `.sha256` + `.manifest.json` + 3-language README | **done** (exercised on a real 2.5 GB room: 1,507 entries, every media reference resolves, an extracted photo is byte-identical, checksum confirmed with `Get-FileHash`) |
