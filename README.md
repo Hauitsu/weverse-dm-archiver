@@ -181,11 +181,11 @@ page loads, so the markup stays lean - the three-dot buttons for 9,574 messages 
 
 * **Export JSON** saves `bookmarks-<slug>.json`, the same shape the renderer reads.
 * **Import JSON** reads one back, skipping anything the room does not have or already carries.
-* **Remove mine** empties what you added and leaves what was baked in alone.
 
 Drop an exported file next to the room as `downloads/<slug>/bookmarks.json` and the next render
-bakes it in as the starting list; you can still star or unstar those in the browser (they are hidden,
-not deleted).
+bakes it in as the starting list. Unstarring a message only hides it from the list - the message stays
+in the archive - and starring it again brings it back. The `x` on a row you added yourself throws that
+single bookmark away.
 
 Bookmarks only ever appear in the **private** export (`rooms/<slug>.html`). The public export
 carries none at all, and nothing here touches your nickname.

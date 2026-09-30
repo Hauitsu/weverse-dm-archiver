@@ -140,8 +140,6 @@
     if (!n) { var kosong = el("div", "bkosong"); kosong.textContent = S.kosong; kotak.appendChild(kosong); }
     var sum = det ? q("summary", det) : null;
     if (sum) sum.textContent = (n ? S.ringkas : S.ringkas0).split("{n}").join(n);
-    var nav = document.getElementById("navbm");
-    if (nav) { nav.hidden = !n; nav.textContent = S.nav.split("{n}").join(n); nav.title = S.navT; }
   }
 
   function tanda(mid, on) {
@@ -216,7 +214,7 @@
 
   // ---- export, import, clear ------------------------------------------------------------------
   var fi = document.getElementById("bmfi");
-  var bIm = document.getElementById("bmim"), bEx = document.getElementById("bmex"), bCl = document.getElementById("bmcl");
+  var bIm = document.getElementById("bmim"), bEx = document.getElementById("bmex");
   if (bIm && fi) {
     bIm.onclick = function () { fi.click(); };
     fi.onchange = function () {
@@ -259,16 +257,6 @@
       a.parentNode.removeChild(a);
       setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
       nota(S.ekspor.split("{f}").join(nama));
-    };
-  }
-  if (bCl) {
-    bCl.onclick = function () {
-      if (!st.a.length && !st.h.length) { nota(S.kosong2); return; }
-      if (!window.confirm(S.yakin)) return;
-      st = { a: [], h: [] };
-      simpan(st);
-      gambar();
-      nota(S.bersih);
     };
   }
 

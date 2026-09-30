@@ -340,12 +340,10 @@ const bkData = {
     more: t("html.bmMore"), tandai: t("html.bmAdd"), buang: t("html.bmDel"), hapus: t("html.bmRemove"),
     salin: t("html.bmCopy"), waktu: t("html.bmTime"), tersalin: t("html.bmCopied"),
     kosong: t("html.bmEmpty"), ringkas: t("html.bookmarkSummary"), ringkas0: t("html.bmSum0"),
-    nav: t("html.navBookmark", { n: '{n}' }), navT: t("html.navBookmarkTitle"),
     tajuk: t("html.bookmarkTitle", { n: '{n}' }), bubble: t("html.bookmarkBubbleTitle"),
     tanggal: t("html.bookmarkDateTitle"),
     photo: t("html.bmPhoto"), video: t("html.bmVideo"), voice: t("html.bmVoice"), gift: t("html.bmGift"),
     ekspor: t("html.bmExported"), impor: t("html.bmImported"), gagal: t("html.bmBad"),
-    yakin: t("html.bmSure"), bersih: t("html.bmCleared"), kosong2: t("html.bmNothing")
   }
 };
 const bmAda = new Map(bmList.map((t) => [t.messageId, t]));
@@ -518,7 +516,6 @@ if (BM_ON) {
   h.push('.bml .bkosong{color:#8b93a1;padding:4px 0}');
   h.push('.bml .bx2{flex:0 0 auto;background:none;border:0;color:#8b93a1;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}');
   h.push('.bml .bx2:hover{color:#ff9c9c}');
-  h.push('.nav a[hidden]{display:none}');
   h.push('.tm .bmk{margin-right:4px}');
   h.push('.dot{border:0;background:none;color:#5f6875;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:5px}');
   h.push('.dot:hover{color:#cfd6e0}');
@@ -586,12 +583,12 @@ h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.t
 h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
 h.push('<h1>' + esc(t("html.title", { room: ROOM_NAME })) + '</h1>');
 h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), room: esc(ROOM_NAME), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
-h.push('<div class="nav">' + (BM_ON ? '<a href="#bml" id="navbm" hidden></a>' : '') + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
+h.push('<div class="nav">' + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
 if (BM_ON) {
   // Empty until you fill it: the three dots next to a message add one, and this box lists, exports
   // and imports them. Nothing is fetched and nothing on disk is rewritten (see src/bm.js).
   h.push('<details class="bml" id="bml"><summary>' + t("html.bmSum0", { n: 0 }) + '</summary>');
-  h.push('<div class="bb"><button type="button" id="bmex">' + t("html.bmExport") + '</button><button type="button" id="bmim">' + t("html.bmImport") + '</button><button type="button" id="bmcl">' + t("html.bmClear") + '</button><span class="bnota" id="bmnota"></span><input type="file" id="bmfi" accept=".json,application/json" hidden></div>');
+  h.push('<div class="bb"><button type="button" id="bmex">' + t("html.bmExport") + '</button><button type="button" id="bmim">' + t("html.bmImport") + '</button><span class="bnota" id="bmnota"></span><input type="file" id="bmfi" accept=".json,application/json" hidden></div>');
   h.push('<div id="bmlist"><div class="bkosong">' + t("html.bmEmpty") + '</div></div></details>');
 }
 lastDay = '';
