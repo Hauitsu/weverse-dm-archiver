@@ -95,6 +95,8 @@
   "gui.openChat": "Open chat",
   "gui.openFolder": "Open folder",
   "gui.openZip": "Open share folder",
+  "gui.open": "Open",
+  "gui.openHint": "open the saved chat page of this room",
   "gui.log": "Progress",
   "gui.pickRoom": "Pick at least one room first.",
   "gui.loginHint": "Waiting for a Weverse login in the browser window that just opened.",

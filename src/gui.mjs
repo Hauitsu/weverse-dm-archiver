@@ -48,6 +48,16 @@ function zones() {
   try { return Intl.supportedValuesOf("timeZone"); } catch (e) { return ["UTC", "Asia/Jakarta", "Asia/Seoul", "Asia/Tokyo"]; }
 }
 
+// What the Open button on a room row points at: the complete export first, then the shareable one,
+// and the zip last. Returns "" when nothing was saved for that room yet.
+function roomPage(slug) {
+  const s = String(slug || "").replace(/[^A-Za-z0-9._-]/g, "");
+  if (!s) return "";
+  const d = dirs(cfg);
+  const cands = [path.join(d.rooms, s + ".html"), path.join(d.roomsPublic, s + ".html"), path.join(d.share, "weverse-dm-" + s + ".zip")];
+  for (const c of cands) { try { if (fs.existsSync(c)) return c; } catch (e) {} }
+  return "";
+}
 function page() {
   const tr = t();
   const list = rooms(cfg);
@@ -55,6 +65,8 @@ function page() {
   const rows = list.map((r) => {
     const e = estimateFor(cfg, r);
     const size = e.measured ? tr("gui.sizeSaved", { v: fmtSize(e.saved) }) : tr("gui.sizeGuess", { v: fmtSize(e.bytes) });
+    const canOpen = !!roomPage(r.slug);
+    const openBtn = "<span class=\"op\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-slug=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(tr("gui.openHint")) + "\">" + esc(tr("gui.open")) + "</button></span>";
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
     // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
     return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
@@ -62,7 +74,7 @@ function page() {
     // and as a chat room second.
       "<span class=\"nm\">" + esc(a) + "</span>" +
       "<span class=\"who\">" + esc(r.rowLabel || r.slug) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
-      "<span class=\"sz\">" + esc(size) + "</span></label>";
+      "<span class=\"sz\">" + esc(size) + "</span>" + openBtn + "</label>";
   }).join(NL);
   // A real dropdown: a zone is picked from the list instead of typed into a native autocomplete that
   // shows nothing until the first keystroke. A zone pinned by hand but missing from Intl's list is
@@ -84,9 +96,10 @@ function page() {
     ":root{color-scheme:light dark}body{font-family:system-ui,Segoe UI,Malgun Gothic,sans-serif;margin:0;padding:24px;max-width:900px;line-height:1.5}",
     "h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}",
     "section{border:1px solid #8884;border-radius:10px;padding:14px 16px;margin:0 0 14px}",
-    "label.row{display:grid;grid-template-columns:24px 1fr 170px 84px 96px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
+    "label.row{display:grid;grid-template-columns:24px 1fr 170px 84px 96px 78px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
     ".nm{font-weight:600}.who,.id,.sz{opacity:.75;font-size:13px}",
     "button{font:inherit;padding:7px 14px;border-radius:8px;border:1px solid #8886;background:#8881;cursor:pointer}",
+    "button.mini{padding:3px 9px;font-size:13px;border-radius:6px}.op{text-align:right}",
     "button.primary{background:#2f6feb;border-color:#2f6feb;color:#fff}button:disabled{opacity:.45;cursor:default}",
     "#log{white-space:pre-wrap;font:12px/1.45 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;background:#8881;border-radius:8px;padding:10px;margin:0}",
     "#bar{height:6px;background:#8883;border-radius:3px;overflow:hidden;margin:10px 0}#fill{display:block;height:100%;width:0;background:#2f6feb;transition:width .4s}",
@@ -185,6 +198,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  tick();",
     "}",
     "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
+    "async function openRoom(slug){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"room\",slug:slug})});}",
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
     // The lower half of the page only makes sense once something is picked, so it stays out of the
@@ -210,10 +224,12 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
     "  under(!!s.running||!!s.result);",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
+    "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open;b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
     "}",
     "el(\"#bAll\").addEventListener(\"click\",function(){all(true);});",
     "el(\"#bNone\").addEventListener(\"click\",function(){all(false);});",
     "el(\"#rooms\").addEventListener(\"change\",total);",
+    "el(\"#rooms\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-slug]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();openRoom(b.dataset.slug);});",
     "el(\"#share\").addEventListener(\"change\",function(){total();fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({shareMode:el(\"#share\").value})});});",
     "el(\"#start\").addEventListener(\"click\",askStart);",
     "el(\"#mGo\").addEventListener(\"click\",start);",
@@ -234,6 +250,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 }
 
 function stateJson() {
+
   const tr = t();
   const key = "gui.phase." + state.phase;
   let text = tr(key);
@@ -249,6 +266,8 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   return {
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
     log: state.log, result: state.result, error: state.error,
+    // Only what the rows need to keep their Open button honest while a run goes on.
+    rooms: rooms(cfg).map(function (x) { return { slug: x.slug, open: !!roomPage(x.slug) }; }),
   };
 }
 
@@ -367,7 +386,7 @@ async function handle(req, res) {
   if (req.method === "POST" && url === "/api/open") {
     const b = await readBody(req);
     const r = state.result || {};
-    const target = b.what === "zip" ? r.share : b.what === "folder" ? r.folder : r.html;
+    const target = b.what === "zip" ? r.share : b.what === "folder" ? r.folder : b.what === "room" ? roomPage(b.slug) : r.html;
     const ok = target ? openExternal(target) : false;
     json(200, { ok: ok, target: target || "" });
     return;

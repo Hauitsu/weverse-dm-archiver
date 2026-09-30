@@ -95,6 +95,8 @@
   "gui.openChat": "Buka obrolan",
   "gui.openFolder": "Buka folder",
   "gui.openZip": "Buka folder share",
+  "gui.open": "Buka",
+  "gui.openHint": "buka halaman chat ruangan ini yang sudah tersimpan",
   "gui.log": "Progres",
   "gui.pickRoom": "Pilih minimal satu ruang dulu.",
   "gui.loginHint": "Menunggu login Weverse di jendela browser yang baru terbuka.",

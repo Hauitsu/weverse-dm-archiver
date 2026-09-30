@@ -95,6 +95,8 @@
   "gui.openChat": "채팅 열기",
   "gui.openFolder": "폴더 열기",
   "gui.openZip": "share 폴더 열기",
+  "gui.open": "열기",
+  "gui.openHint": "저장된 이 방의 채팅 페이지 열기",
   "gui.log": "진행 상황",
   "gui.pickRoom": "방을 하나 이상 선택하세요.",
   "gui.loginHint": "방금 열린 브라우저 창에서 위버스 로그인을 기다리는 중입니다.",
