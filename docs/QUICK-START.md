@@ -65,7 +65,7 @@ Options:
 - **Signing in with Google** - the button above is also the "done" signal for the normal sign-in
   window; the moment you press it the tool closes that window and takes the session over - and if that session still is not there, the sign-in window comes back instead of the run ending.
 - **Also make a shareable zip** - three choices, remembered in `config.json`. **Yes** (the default)
-  writes `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three
+  writes `share/weverse-dm-<room>.zip` with the public chat, its media and a README in three
   languages; only artist messages and media are inside, your own messages are left out. **Yes but Low
   Quality** packs the same thing from re-compressed copies - 1280px on the long side, h264 video,
   64 kbps audio - and needs `ffmpeg` on your `PATH`; the archive in `rooms/` and `media/` keeps its
@@ -99,7 +99,7 @@ When it finishes, the Result panel offers:
   copy (both sides, your harvested nickname); the shareable twin is `rooms/public/<room>.html`,
   where that nickname reads `EverAfter`.
 - **Open folder** - the folder holding the archive.
-- **Open dist folder** - where the share zips live.
+- **Open share folder** - where the share zips live.
 
 Keep a room folder together: the HTML file links to the photos and videos next to it. Copying
 the whole `rooms/` + `media/` pair, or the zip, keeps it working.
@@ -141,7 +141,7 @@ rooms/               the private export: html, md, jsonl, summary.json, fonts/ (
 rooms/public/        the public export: artist side only, nickname hidden, no bookmarks
 media/               photos/, video/, avatars/, fonts/
 downloads/<room>/    the raw pages, one JSONL line each - delete only if you want to start over
-dist/                share zips with their .sha256 and .manifest.json
+share/                share zips with their .sha256 and .manifest.json
 config.json          optional settings (language, tz, browserPath, output, publicRename, pacing)
 ```
 

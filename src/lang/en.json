@@ -94,7 +94,7 @@
   "gui.result": "Result",
   "gui.openChat": "Open chat",
   "gui.openFolder": "Open folder",
-  "gui.openZip": "Open dist folder",
+  "gui.openZip": "Open share folder",
   "gui.log": "Progress",
   "gui.pickRoom": "Pick at least one room first.",
   "gui.loginHint": "Waiting for a Weverse login in the browser window that just opened.",

@@ -125,7 +125,7 @@ export async function bundle(opts) {
   const slug = o.slug;
   const roomDir = o.roomDir;
   const mediaDir = o.mediaDir;
-  const distDir = o.distDir;
+  const shareDir = o.shareDir;
   const low = !!o.lowQuality;
   const cfg = o.cfg || loadConfig();
   const generatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -196,9 +196,9 @@ export async function bundle(opts) {
   fs.writeFileSync(path.join(root, "README.txt"), readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "", low: low }, generatedAt), "utf8");
   fs.writeFileSync(path.join(root, "index.html"), indexHtml({ slug: slug, roomName: o.roomName || slug }), "utf8");
 
-  fs.mkdirSync(distDir, { recursive: true });
-  const zipName = freeName(distDir, rootName);
-  const zipPath = path.join(distDir, zipName);
+  fs.mkdirSync(shareDir, { recursive: true });
+  const zipName = freeName(shareDir, rootName);
+  const zipPath = path.join(shareDir, zipName);
 
   // A manifest travels inside the zip too, so whoever receives it can see what it is without
   // unpacking anything. The checksum cannot be in there (it is taken of the finished file), so it

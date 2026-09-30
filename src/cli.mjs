@@ -4,7 +4,7 @@
 //   node src/cli.mjs harvest --room yunha        walk the history (starts the private browser)
 //   node src/cli.mjs render  --room yunha        build both exports (private + public) from disk
 //   node src/cli.mjs media   --room yunha        download the photos and video (no browser if complete)
-//   node src/cli.mjs share   --room yunha        one zip in dist/, ready to send
+//   node src/cli.mjs share   --room yunha        one zip in share/, ready to send
 //   node src/cli.mjs all     --room yunha --share
 //   node src/cli.mjs doctor                      check node, browser, rooms and folders
 import fs from "node:fs";
@@ -92,7 +92,7 @@ const commands = {
   },
   share: async () => {
     const r = pick();
-    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
+    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.dist, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
     log(b.zip);
     log("sha256 " + b.sha256);
   },

@@ -23,7 +23,7 @@ login tokens, and never touches the tab you are logged in on.
 - `media/` - every photo, video and audio file the conversation links to, at the quality
   Weverse served
 - timestamps in **your** timezone, detected from the machine
-- optionally `dist/weverse-dm-<room>.zip` - one file per room, built from the **public** export
+- optionally `share/weverse-dm-<room>.zip` - one file per room, built from the **public** export
   plus exactly the media that page points at, with a three-language `README.txt` for whoever you
   send it to
 
@@ -37,7 +37,7 @@ login tokens, and never touches the tab you are logged in on.
 3. Log in to Weverse once in that browser window.
 4. Tick a room and press **Start** - the popup explains the separate browser window first (hovering
    the button says the same) - then confirm. Progress streams page by page.
-5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `dist/` - it is made
+5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `share/` - it is made
    by default, and the picker can ask for a re-compressed one instead, or for none at all.
 
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
@@ -54,7 +54,7 @@ including what each message means, is in `docs/QUICK-START.md`.
 | `wdm harvest --room yunha` | walk the history backwards (starts the private browser) |
 | `wdm render --room yunha` | build both exports (private + public) from what is on disk |
 | `wdm media --room yunha` | download the photos and video the export points at |
-| `wdm share --room yunha` | one zip in `dist/`, built from the public export |
+| `wdm share --room yunha` | one zip in `share/`, built from the public export |
 | `wdm all --room yunha --share` | all of the above, in order |
 | `wdm doctor` | check node, browser, rooms and folders |
 
@@ -65,7 +65,7 @@ rooms/               private export: <room>.html, <room>.md, <room>.jsonl, summa
 rooms/public/        public export: the same files for the artist side only
 media/               photos/, video/, avatars/, fonts/ at original quality
 downloads/<room>/    one JSONL line per page of history (this is what makes it resumable)
-dist/                share zips: weverse-dm-<room>.zip, .sha256, .manifest.json
+share/                share zips: weverse-dm-<room>.zip, .sha256, .manifest.json
 ```
 
 Rooms never share a folder under `downloads/`, so one room history can never leak into another
@@ -104,7 +104,7 @@ anything, including the sentences where the artist typed it. It always becomes `
 is no setting to get wrong; `"publicRename"` in `config.json` stays available for extra
 `find=replace` pairs. The share zip is always built from the public export,
 and only the media that page points at is copied into it, so nothing you sent is packaged for
-someone else. If you would rather not share anything, `dist/` is just a folder you can delete.
+someone else. If you would rather not share anything, `share/` is just a folder you can delete.
 
 ## Limits
 

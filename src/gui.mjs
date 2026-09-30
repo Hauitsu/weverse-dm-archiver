@@ -327,7 +327,7 @@ async function startJob(body) {
       const zip = last.res.phases.bundle ? last.res.phases.bundle.zip : "";
       const ids = String((last.res.phases.harvest && last.res.phases.harvest.ids) || 0);
       state.result = {
-        slug: last.slug, html: html, zip: zip, folder: dirs(cfg).rooms, dist: dirs(cfg).dist,
+        slug: last.slug, html: html, zip: zip, folder: dirs(cfg).rooms, share: dirs(cfg).share,
         line: tr("gui.doneText", { n: ids, v: last.roomName }),
         meta: zip ? path.basename(zip) : "",
       };
@@ -365,7 +365,7 @@ async function handle(req, res) {
   if (req.method === "POST" && url === "/api/open") {
     const b = await readBody(req);
     const r = state.result || {};
-    const target = b.what === "zip" ? r.dist : b.what === "folder" ? r.folder : r.html;
+    const target = b.what === "zip" ? r.share : b.what === "folder" ? r.folder : r.html;
     const ok = target ? openExternal(target) : false;
     json(200, { ok: ok, target: target || "" });
     return;
