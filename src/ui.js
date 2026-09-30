@@ -37,12 +37,22 @@
     d.style.setProperty("--at", v[2]);
     d.style.setProperty("--atl", v[3]);
   }
-  // The number is fixed; only the words after it are the reader's to rename.
+  // The number is live: whole days from the first message in the archive to today, counted in the
+  // reader's own timezone, so an archive opened next year says a bigger number. The words after it
+  // are the reader's to rename.
+  function hitung() {
+    if (!WD.mulai) return 0;
+    var a = new Date(WD.mulai), b = new Date();
+    a.setHours(0, 0, 0, 0);
+    b.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((b - a) / 86400000));
+  }
+  function tulisAngka() { num.textContent = WD.mulai ? "+" + hitung() : ""; }
   function kata() { return st.t || WD.hari || ""; }
 
   var chip = el("div", "chip"), pil = el("div", "cp"), num = el("span", "angka"), sp = el("span", "hari");
   var ht = el("button", "hrt");
-  num.textContent = WD.angka || "";
+  num.textContent = "";
   num.setAttribute("role", "button");
   num.tabIndex = 0;
   num.title = T.warna || "";
@@ -139,6 +149,7 @@
     if (!wrap || document.querySelector(".chip")) return;
     var d = wrap.querySelector(".day, .m");
     if (d) wrap.insertBefore(chip, d); else wrap.appendChild(chip);
+    tulisAngka();
     tulis();
     tanda();
   }
@@ -149,4 +160,8 @@
   if (window.MutationObserver) {
     new MutationObserver(function () { terapkan(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-tema"] });
   }
+  // Today is not a constant: refresh on a timer, and again whenever the page is looked at.
+  setInterval(tulisAngka, 60000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) tulisAngka(); });
+  window.addEventListener("focus", tulisAngka);
 })();

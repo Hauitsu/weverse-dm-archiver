@@ -24,10 +24,13 @@ login tokens, and never touches the tab you are logged in on.
   bubble is mint (`#bbf3f6`) and yours near-white (`#f2f3f7`), and the dark theme keeps the pair the other way
   round (`#1c3b5e` for the artist, `#1f1f1f` for yours); one nickname grey (`#666666`) on both sides in
   both themes, and the choice is remembered per browser - dark stays the default
-- the days-together chip the app shows at the top of a conversation, and behind it the app's ten bubble
-  colours: the heart or the `+546` opens the swatch row, the words after the number are yours to rename
-  (15 characters), and `↺` puts everything back. Only the artist bubble takes the colour, only in that
-  room, and only in your browser - see [Bubble colour and the days chip](#bubble-colour-and-the-days-chip)
+- the days-together chip the app shows at the top of a conversation: it stays pinned to the top-right
+  while the page scrolls, like the day header on the left, so it reads as one HUD. The number is
+  **live** - every day you open the archive it says one more - and behind it sit the app's ten bubble
+  colours: the heart or the number opens the swatch row, the words after it are yours to rename
+  (15 characters), and `↺` puts everything back. Only the artist bubble takes the colour, only in
+  that room, and only in your browser - see
+  [Bubble colour and the days chip](#bubble-colour-and-the-days-chip)
 - a message that is nothing but a photo or a video gets no bubble at all - the rounded media is
   the message, like in the app. A voice note keeps its bubble (the player needs a body), and so do
   gifts and anything with a caption
@@ -170,16 +173,21 @@ MIT - see `LICENSE`.
 
 ## Bubble colour and the days chip
 
-Every conversation opens with the same pill the app puts there: a heart, the number of days you two
-have been talking (`+546` counts from the first message in the archive to the last), and the words
-after it.
+Every conversation opens with the same pill the app puts there: a heart, the number of days you have
+been talking, and the words after it. The pill is sticky, so it rides along the top-right of the page
+the way the day header rides the top-left, and only the pill takes clicks - the strip beside it lets
+the mouse through to the message underneath.
 
+* **The number** counts from the first message in the archive to **today**, in your own timezone, and
+  it is counted in the page itself: leave the archive alone for a month, open it, and it says a month
+  more. An archive of a conversation that has ended keeps growing, which is what
+  `+546 days together` means in the app.
 * **The heart, or the number** - opens the ten bubble colours, in the app's own order. Picking one
   recolours that room's artist bubbles and remembers it in this browser only
   (`localStorage["wdm-bub"]`, keyed by room).
-* **The words after the number** - click to rename them: anything, up to 15 characters. Enter saves,
-  Esc drops the edit. They start out in the page's language ("days together", "일 함께",
-  "hari bersama").
+* **The words after the number** - click to rename them: anything, up to 15 characters, and the
+  default fits that budget too ("days together" is 13, "hari bersama" is 12). Enter saves, Esc drops
+  the edit. They start out in the page's language ("days together", "일 함께", "hari bersama").
 * **↺** at the end of the row - back to the export's own colours.
 
 The swatches keep the app's vivid colours in both themes, because that is what the picker looks like

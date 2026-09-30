@@ -358,10 +358,9 @@ const WARNA_PALET = WARNA.map(([nama, gelap, terang]) => {
   };
 });
 const UISKRIP = fs.readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
-const hariBersama = Math.max(0, Math.round((new Date(last.createDate) - new Date(first.createDate)) / 86400000));
 const uiData = {
   room: BASE,
-  angka: '+' + hariBersama,
+  mulai: first.createDate,
   hari: t('html.chipHari'),
   P: WARNA_PALET,
   T: { warna: t('html.bubTitle'), reset: t('html.bubReset'), edit: t('html.chipEdit') },
@@ -609,21 +608,23 @@ h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex
 h.push('.tt:hover{filter:brightness(1.08)}');
 h.push('.tt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
-/* The days-together chip and its swatch row: fixed to the top-right of the conversation, like the
-   app. Built by src/ui.js so the export stays lean; the colours themselves are inline styles. */
-h.push('.chip{position:relative;display:flex;justify-content:flex-end;margin:2px 0 12px}');
-h.push('.chip .cp{display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
+/* The days-together chip and its swatch row: pinned to the top-right of the conversation like the
+   day header is pinned to the top-left, so the two read as one HUD while the page scrolls. Built by
+   src/ui.js so the export stays lean; the colours themselves are inline styles. The row is
+   transparent to the mouse - only the pill itself takes clicks - so it never blocks a message. */
+h.push('.chip{position:sticky;top:0;z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
+h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
 h.push('.chip .hrt{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:9px;background:#2f9bff;cursor:pointer}');
 h.push('.chip .hrt:hover{filter:brightness(1.12)}');
 h.push('.chip .hrt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('.chip .hrt svg{display:block;width:13px;height:13px;fill:#fff}');
-h.push('.chip .angka{font-size:12px;font-weight:600;color:#e6e6e6;cursor:pointer;border-radius:4px}');
+h.push('.chip .angka{font-size:13px;font-weight:700;letter-spacing:.2px;color:#e6e6e6;cursor:pointer;border-radius:4px}');
 h.push('.chip .angka:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('.chip .hari{font-size:12px;font-weight:600;color:#e6e6e6;cursor:pointer;white-space:nowrap}');
 h.push('.chip .hari:focus-visible{outline:2px solid #4da3ff;outline-offset:2px;border-radius:4px}');
 h.push('.chip input.hari{width:15ch;font:inherit;font-size:12px;font-weight:600;color:#e6e6e6;background:#0f1115;border:1px solid #3a4552;border-radius:7px;padding:2px 5px;outline:none}');
 h.push('.chip input.hari:focus{border-color:#4da3ff}');
-h.push('#wpal{position:absolute;right:0;top:calc(100% + 7px);z-index:36;display:flex;flex-wrap:wrap;align-items:center;gap:7px;max-width:min(92vw,330px);padding:9px 10px;background:#171c25;border:1px solid #2b3542;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.45)}');
+h.push('#wpal{position:absolute;right:0;top:calc(100% + 7px);z-index:36;display:flex;flex-wrap:wrap;align-items:center;gap:7px;max-width:min(92vw,330px);padding:9px 10px;pointer-events:auto;background:#171c25;border:1px solid #2b3542;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.45)}');
 h.push('#wpal[hidden]{display:none}');
 h.push('#wpal button.w{width:22px;height:22px;padding:0;border:0;border-radius:50%;cursor:pointer;transition:transform .08s}');
 h.push('#wpal button.w:hover{transform:scale(1.1)}');
