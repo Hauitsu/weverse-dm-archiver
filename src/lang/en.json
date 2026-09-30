@@ -76,7 +76,7 @@
   "gui.advanced": "Advanced: time zone",
   "gui.langHint": "the page and the exported chat are written in this language",
   "gui.tz": "Time zone",
-  "gui.tzHint": "dates in the archive follow {v}; type any IANA zone to pin one",
+  "gui.tzHint": "dates in the archive follow {v} unless you pick a zone here - a new choice applies to the next run",
   "gui.language": "Language",
   "gui.start": "Start",
   "gui.stop": "Stop",

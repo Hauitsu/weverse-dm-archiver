@@ -76,7 +76,7 @@
   "gui.advanced": "Pengaturan lanjutan: zona waktu",
   "gui.langHint": "halaman ini dan obrolan hasil ekspor memakai bahasa ini",
   "gui.tz": "Zona waktu",
-  "gui.tzHint": "tanggal di arsip mengikuti {v}; tulis nama zona IANA untuk memakukannya",
+  "gui.tzHint": "tanggal di arsip mengikuti {v} kecuali kamu memilih zona di sini - pilihan baru berlaku pada jalannya berikutnya",
   "gui.language": "Bahasa",
   "gui.start": "Mulai",
   "gui.stop": "Stop",

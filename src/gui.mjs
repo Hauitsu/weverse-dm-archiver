@@ -56,7 +56,13 @@ function page() {
       "<span class=\"who\">" + esc(a) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
       "<span class=\"sz\">" + esc(size) + "</span></label>";
   }).join(NL);
-  const opts = zones().map((z) => "<option value=\"" + esc(z) + "\">").join("");
+  // A real dropdown: a zone is picked from the list instead of typed into a native autocomplete that
+  // shows nothing until the first keystroke. A zone pinned by hand but missing from Intl's list is
+  // kept at the top, so merely opening the page never rewrites the setting.
+  const curTz = String(cfg.tz || "auto");
+  const tzList = ["auto"].concat(zones());
+  if (curTz !== "auto" && tzList.indexOf(curTz) < 0) tzList.unshift(curTz);
+  const opts = tzList.map((z) => "<option value=\"" + esc(z) + "\"" + (z === curTz ? " selected" : "") + ">" + esc(z === "auto" ? machine : z) + "</option>").join("");
   const langs = ["en", "ko", "id"].map((l) => "<option value=\"" + l + "\"" + (pickLang(cfg.language) === l ? " selected" : "") + ">" + l + "</option>").join("");
 
   return [
@@ -91,8 +97,7 @@ function page() {
     "<div class=\"grid\"><label><input type=\"checkbox\" id=\"share\" checked> " + esc(tr("gui.share")) + "</label>",
     "<span class=\"muted\">" + esc(tr("gui.shareHint")) + "</span></div>",
     "<details class=\"adv\" style=\"margin-top:10px\"><summary>" + esc(tr("gui.advanced")) + "</summary>",
-    "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <input type=\"text\" id=\"tz\" list=\"tzs\" size=\"22\" value=\"" + esc(cfg.tz || "auto") + "\"></label>",
-    "<datalist id=\"tzs\">" + opts + "</datalist>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <select id=\"tz\">" + opts + "</select></label>",
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
@@ -151,6 +156,7 @@ function page() {
     "el(\"#bFolder\").addEventListener(\"click\",function(){openIt(\"folder\");});",
     "el(\"#bZip\").addEventListener(\"click\",function(){openIt(\"zip\");});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
+    "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
     "total();",
     "setInterval(tick,1000); tick();",
     "</script></body></html>",

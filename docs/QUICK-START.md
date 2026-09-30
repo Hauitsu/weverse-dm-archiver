@@ -53,7 +53,7 @@ Options:
   up to `estimateGb` (3 GB), a saved room is projected from its own measured rate, and ticking the
   shareable zip (on by default) adds roughly the same again.
 - **Advanced settings** - collapsed, so you can ignore it. The time zone lives there: `auto`
-  follows the machine, or type an IANA name (`Asia/Jakarta`) to pin one. The timestamps in the
+  follows the machine, or pick a zone from the list (`Asia/Jakarta`) to pin one. The timestamps in the
   archive are the only thing it changes.
 
 ## 4. Watch, or walk away
