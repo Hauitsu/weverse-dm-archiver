@@ -137,14 +137,14 @@ Write-Host ("copied: " + $selected.Count + " files, " + [Math]::Round(((Get-Chil
 
 
 # 3b. the shipped link. config.json is never published, so a build whose users should be able to
-#     upload has to carry the folder id somewhere. It is not written into any file whose name the
-#     code mentions: the id goes into a data file that src/collect.mjs finds by its byte size alone
-#     (zoner(BLOB_SIZE)). tools/make-blob.mjs writes that file and the matching number into the
-#     stage, taking the id from the private file outside this folder, and removes both when there is
-#     no id at all.
-$blobOut = (node (Join-Path $Src "tools\make-blob.mjs") --root $Stage 2>&1 | Out-String).Trim()
-if ($LASTEXITCODE -ne 0) { throw ("make-blob failed: " + $blobOut) }
-Write-Host ("link   : " + $blobOut)
+#     upload has to carry the folder id somewhere, and it is not written into any file whose name the
+#     code mentions: the id sits in a data file that src/collect.mjs finds by its byte size alone
+#     (zoner(BLOB_SIZE)). The author makes that file once with tools/make-blob.mjs; here the copy in
+#     the stage is checked against the code - and its size moved if another published file already
+#     uses it - so what ships is readable. No carrier in the source tree means no carrier is shipped.
+$blobOut = (node (Join-Path $Src "tools\check-blob.mjs") --root $Stage --fix 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw ("blob check failed: " + $blobOut) }
+Write-Host ("link   : " + ($blobOut -replace "`r?`n", "; "))
 
 # 4. scan the copied files
 $findings = @()

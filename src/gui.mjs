@@ -802,7 +802,7 @@ server.listen(ladder[0], "127.0.0.1", () => {
   console.log("gui: repo " + REPO);
   if (cfg.collectDebug) console.log("gui: collectDebug is on - every room offers the Share to button");
 if (/\{[A-Za-z0-9_.-]+\}/.test(String(cfg.collectUrl || "")) && !driveUrl(cfg)) {
-  console.log("gui: collectUrl has an empty {name} placeholder -; the Share to button stays hidden");
+  console.log("gui: collectUrl has an unresolved {name} placeholder; the Share to button stays hidden");
 }
   if (!argv.includes("--no-open")) openExternal(url);
   // Remember where this one listens, so the next double-click opens this page instead of a new server.
