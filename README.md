@@ -22,8 +22,8 @@ login tokens, and never touches the tab you are logged in on.
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
 - a light theme for the page itself, switched from the round button in the bottom-right corner: there your own
   bubble is near-white (`#f2f3f7`) and the artist's starts on the pastel cyan (`#bbf3f6`), while the dark
-  theme shows that same pick vividly (`#07CBC9` beside your `#1f1f1f`); one nickname grey (`#666666`) on
-  both sides in both themes, and the choice is remembered per browser - dark stays the default
+  theme shows that same pick deep (`#016268` with white letters, beside your `#1f1f1f`); one nickname grey
+  (`#666666`) on both sides in both themes, and the choice is remembered per browser - dark stays the default
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
   scrolls, parking just under the day header so the two read as one HUD. The number is **live** -
   every day you open the archive it says one more - and behind it sit the app's ten bubble colours:
@@ -196,26 +196,28 @@ underneath.
 A room starts on **cyan**, the leftmost swatch, and there is nothing to reset: one pick covers both
 themes, so switching to light mode keeps the choice and just uses the pastel of it.
 
-The swatches keep the app's vivid colours in both themes, because that is what the picker looks like
-in the app; the bubble uses the vivid version in dark mode and the pastel version of the same choice
-in light mode.
+The swatches keep the app's vivid colours in both themes - that is the row the picker shows in the
+app, and it does not move when you pick. The bubble is what changes: the deep version in dark mode,
+where the letters are always white, and the pastel of the same choice in light mode.
 
 | choice | dark mode | light mode |
 |---|---|---|
-| cyan | `#07CBC9` | `#bbf3f6` |
-| green | `#01DC3A` | `#DAFDDA` |
-| blue | `#2EB3FE` | `#D9EFFF` |
-| purple | `#7540FE` | `#E4E3FD` |
-| pink | `#F75AFF` | `#FDE0FE` |
-| yellow | `#FFB600` | `#FFEDC6` |
-| orange | `#FF6E01` | `#FFE3D6` |
-| pink-red | `#FF3C7E` | `#FEDFE4` |
-| red | `#FE2222` | `#FFE0DB` |
-| grey | `#53565D` | `#45474F` |
+| cyan | `#016268` | `#bbf3f6` |
+| green | `#0b5b1e` | `#DAFDDA` |
+| blue | `#00456e` | `#D9EFFF` |
+| purple | `#3f3494` | `#E4E3FD` |
+| pink | `#6b236f` | `#FDE0FE` |
+| yellow | `#6c5301` | `#FFEDC6` |
+| orange | `#7e4323` | `#FFE3D6` |
+| pink-red | `#79253c` | `#FEDFE4` |
+| red | `#7b241b` | `#FFE0DB` |
+| grey | `#44474e` | `#45474F` |
 
-The letter colour follows the bubble instead of a hand-kept list: the renderer measures each colour
-and picks black or white, so the grey ends up white on grey while the pastels stay dark - and the
-message, its translation and its links all move together.
+The dark set is white-lettered by design. In light mode the letter colour follows the bubble instead
+of a hand-kept list: the renderer measures each pastel and picks black or white, so the grey ends up
+white on grey while the pastels stay dark - and the message, its translation and its links all move
+together. The heart button in the bar wears whatever colour is picked, so the choice is visible with
+the picker closed.
 
 Nothing else is touched. Your own bubble keeps its colour, gift covers keep their brand pink, and a
 message that is nothing but media has no bubble to colour. Cyan is simply where the app starts too,

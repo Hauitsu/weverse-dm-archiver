@@ -335,25 +335,30 @@ const bmEmbed = bmList.filter((t) => t.messageId && idAda.has(t.messageId))
   .map((t) => ({ m: t.messageId, s: t.isoWib || '', p: String(t.preview || '').slice(0, 160) }));
 const BMSKRIP = fs.readFileSync(new URL('./bm.js', import.meta.url), 'utf8');
 // ---- Weverse bubble colours (the swatch behind the days-together chip) --------------------------
-// Ten choices in the app's own order: each has the vivid dark-mode version and the pastel it turns
-// into in light mode. The letter colour is picked by contrast, so the grey (#45474F) gets white
-// text and every pastel gets near-black - nothing hand-kept that could drift from the colours.
+// Ten choices in the app's own order: the swatch row keeps the app's vivid chips, the dark bubble is
+// the deep colour beside it (always white letters), the light bubble is the pastel (letters picked by
+// contrast, so the grey comes out white and every pastel near-black - nothing hand-kept that could
+// drift). [name, swatch in the picker, dark bubble, light bubble].
 const WARNA = [
-  ['cyan', '#07CBC9', '#bbf3f6'], ['hijau', '#01DC3A', '#DAFDDA'], ['biru', '#2EB3FE', '#D9EFFF'],
-  ['ungu', '#7540FE', '#E4E3FD'], ['pink', '#F75AFF', '#FDE0FE'], ['kuning', '#FFB600', '#FFEDC6'],
-  ['oren', '#FF6E01', '#FFE3D6'], ['merah muda', '#FF3C7E', '#FEDFE4'], ['merah', '#FE2222', '#FFE0DB'],
-  ['abu', '#53565D', '#45474F'],
+  ['cyan', '#07CBC9', '#016268', '#bbf3f6'], ['hijau', '#01DC3A', '#0b5b1e', '#DAFDDA'],
+  ['biru', '#2EB3FE', '#00456e', '#D9EFFF'], ['ungu', '#7540FE', '#3f3494', '#E4E3FD'],
+  ['pink', '#F75AFF', '#6b236f', '#FDE0FE'], ['kuning', '#FFB600', '#6c5301', '#FFEDC6'],
+  ['oren', '#FF6E01', '#7e4323', '#FFE3D6'], ['merah muda', '#FF3C7E', '#79253c', '#FEDFE4'],
+  ['merah', '#FE2222', '#7b241b', '#FFE0DB'], ['abu', '#53565D', '#44474e', '#45474F'],
 ];
 const warnaRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const warnaCahaya = (h) => { const c = warnaRgb(h).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
 const warnaKontras = (a, b) => { const x = Math.max(a, b), y = Math.min(a, b); return (x + 0.05) / (y + 0.05); };
 const warnaGeser = (h, d) => '#' + warnaRgb(h).map((v) => Math.max(0, Math.min(255, Math.round(d > 0 ? v + (255 - v) * d : v * (1 + d))))).map((v) => v.toString(16).padStart(2, '0')).join('');
 const warnaTeks = (bg) => { const L = warnaCahaya(bg); return warnaKontras(L, warnaCahaya('#101418')) >= warnaKontras(L, 1) ? '#101418' : '#ffffff'; };
-const WARNA_PALET = WARNA.map(([nama, gelap, terang]) => {
-  const dT = warnaTeks(gelap), lT = warnaTeks(terang);
+const WARNA_PALET = WARNA.map(([nama, swatch, gelap, terang]) => {
+  const lT = warnaTeks(terang);
   return {
     n: nama,
-    dk: [gelap, warnaGeser(gelap, 0.18), dT, dT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
+    sw: swatch,
+    // Each dark bubble is white-on-deep by design, so there is nothing to calculate there; the light
+    // pastels still pick their letter colour by contrast (the grey #45474F comes out white).
+    dk: [gelap, warnaGeser(gelap, 0.18), '#ffffff', '#dbe9fb'],
     lt: [terang, warnaGeser(terang, -0.12), lT, lT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
   };
 });
@@ -474,7 +479,7 @@ h.push('.m.me .col{align-items:flex-end}');
 h.push('.who{font-weight:600;font-size:11px;line-height:1.3;color:#666666;margin:0 4px 2px;word-break:break-word}');
 h.push('.bub{background:#171c25;border:1px solid #232833;border-radius:14px;padding:6px 12px;word-break:break-word}');
 h.push('.tx{white-space:pre-wrap}');
-h.push('.m.artist .bub{background:var(--ab,#1c3b5e);border-color:var(--abd,#2b5480);border-bottom-left-radius:4px}');
+h.push('.m.artist .bub{background:var(--ab,#016268);border-color:var(--abd,#1f5e63);border-bottom-left-radius:4px}');
 h.push('/* Only when a colour is picked: letters, translation, links and the deleted note follow it. */');
 h.push('html[data-bub] .m.artist .bub:not(.gift):not(.bare){color:var(--at)}');
 h.push('html[data-bub] .m.artist .bub .en{color:var(--at);opacity:.85}');
@@ -633,10 +638,13 @@ h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#
    transparent to the mouse - only the pill itself takes clicks - so it never blocks a message. */
 h.push('.chip{position:sticky;top:var(--chip-atas,34px);z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
 h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
-h.push('.chip .hrt{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:9px;background:#2f9bff;cursor:pointer}');
+// The heart button wears the colour that is picked, so the bar shows the live choice even while the
+// palette is closed; the icon flips with it (white on the deep set and on the grey, near-black on a
+// pastel), using the same --at the bubbles use.
+h.push('.chip .hrt{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:9px;background:var(--ab,#2f9bff);cursor:pointer}');
 h.push('.chip .hrt:hover{filter:brightness(1.12)}');
 h.push('.chip .hrt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
-h.push('.chip .hrt svg{display:block;width:13px;height:13px;fill:#fff}');
+h.push('.chip .hrt svg{display:block;width:13px;height:13px;fill:var(--at,#fff)}');
 h.push('.chip .angka{font-size:13px;font-weight:700;letter-spacing:.2px;color:#e6e6e6;cursor:pointer;border-radius:4px}');
 h.push('.chip .angka:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('.chip .hari{font-size:12px;font-weight:600;color:#e6e6e6;cursor:pointer;white-space:nowrap}');

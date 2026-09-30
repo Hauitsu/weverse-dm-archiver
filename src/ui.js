@@ -21,7 +21,7 @@
       localStorage.setItem(KEY, JSON.stringify(j));
     } catch (e) {}
   }
-  // One pick covers both themes: the vivid swatch in dark, the pastel of the same choice in light.
+  // One pick covers both themes: the deep colour in dark (white letters), the pastel in light.
   // There is no "no colour" state, so there is nothing to reset - every room opens on cyan.
   function terapkan() {
     var d = document.documentElement, p = PAL[st.c] || PAL[0];
@@ -67,7 +67,7 @@
   PAL.forEach(function (e, i) {
     var b = el("button", "w");
     b.type = "button";
-    b.style.background = e.dk[0];               // the app's own swatches, the same in both themes
+    b.style.background = e.sw || e.dk[0];       // the app's own swatches, frozen: same in both themes
     b.title = e.n;
     b.setAttribute("aria-label", e.n);
     b.onclick = function (ev) { ev.stopPropagation(); st.c = i; simpan(); terapkan(); tanda(); };
