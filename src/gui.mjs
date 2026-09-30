@@ -240,7 +240,10 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "</select></label><span class=\"tipwrap\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
 "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"shGo\" class=\"primary\">" + esc(tr("gui.shareGenerate")) + "</button>",
 "<button id=\"shFolder\" style=\"display:none\">" + esc(tr("gui.openFolder")) + "</button>",
+"<button id=\"shTo\" style=\"display:none\">" + esc(tr("gui.shareTo", { name: cfg.collectName })) + "</button>",
 "<button id=\"shClose\">" + esc(tr("gui.cancel")) + "</button></div>",
+// The link opens in the normal browser; the zip itself travels the way the two of them agree on.
+"<div id=\"shToHint\" class=\"muted\" style=\"display:none;margin-top:8px\">" + esc(tr("gui.shareToHint", { name: cfg.collectName })) + "</div>",
 "<div id=\"shBar\" style=\"display:none\"><i id=\"shFill\"></i></div>",
 "<div id=\"shLog\" style=\"display:none\"></div>",
 "</div></div>",
@@ -325,7 +328,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
     "async function openItSlug(what,slug){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:what,slug:slug})});}",
-    "var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0;",
+    "var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,lastCollect=false;",
     "function roomInfo(slug){for(var i=0;i<lastRooms.length;i++){if(lastRooms[i].slug===slug)return lastRooms[i];}return null;}",
     "function hideShare(){el(\"#shModal\").style.display=\"none\";}",
     "function paintShare(info,sh){",
@@ -341,6 +344,9 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#shQ\").disabled=busy;",
     "  el(\"#shFolder\").style.display=(info&&info.zip)?\"\":\"none\";",
     "  el(\"#shFolder\").disabled=busy;",
+    "  el(\"#shTo\").style.display=(lastCollect&&info&&info.zip)?\"\":\"none\";",
+    "  el(\"#shTo\").disabled=busy;",
+    "  el(\"#shToHint\").style.display=(lastCollect&&info&&info.zip)?\"\":\"none\";",
     "  if(busy){el(\"#shBar\").style.display=\"\";el(\"#shLog\").style.display=\"\";}",
     "}",
     "function paintEst(){",
@@ -401,7 +407,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  under(!!s.running||!!s.result);",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open;b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
-    "  lastRooms=s.rooms||[];lastShare=s.share||null;",
+    "  lastRooms=s.rooms||[];lastShare=s.share||null;lastCollect=!!s.collect;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
     "  el(\"#start\").disabled=sbusy;",
     "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
@@ -432,6 +438,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#shQ\").addEventListener(\"change\",paintEst);",
     "el(\"#shClose\").addEventListener(\"click\",hideShare);",
     "el(\"#shFolder\").addEventListener(\"click\",function(){if(shSlug)openItSlug(\"shareFolder\",shSlug);});",
+    "el(\"#shTo\").addEventListener(\"click\",function(){fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"collect\"})});});",
     "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))hideShare();});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
@@ -457,6 +464,8 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   if (state.phase === "idle") state.percent = 0;
   return {
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
+    // Whether this build ships a "share to <name>" link; the page shows the button only then.
+    collect: !!String(cfg.collectUrl || "").trim(),
     log: state.log, result: state.result, error: state.error,
     // Only what the rows need to keep their Open button honest while a run goes on.
     rooms: rooms(cfg).map(function (x) { const si = shareInfo(x.slug); return { slug: x.slug, label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip }; }),
@@ -602,6 +611,14 @@ async function handle(req, res) {
     const b = await readBody(req);
     const r = state.result || {};
     if (b.what === "shareFolder" && b.slug) { json(200, { ok: openShareFolder(String(b.slug)), target: dirs(cfg).share }); return; }
+    // "Share to <name>": the one link this build ships. Only that value is opened, and only when
+    // it is a real http(s) address - the page cannot ask for any other target.
+    if (b.what === "collect") {
+      const u = String(cfg.collectUrl || "").trim();
+      const ok = /^https?:\/\//i.test(u) ? openExternal(u) : false;
+      json(200, { ok: ok, target: ok ? u : "" });
+      return;
+    }
     const target = b.what === "zip" ? r.share : b.what === "folder" ? r.folder : b.what === "room" ? roomPage(b.slug) : r.html;
     const ok = target ? openExternal(target) : false;
     json(200, { ok: ok, target: target || "" });

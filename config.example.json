@@ -1,5 +1,5 @@
 {
-  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is not on PATH.",
+  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is not on PATH. collectUrl is the link the Share to <name> button opens (empty hides the button).",
   "language": "auto",
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
@@ -14,6 +14,8 @@
   "guiPort": 8787,
   "estimateGb": 3,
   "shareMode": "yes",
+  "collectName": "Hauitsu",
+  "collectUrl": "",
   "ffmpegPath": "",
   "credit": ""
 }

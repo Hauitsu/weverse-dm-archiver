@@ -31,6 +31,11 @@ export const DEFAULTS = {
   shareMode: "yes",
   // Empty means "the ffmpeg on PATH". Set it when ffmpeg lives somewhere unusual.
   ffmpegPath: "",
+  // "Share to <name>": one link the page opens in the browser when someone wants to hand their zip
+  // over - a social profile, a chat invite or a cloud folder. Empty hides the button, and only this
+  // one value is ever opened (never anything the page itself sends).
+  collectName: "Hauitsu",
+  collectUrl: "",
 };
 
 // Missing file = all defaults. A file that exists but does not parse is a real error:
@@ -49,6 +54,10 @@ export function readConfig(file) {
   const cfg = Object.assign({}, DEFAULTS, raw);
   cfg.pacing = Object.assign({}, DEFAULTS.pacing, raw.pacing || {});
   if (SHARE_MODES.indexOf(String(cfg.shareMode)) < 0) cfg.shareMode = DEFAULTS.shareMode;
+  if (typeof cfg.collectUrl !== "string") cfg.collectUrl = DEFAULTS.collectUrl;
+  cfg.collectUrl = cfg.collectUrl.trim();
+  if (typeof cfg.collectName !== "string" || !cfg.collectName.trim()) cfg.collectName = DEFAULTS.collectName;
+  cfg.collectName = cfg.collectName.trim();
   return cfg;
 }
 

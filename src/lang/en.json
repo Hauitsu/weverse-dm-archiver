@@ -106,6 +106,8 @@
   "gui.shareFull": "Original quality (larger) (instant)",
   "gui.shareLowQ": "Low quality (smaller) (up to 15 minutes)",
   "gui.shareGenerate": "Generate zip",
+  "gui.shareTo": "Share to {name}",
+  "gui.shareToHint": "opens {name}'s page in your browser so you can send this zip over - the Low quality one is far smaller to send.",
   "gui.shareHas": "Zip already exists: {v}",
   "gui.shareNone": "No zip for this room yet.",
   "gui.shareEst": "estimated zip: about {v}",

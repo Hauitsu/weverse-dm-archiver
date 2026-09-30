@@ -106,6 +106,8 @@
   "gui.shareFull": "Kualitas asli (lebih besar) (instan)",
   "gui.shareLowQ": "Kualitas rendah (lebih kecil) (sampai 15 menit)",
   "gui.shareGenerate": "Buat zip",
+  "gui.shareTo": "Bagikan ke {name}",
+  "gui.shareToHint": "membuka halaman {name} di browser supaya kamu bisa mengirim zip ini - versi Low quality jauh lebih ringan untuk dikirim.",
   "gui.shareHas": "Zip sudah ada: {v}",
   "gui.shareNone": "Belum ada zip untuk room ini.",
   "gui.shareEst": "perkiraan zip: sekitar {v}",

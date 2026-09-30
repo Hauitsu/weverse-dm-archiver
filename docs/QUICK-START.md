@@ -76,6 +76,8 @@ Options:
 - **Share** (on a room row) - packs that one room on the spot, without touching the others. The
   popup says what the zip is expected to weigh, counted from the files that would go in, and the
   number changes with the quality choice in the same popup.
+  If a collector link is configured (`collectUrl`), the popup also shows **Share to <name>**: it opens
+  that page in your browser so you can pass the zip on - send the Low quality one, 350 MB against 2.5 GB.
 - **Estimated size** - the line under the list adds up every room you tick; hover it for the
   reasoning. The estimate is a ceiling, not a promise: this group's conversation starts April 2025, a
   room that has never been saved is quoted as up to `estimateGb` (3 GB), a saved room is projected

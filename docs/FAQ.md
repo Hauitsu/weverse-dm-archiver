@@ -106,6 +106,14 @@ probe if you would rather paste it into DevTools yourself, and `wdm labels --fro
 imports the result. Re-render afterwards (`wdm render --room <slug>`), and rebuild any zip that
 already exists.
 
+## How do I send a finished room to someone else?
+
+Use **Share** on the room row, then **Share to Hauitsu** if the build ships that link (`collectUrl`
+in `config.json`): it opens the collector's page - a social profile or a chat - and you hand the zip
+over however the two of you agree, usually as a cloud link. Send the **Low quality** zip: one room is
+about 2.5 GB at full quality and about 350 MB re-compressed, and eight rooms at full size come to
+roughly 20 GB, more than a free Drive holds.
+
 ## What is inside the zip?
 
 One folder per room, holding the page and everything it needs. With **Low quality** the

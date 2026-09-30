@@ -81,6 +81,10 @@ the folder that holds it. The popup also says what that zip is expected to weigh
 files that would go in, and the number follows the quality choice. A room that was never run says so
 instead, because a zip is built from the public export and nothing else.
 
+If the build ships a contact link (`collectUrl` in `config.json`), the same popup offers **Share to
+Hauitsu**: one click opens that page - a social profile, a chat invite or a cloud folder - so a room
+can be handed back to whoever collects them.
+
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,
 including what each message means, is in `docs/QUICK-START.md`.
