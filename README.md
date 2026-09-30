@@ -65,7 +65,7 @@ rooms/               private export: <room>.html, <room>.md, <room>.jsonl, summa
 rooms/public/        public export: the same files for the artist side only
 media/               photos/, video/, avatars/, fonts/ at original quality
 downloads/<room>/    one JSONL line per page of history (this is what makes it resumable)
-share/                share zips: weverse-dm-<room>.zip, .sha256, .manifest.json
+share/                share zips: weverse-dm-<room>.zip (papers in verify/)
 ```
 
 Rooms never share a folder under `downloads/`, so one room history can never leak into another

@@ -208,7 +208,7 @@ export async function bundle(opts) {
     archive: rootName, slug: slug, roomId: o.roomId || "", roomName: o.roomName || "", artist: o.artist || "",
     generatedAt: generatedAt, chatFiles: chatFiles, mediaFiles: mediaFiles, mediaBytes: mediaBytes,
     mediaBytesOriginal: mediaOriginal, quality: low ? "low" : "full", recompressed: shrunk, keptOriginal: kept,
-    checksum: "see " + zipName + ".sha256 next to this archive",
+    checksum: "see " + zipName + ".sha256 in the verify folder beside this archive",
   };
   const manifestPath = path.join(root, "manifest.json");
   fs.writeFileSync(manifestPath, JSON.stringify(inside, null, 2) + NL, "utf8");
@@ -220,11 +220,13 @@ export async function bundle(opts) {
     .concat(collect(root, rootName + "/").filter((e) => e.dir || top.indexOf(e.name) < 0));
   const zip = writeZip(zipPath, entries, { onLog: log });
   const sum = sha256File(zipPath);
-  fs.writeFileSync(zipPath + ".sha256", sum + "  " + zipName + NL, "utf8");
+  const verifyDir = path.join(shareDir, "verify");   // the zip travels alone; its papers live here
+  fs.mkdirSync(verifyDir, { recursive: true });
+  fs.writeFileSync(path.join(verifyDir, zipName + ".sha256"), sum + "  " + zipName + NL, "utf8");
 
   const manifest = Object.assign({}, inside, { entries: zip.entries, zipBytes: zip.zipBytes, zip: zipName, sha256: sum });
   delete manifest.checksum;
-  fs.writeFileSync(zipPath + ".manifest.json", JSON.stringify(manifest, null, 2) + NL, "utf8");
+  fs.writeFileSync(path.join(verifyDir, zipName + ".manifest.json"), JSON.stringify(manifest, null, 2) + NL, "utf8");
   fs.rmSync(stageParent, { recursive: true, force: true });
   log("bundle: " + zipName + " (" + fmtSize(zip.zipBytes) + ") sha256 " + sum.slice(0, 16) + "...");
   return { zip: zipPath, sha256: sum, bytes: zip.zipBytes, entries: zip.entries, mediaFiles: mediaFiles, mediaBytes: mediaBytes, mediaOriginal: mediaOriginal, quality: low ? "low" : "full", recompressed: shrunk, manifest: manifest };
