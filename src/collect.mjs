@@ -7,9 +7,13 @@
 //
 // The shared drive link is not written out anywhere. It is stitched together when the button is
 // pressed, out of two halves kept apart plus a host spelled in pieces, so searching this repository
-// for the link - or for its folder id - finds nothing. That is hiding from a search box, not from a
-// reader: this file is public, and anyone who reads it can recover the link. Keep that in mind when
-// deciding who may write into that folder.
+// for the link - or for its folder id - finds nothing. An owner can instead keep the id in a file
+// outside this repository and point at it with a {name} placeholder in config.json (see SECRETS
+// below). Both are hiding from a search box, not from a reader: this file is public, and anyone who
+// reads it can recover the link. Keep that in mind when deciding who may write into that folder.
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { DM_START_MONTH, monthIndex, thisMonth } from "./pipeline.mjs";
 import { rowNumbers } from "./rowinfo.mjs";
 
@@ -18,8 +22,9 @@ import { rowNumbers } from "./rowinfo.mjs";
 // the exception off and offers every complete room.
 const OWNED = "yunha";
 
-// Two halves of the drive folder id, base64 each. Empty in a build that ships no link, which is why
-// driveUrl() below is the only thing that decides whether the offer exists at all.
+// Two halves of the drive folder id, base64 each. They stay empty in this file; tools/publish.ps1
+// fills them in the published copy from the secret file outside this repository. driveUrl() below is
+// the only thing that decides whether the offer exists at all.
 const ID_A = "";
 const ID_B = "";
 
@@ -37,15 +42,66 @@ export function ownedSlugs(cfg) {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-// A collectUrl in config.json wins, so the link can be changed without touching this file.
-export function driveUrl(cfg) {
-  const override = String((cfg && cfg.collectUrl) || "").trim();
-  if (override) return override;
-  const id = Buffer.from(ID_A + ID_B, "base64").toString("utf8").trim();
-  if (!/^[A-Za-z0-9_-]{8,}$/.test(id)) return "";
-  return "https://" + "drive" + "." + "google" + ".com/drive/folders/" + id;
+// Values for the {name} placeholders in collectUrl, kept in a small file outside this repository:
+// <parent of this folder>/_secret/secrets.json, or wherever WDM_SECRETS points. The folder id is
+// then in no published file and in no commit - a build can be published without ever writing it
+// down. A machine without that file simply resolves nothing.
+const SECRETS = process.env.WDM_SECRETS || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "_secret", "secrets.json");
+let secretCache = { stamp: "", data: {} };
+
+function secrets() {
+  let stamp = "";
+  try { const st = fs.statSync(SECRETS); stamp = st.mtimeMs + " " + st.size; } catch (e) { return {}; }
+  if (stamp === secretCache.stamp) return secretCache.data;
+  let data = {};
+  try {
+    const raw = JSON.parse(fs.readFileSync(SECRETS, "utf8"));
+    if (raw && typeof raw === "object") data = raw;
+  } catch (e) { data = {}; }
+  secretCache = { stamp: stamp, data: data };
+  return data;
 }
 
+// A value may be the folder id on its own or a whole sharing link; both come out as the id.
+function idOnly(value) {
+  const text = String(value == null ? "" : value).trim();
+  const found = text.match(/\/folders\/([A-Za-z0-9_-]{8,})/);
+  return found ? found[1] : text;
+}
+
+// {name} -> the matching secret. An unknown or empty placeholder makes the whole template unusable,
+// so the button disappears instead of opening a broken link.
+function fill(text) {
+  const all = secrets();
+  let missing = false;
+  const out = String(text == null ? "" : text).replace(/\{([A-Za-z0-9_.-]+)\}/g, function (whole, name) {
+    const value = idOnly(all[name]);
+    if (!value) { missing = true; return ""; }
+    return value;
+  });
+  return missing ? "" : out;
+}
+
+const FOLDER = "https://" + "drive" + "." + "google" + ".com/drive/folders/";
+
+function asUrl(value) {
+  const text = String(value == null ? "" : value).trim();
+  if (/^https?:\/\/\S+$/i.test(text)) return text;
+  const id = idOnly(text);
+  return /^[A-Za-z0-9_-]{8,}$/.test(id) ? FOLDER + id : "";
+}
+
+// The link the Share to button opens. A collectUrl in config.json wins, so it can be changed without
+// touching this file, and a template there ({quant}) is filled from the secret file. Without an
+// override the build's own two halves are used, and a build that shipped without them still looks
+// for the placeholder in the secret file - that is how the author runs his own copy before anything
+// is published.
+export function driveUrl(cfg) {
+  const raw = String((cfg && cfg.collectUrl) || "").trim();
+  if (raw) return asUrl(fill(raw));
+  const id = fill(Buffer.from(ID_A + ID_B, "base64").toString("utf8").trim() || "{quant}");
+  return asUrl(id);
+}
 export function collectReady(cfg) { return !!driveUrl(cfg); }
 
 // Complete: starts at the floor of the window and ends in this month or, for a backup taken days

@@ -1,5 +1,5 @@
 {
-  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is not on PATH. collectOwned lists the rooms the collector already has (never asked for); collectUrl replaces the built-in collector link with one of your own; collectSeen remembers that the once-per-install popup was shown; collectDebug is for looking at that popup, offering every room whatever its archive looks like.",
+  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is not on PATH. collectOwned lists the rooms the collector already has (never asked for); collectUrl: a link of your own that replaces the link the build shipped with. It may be a template with a {name} placeholder, whose value is read from a small file kept outside this folder (see src/collect.mjs). Empty means the link the build shipped with.",
   "language": "auto",
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
