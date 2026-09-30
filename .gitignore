@@ -24,3 +24,9 @@ desktop.ini
 .DS_Store
 verify/
 rooms-public/
+# the artist pictures ship with the repo (small); the full-size originals in media/avatar-src/ stay local
+!media/avatars/
+!media/avatars/*-artist.png
+!media/avatars/*-artist.jpg
+!media/avatars/*-artist.jpeg
+!media/avatars/*-artist.webp
