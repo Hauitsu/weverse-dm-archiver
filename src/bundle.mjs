@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import { writeZip, collect } from "./zip.mjs";
 import { loadConfig } from "./config.mjs";
 import { findFfmpeg, supports, shrinkOne, pool, MAX_SIDE } from "./quality.mjs";
+import { fmtSize } from "./size.mjs";
 
 const NL = String.fromCharCode(10);
 
@@ -187,11 +188,11 @@ export async function bundle(opts) {
     mediaFiles++;
     mediaBytes += size;
   });
-  if (shrunk) log("quality: re-compressed " + shrunk + " of " + mediaFiles + " media file(s): " + (mediaOriginal / 1048576).toFixed(1) + " MB -> " + (mediaBytes / 1048576).toFixed(1) + " MB" + (kept ? " (" + kept + " would not get smaller, kept as they were)" : ""));
+  if (shrunk) log("quality: re-compressed " + shrunk + " of " + mediaFiles + " media file(s): " + fmtSize(mediaOriginal) + " -> " + fmtSize(mediaBytes) + (kept ? " (" + kept + " would not get smaller, kept as they were)" : ""));
   if (!refs.size && fs.existsSync(mediaDir) && collect(mediaDir, "").some((e) => !e.dir && e.name !== "media-manifest.json")) {
     log("warning: the page does not point at any local media, so the package has no photos or video");
   }
-  log("bundle: " + chatFiles + " archive file(s) and " + mediaFiles + " of " + refs.size + " referenced media file(s), " + (mediaBytes / 1048576).toFixed(1) + " MB" + (refMissing ? ", " + refMissing + " not on disk" : ""));
+  log("bundle: " + chatFiles + " archive file(s) and " + mediaFiles + " of " + refs.size + " referenced media file(s), " + fmtSize(mediaBytes) + (refMissing ? ", " + refMissing + " not on disk" : ""));
 
   fs.writeFileSync(path.join(root, "README.txt"), readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "", low: low }, generatedAt), "utf8");
   fs.writeFileSync(path.join(root, "index.html"), indexHtml({ slug: slug, roomName: o.roomName || slug }), "utf8");
@@ -225,6 +226,6 @@ export async function bundle(opts) {
   delete manifest.checksum;
   fs.writeFileSync(zipPath + ".manifest.json", JSON.stringify(manifest, null, 2) + NL, "utf8");
   fs.rmSync(stageParent, { recursive: true, force: true });
-  log("bundle: " + zipName + " (" + (zip.zipBytes / 1048576).toFixed(1) + " MB) sha256 " + sum.slice(0, 16) + "...");
+  log("bundle: " + zipName + " (" + fmtSize(zip.zipBytes) + ") sha256 " + sum.slice(0, 16) + "...");
   return { zip: zipPath, sha256: sum, bytes: zip.zipBytes, entries: zip.entries, mediaFiles: mediaFiles, mediaBytes: mediaBytes, mediaOriginal: mediaOriginal, quality: low ? "low" : "full", recompressed: shrunk, manifest: manifest };
 }

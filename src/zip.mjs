@@ -5,6 +5,7 @@
 // macOS and Linux, with no tar.exe, no 7-Zip and no dependency to install.
 import fs from "node:fs";
 import path from "node:path";
+import { fmtSize } from "./size.mjs";
 
 const TABLE = (() => {
   const t = new Int32Array(256);
@@ -124,7 +125,7 @@ export function writeZip(zipPath, entries, opts) {
     fs.writeSync(fd, end);
   } finally { fs.closeSync(fd); }
   const total = fs.statSync(zipPath).size;
-  log("zip: " + central.length + " entries, " + (total / 1048576).toFixed(1) + " MB");
+  log("zip: " + central.length + " entries, " + fmtSize(total));
   return { path: zipPath, entries: central.length, bytes: bytes, zipBytes: total };
 }
 

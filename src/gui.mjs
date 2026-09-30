@@ -12,6 +12,7 @@ import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, hurryMode, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
+import { fmtSize } from "./size.mjs";
 
 const NL = String.fromCharCode(10);
 const argv = process.argv.slice(2);
@@ -53,7 +54,7 @@ function page() {
   const machine = "auto (" + (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") + ")";
   const rows = list.map((r) => {
     const e = estimateFor(cfg, r);
-    const size = e.measured ? tr("gui.sizeSaved", { v: (e.saved / GIB).toFixed(1) }) : tr("gui.sizeGuess", { v: (e.bytes / GIB).toFixed(1) });
+    const size = e.measured ? tr("gui.sizeSaved", { v: fmtSize(e.saved) }) : tr("gui.sizeGuess", { v: fmtSize(e.bytes) });
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
     // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
     return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
@@ -120,7 +121,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<div id=\"under\" style=\"display:none\">",
     "<section>",
     "<div class=\"grid\" style=\"margin-top:8px;position:relative\"><span id=\"total\" class=\"muted\"></span>",
-    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.estHint", { v: Number(cfg.estimateGb || 3).toFixed(1) })) + "</span></span></div>",
+    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.estHint", { v: fmtSize(Number(cfg.estimateGb || 3) * GIB) })) + "</span></span></div>",
     "<div class=\"grid\" style=\"margin-top:8px;position:relative\"><label>" + esc(tr("gui.share")) + " <select id=\"share\">" + shareOpts + "</select></label>",
     "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
     "<details class=\"adv\" style=\"margin-top:20px\"><summary>" + esc(tr("gui.advanced")) + "</summary>",
@@ -150,21 +151,21 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + "};",
     "function el(s){return document.querySelector(s);}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
-    "var GIB=1073741824;",
+    "var fmtSize=" + fmtSize.toString() + ";",
     "function total(){",
     "  under();",
     "  var n=0,full=0,saved=0;",
     "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){if(!c.checked)return;n++;full+=Number(c.dataset.full||0);saved+=Number(c.dataset.saved||0);});",
     "  if(!n){el(\"#total\").innerHTML=MSG.none;return;}",
-    "  var t=MSG.total.replace(\"{n}\",\"<strong>\"+n+\"</strong>\").replace(\"{v}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
-    "  if(saved>0)t+=MSG.savedNote.replace(\"{s}\",\"<strong>\"+(saved/GIB).toFixed(1)+\" GB</strong>\");",
+    "  var t=MSG.total.replace(\"{n}\",\"<strong>\"+n+\"</strong>\").replace(\"{v}\",\"<strong>\"+fmtSize(full)+</strong>\");",
+    "  if(saved>0)t+=MSG.savedNote.replace(\"{s}\",\"<strong>\"+fmtSize(saved)+</strong>\");",
     "  var mode=el(\"#share\").value;",
     "  if(mode!==\"no\"){",
-    "    t+=mode===\"low\"?MSG.zipLow:MSG.zipNote.replace(\"{z}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
+    "    t+=mode===\"low\"?MSG.zipLow:MSG.zipNote.replace(\"{z}\",\"<strong>\"+fmtSize(full)+</strong>\");",
     // What ends up on disk: the conversation, plus the zip beside it when one is written. A
     // re-compressed zip is a fraction of the conversation and guessing that fraction would be
     // worse than saying "much smaller", so in low mode only the conversation is counted.
-    "    t+=MSG.allNote.replace(\"{t}\",\"<strong>\"+((mode===\"low\"?full:full*2)/GIB).toFixed(1)+\" GB</strong>\");",
+    "    t+=MSG.allNote.replace(\"{t}\",\"<strong>\"+fmtSize(mode===\"low\"?full:full*2)+</strong>\");",
     "  }",
     "  el(\"#total\").innerHTML=t;",
     "}",

@@ -159,6 +159,6 @@ export async function downloadMedia(opts) {
   };
   await Promise.all(Array.from({ length: conc }, worker));
   saveManifest();
-  log("media done: " + stats.ok + " downloaded, " + stats.skip + " already there, " + stats.failed + " failed (" + (stats.bytes / 1048576).toFixed(1) + " MB)");
+  log("media done: " + stats.ok + " downloaded, " + stats.skip + " already there, " + stats.failed + " failed (" + fmtSize(stats.bytes) + ")");
   return stats;
 }
