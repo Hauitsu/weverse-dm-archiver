@@ -89,7 +89,17 @@ const thumbWeb = (o) => THUMB_DIR ? THUMB_DIR + '/' + path.basename(o.f.rel).rep
 const namaMedia = (o) => path.basename(o.f.rel).replace(/\.[A-Za-z0-9]+$/, '');
 const videoPoster = (o) => { if (!VIDEO_POSTER || (o.im && o.im.kind === 'audio')) return null; const w = VIDEO_POSTER + '/' + namaMedia(o) + VIDEO_POSTER_EXT; return fs.existsSync(path.join(OUT, w)) ? w : null; };
 const videoAsli = (o) => { if (!VIDEO_ASLI_REL || !o.f.ada) return null; const w = VIDEO_ASLI_REL + '/' + path.basename(o.f.rel); return o.f.web === w ? null : w; };
-const avWeb = (side) => { if (AVATAR_FILE) return side === 'artist' ? AVATAR_FILE : null; const p = 'avatars/' + side + '.png'; return fs.existsSync(path.join(MEDIA_ABS, p)) ? MEDIA_REL + '/' + p : null; };
+const AVATAR_EXT = ['png', 'jpg', 'jpeg', 'webp'];
+// A room-level pair (avatars/<slug>-artist.png) wins over the shared one, so each room can show its
+// own artist - and the fan's own picture in the private export.
+const avWeb = (side) => {
+  if (AVATAR_FILE) return side === 'artist' ? AVATAR_FILE : null;
+  for (const n of [BASE + '-' + side, side]) for (const e of AVATAR_EXT) {
+    const p = 'avatars/' + n + '.' + e;
+    if (fs.existsSync(path.join(MEDIA_ABS, p))) return MEDIA_REL + '/' + p;
+  }
+  return null;
+};
 
 // ---- font emoji lokal (Noto Color Emoji, lisensi OFL-1.1) ----
 // Put the files in media/fonts/. If apple-emoji.{woff2,ttf,otf} exists (your own Apple font), that one is used

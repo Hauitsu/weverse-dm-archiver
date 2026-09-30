@@ -18,7 +18,7 @@ import { findFfmpeg } from "./quality.mjs";
 import { findBrowser } from "./browser.mjs";
 import { readArchive } from "./harvest.mjs";
 import { artistLabel, loadRooms, saveRooms } from "./rooms.mjs";
-import { DM_URL, LABEL_PROBE, captureLabels, gotoDm, mergeLabels, readRows } from "./labels.mjs";
+import { DM_URL, LABEL_PROBE, captureLabels, gotoDm, mergeLabels, readRows, saveAvatars } from "./labels.mjs";
 
 const argv = process.argv.slice(2);
 const cmd = (argv[0] || "help").toLowerCase();
@@ -95,6 +95,8 @@ const commands = {
         if (!rows.length) log("the page showed no room rows; open the DM list in that window and run it again");
       });
     }
+    const avatars = has("no-avatars") ? [] : await saveAvatars(cfg, obj, rows, { onLog: log, mediaDir: d.media });
+    if (avatars.length) log("avatars: " + avatars.join(", "));
     const res = mergeLabels(obj, rows);
     for (const c of res.changed) log("label: " + c.slug.padEnd(10) + JSON.stringify(c.from) + " -> " + JSON.stringify(c.to));
     if (res.kept.length) log("already right: " + res.kept.join(", "));

@@ -5,6 +5,7 @@
 // off that page (or off a JSON file holding a pasted probe result) and writes them into
 // rooms.unis.json, where rowLabel already decides what the exports call the room.
 import fs from "node:fs";
+import path from "node:path";
 
 // The DM web app. It is a separate site from weverse.io and the only place the room names show.
 export const DM_URL = "https://dm.weverse.io/";
@@ -55,7 +56,9 @@ const PROBE = [
   "    var key = (id || '?') + '|' + label;",
   "    if (seen[key]) continue;",
   "    seen[key] = 1;",
-  "    out.push({ roomId: id, label: label });",
+  "    var im = li.querySelector('img');",
+  "    var avatar = im ? (im.currentSrc || im.src || '') : '';",
+  "    out.push({ roomId: id, label: label, avatar: avatar });",
   "  }",
   "  return { url: location.href, title: document.title, count: out.length, rows: out };",
   "})()",
@@ -108,6 +111,33 @@ export function mergeLabels(obj, rows) {
   const unmatched = [];
   for (const id of byId.keys()) if (!known.has(id)) unmatched.push(id);
   return { changed: changed, kept: kept, missing: missing, unmatched: unmatched };
+}
+
+// Save the profile pictures the rows pointed at, one per room: media/avatars/<slug>-artist.<ext>.
+// The picture only ever lands under the room it came from, so one artist can never stand in for another.
+export async function saveAvatars(cfg, obj, rows, o) {
+  const opts = o || {};
+  const log = opts.onLog || (() => {});
+  const byId = new Map();
+  for (const r of rows || []) if (r && r.roomId && r.avatar) byId.set(String(r.roomId).toUpperCase(), String(r.avatar));
+  const dir = path.join(opts.mediaDir || '', 'avatars');
+  const done = [];
+  for (const room of (obj && obj.rooms) || []) {
+    const url = byId.get(String(room.roomId || '').toUpperCase());
+    if (!url) continue;
+    try {
+      const res = await fetch(url, { headers: { Referer: 'https://weverse.io/', 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) { log('avatar ' + room.slug + ': http ' + res.status); continue; }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const kind = String(res.headers.get('content-type') || '').toLowerCase();
+      const ext = kind.indexOf('png') >= 0 ? 'png' : kind.indexOf('webp') >= 0 ? 'webp' : 'jpg';
+      fs.mkdirSync(dir, { recursive: true });
+      for (const old of ['png', 'jpg', 'jpeg', 'webp']) fs.rmSync(path.join(dir, room.slug + '-artist.' + old), { force: true });
+      fs.writeFileSync(path.join(dir, room.slug + '-artist.' + ext), buf);
+      done.push(room.slug + '.' + ext + ' (' + Math.round(buf.length / 1024) + 'K)');
+    } catch (e) { log('avatar ' + room.slug + ': ' + e.message); }
+  }
+  return done;
 }
 
 // Rows from a file: either what the probe printed or a bare array of rows.
