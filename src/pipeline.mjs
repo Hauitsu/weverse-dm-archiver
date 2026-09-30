@@ -16,7 +16,7 @@ import { loadConfig } from "./config.mjs";
 import { harvest, readArchive } from "./harvest.mjs";
 import { downloadMedia } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
-import { findBrowser, launch, profileDir } from "./browser.mjs";
+import { findBrowser, launch, launchPlain, killBrowser, waitExit, profileDir } from "./browser.mjs";
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
 import { loadRooms } from "./rooms.mjs";
 
@@ -209,6 +209,9 @@ export const HURRY_RETRY_AFTER_MS = 60000;
 export function hurryMode(st, now) {
   if (!st || !st.loginWait || st.phase !== "browser") return "";
   const t = Number(now || Date.now());
+  // The plain sign-in window is the one case where waiting a minute first would be pointless: the
+  // user opened it to type, so the button is there from the first second.
+  if (st.plainWait) return st.hurryFirstAt && t - Number(st.hurryFirstAt) >= HURRY_RETRY_AFTER_MS ? "retry" : "ready";
   if (!st.hurryFirstAt) return t - Number(st.loginAt || 0) >= HURRY_AFTER_MS ? "ready" : "";
   return t - Number(st.hurryFirstAt) >= HURRY_RETRY_AFTER_MS ? "retry" : "ready";
 }
@@ -253,23 +256,77 @@ function auditPublic(o, dir, log) {
 }
 
 // Start the private browser window and wait until it can talk to the API.
+// The one thing nothing here can look inside is the plain sign-in window: it has no debugging port
+// by design, so only the person typing in it knows when the typing is done. They say so with the
+// page button (the GUI), by closing the window, or by pressing Enter where the tool runs in a
+// terminal. Returns why the wait ended so the caller can tell a stop from a timeout.
+async function waitForGo(proc, opts, log) {
+  const o = opts || {};
+  const stop = o.shouldStop || (() => false);
+  const said = o.saidDone;
+  const until = Date.now() + (o.plainWaitMs || 1800000);
+  let typed = false;
+  if (!said) {
+    try {
+      if (process.stdin.isTTY) { process.stdin.setEncoding("utf8"); process.stdin.on("data", () => { typed = true; }); process.stdin.resume(); }
+    } catch (e) {}
+  }
+  log("browser: sign in there, then " + (said ? "press the button on the page" : "close that window (or press Enter here)"));
+  for (;;) {
+    if (stop()) return "stopped";
+    if (said && said()) return "done";
+    if (typed) return "done";
+    if (!proc || proc.exitCode !== null) return "closed";
+    if (Date.now() > until) return "timeout";
+    await sleep(400);
+  }
+}
+
 export async function openSession(o) {
   const opts = o || {};
   const log = opts.onLog || (() => {});
   const cfg = opts.cfg || loadConfig();
   const found = findBrowser(cfg);
   if (!found) return { error: "no-browser" };
-  const started = await launch({ browserPath: found.path, profile: profileDir(), url: "https://weverse.io/", onLog: log });
-  if (!started.port) return { error: "no-port" };
-  const target = await waitPage(started.port, "weverse.io", 30000);
-  if (!target) return { error: "no-page" };
-  const cdp = await attach(target.webSocketDebuggerUrl);
-  const ok = await ensureAuth(cdp, {
-    onLog: log, shouldStop: opts.shouldStop, timeoutMs: opts.authTimeoutMs || 300000,
-    hurry: opts.hurry, hurryLog: opts.hurryLog,
-  });
-  if (!ok) return { error: "no-auth", cdp: cdp, browser: started };
-  return { cdp: cdp, browser: started, name: found.name };
+  const open = () => launch({ browserPath: found.path, profile: profileDir(), url: "https://weverse.io/", onLog: log });
+  const use = async (started, ms) => {
+    if (!started.port) return { error: "no-port" };
+    const target = await waitPage(started.port, "weverse.io", 30000);
+    if (!target) return { error: "no-page" };
+    const cdp = await attach(target.webSocketDebuggerUrl);
+    const ok = await ensureAuth(cdp, {
+      onLog: log, shouldStop: opts.shouldStop, timeoutMs: ms,
+      hurry: opts.hurry, hurryLog: opts.hurryLog,
+    });
+    return { cdp: cdp, browser: started, name: found.name, auth: ok };
+  };
+  // The session already in the profile is what every run after the first lives on, so look for it
+  // first: this is the window that can read the page, and opening a second one for nothing would be
+  // a pointless extra step.
+  let started = await open();
+  let got = await use(started, opts.probeMs || 15000);
+  if (got.error) return got;
+  if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
+  // Nothing in the profile yet - and the browser that can read the page is exactly the one Google
+  // refuses. Hand the typing to a normal window, then take over the session it leaves behind.
+  log("browser: no Weverse session in this profile yet");
+  log("browser: opening a normal window to sign in - Google refuses a browser that is driven over DevTools");
+  killBrowser(started.proc);
+  await waitExit(started.proc, 15000);
+  const plain = await launchPlain({ browserPath: found.path, profile: profileDir(), url: "https://weverse.io/", onLog: log });
+  if (opts.onPlainWait) opts.onPlainWait(true);
+  const why = await waitForGo(plain.proc, opts, log);
+  if (opts.onPlainWait) opts.onPlainWait(false);
+  killBrowser(plain.proc);
+  await waitExit(plain.proc, 15000);
+  if (why === "stopped") return { error: "stopped", cdp: null, browser: plain };
+  if (why === "timeout") { log("browser: nobody signed in within the time allowed"); return { error: "no-auth", cdp: null, browser: plain }; }
+  log("browser: taking over the session the sign-in window left behind");
+  started = await open();
+  got = await use(started, opts.authTimeoutMs || 300000);
+  if (got.error) return got;
+  if (!got.auth) return { error: "no-auth", cdp: got.cdp, browser: got.browser };
+  return { cdp: got.cdp, browser: got.browser, name: got.name };
 }
 
 // One room, start to finish.

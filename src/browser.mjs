@@ -144,6 +144,49 @@ export async function launch(opts) {
   return { proc: proc, port: port, profile: profile };
 }
 
+// Sign-in providers refuse a browser that is being driven over DevTools: Google answers with "this
+// browser or app may not be secure" and there is no flag that talks it out of that. The window the
+// user types into therefore starts without the debugging port, on the very same profile, and the
+// session it leaves behind is what the automated launch picks up a moment later.
+const PLAIN_ARGS = [
+  "--no-first-run",
+  "--no-default-browser-check",
+  "--disable-features=Translate,OptimizationHints",
+  "--window-size=1280,900",
+];
+
+// A normal browser window on the archiver profile: same cookies, no DevTools, nothing automated.
+export function launchPlain(opts) {
+  const o = opts || {};
+  const profile = o.profile || profileDir();
+  fs.mkdirSync(profile, { recursive: true });
+  const log = o.onLog || (() => {});
+  const url = o.url || "https://weverse.io/";
+  log("browser: " + path.basename(o.browserPath) + " (normal window, no debug port)");
+  const proc = spawn(o.browserPath, ["--user-data-dir=" + profile].concat(PLAIN_ARGS, [url]), { stdio: "ignore" });
+  proc.on("error", (e) => log("browser error: " + String(e.message || e)));
+  return { proc: proc, profile: profile };
+}
+
+// Close a browser we started. taskkill takes the whole tree with it: killing only the process we
+// spawned can leave renderers behind, and they hold the profile lock the next launch needs.
+export function killBrowser(proc) {
+  if (!proc || proc.exitCode !== null || proc.signalCode) return;
+  try {
+    if (process.platform === "win32") { spawn("taskkill", ["/PID", String(proc.pid), "/T", "/F"], { stdio: "ignore" }); return; }
+  } catch (e) {}
+  try { proc.kill(); } catch (e) {}
+}
+
+// Wait until a browser we started is really gone, so the profile is free for the next launch.
+export async function waitExit(proc, ms) {
+  const until = Date.now() + (ms || 15000);
+  for (;;) {
+    if (!proc || proc.exitCode !== null || proc.signalCode) return true;
+    if (Date.now() > until) return false;
+    await sleep(200);
+  }
+}
 // Open a file or URL with the desktop default handler: the "Open result" button and the Node
 // download page when no browser was found.
 export function openExternal(target) {

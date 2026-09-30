@@ -29,6 +29,11 @@ safe to close, and closing it stops the tool.
 ## 2. Log in once
 
 In the browser window that opened, log in to Weverse the normal way and open the artist you want.
+Signing in with **Google** is the one case that needs a second window, and it is Google's rule, not
+Weverse's: Google refuses to sign anyone in from a browser that is being automated ("this browser or
+app may not be secure"). So when the profile has no live session, the tool opens a normal window with
+no debugging port - sign in **there**, press the button on the page (or close that window) when you are
+done, and the tool takes over the session it left in the profile.
 The page shows "Waiting for a Weverse login" until the session is live. You only do this once:
 the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile`.
 
@@ -55,6 +60,8 @@ Options:
   for the next check right away (2.5 s becomes 0.25 s); it cannot skip the token check, so a wrong
   press simply keeps waiting. A minute after that press the button turns into **Retry** - nothing
   retries on its own, you decide when it is worth another look.
+- **Signing in with Google** - the button above is also the "done" signal for the normal sign-in
+  window; the moment you press it the tool closes that window and takes the session over.
 - **Also make a shareable zip** - three choices, remembered in `config.json`. **Yes** (the default)
   writes `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three
   languages; only artist messages and media are inside, your own messages are left out. **Yes but Low

@@ -29,6 +29,16 @@ No. It starts its **own** browser window with its own profile under
 `%LOCALAPPDATA%\weverse-dm-archiver\profile`. The window and profile you normally use are never
 read, reloaded, navigated or closed by this tool.
 
+## Google says "this browser or app may not be secure"
+
+That message comes from Google, not from Weverse, and it is about the browser rather than your
+account: Google refuses to sign anyone in from a browser that is being driven over the DevTools
+protocol, which is exactly how the tool reads the page. No flag talks it out of that, so the tool
+splits the job in two. It starts its automated window as usual; if the profile has no live session
+yet, it opens a second window with no debugging port at all. You sign in **there** - Google is happy
+with an ordinary window - and once you press the button on the page (or close that window) the tool
+closes it and takes over the session it left behind in the same profile. The archive itself is
+unchanged: same session, still kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` for next time.
 ## Can I keep using Weverse while it runs?
 
 Yes. The tool works in its own window, so nothing you do in your normal browser interferes. Just

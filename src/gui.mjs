@@ -23,7 +23,7 @@ function flag(name, fallback) {
 
 let cfg = loadConfig();
 const state = {
-  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0,
+  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false,
   log: [], result: null, error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -238,6 +238,7 @@ function stateJson() {
   if (text === key) text = state.phase;
   // While the login wait runs, say what is actually being waited for instead of "Starting the browser".
   if (state.phase === "browser" && state.loginWait) text = tr("gui.loginHint");
+if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   if (state.error) text = tr("gui.phase.error") + ": " + state.error;
   if (state.slug && (state.phase === "harvest" || state.phase === "media" || state.phase === "render")) {
     text += " - " + state.roomName + (state.progress ? " (" + state.progress.line + ")" : "");
@@ -281,13 +282,18 @@ async function startJob(body) {
     setPhase("browser");
     push(tr("gui.loginHint"));
     // The login wait is automatic; the button only shortens the pause before the next check.
-    state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0;
+    state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0; state.plainWait = false;
     const session = await openSession({
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
       hurryLog: tr("gui.checkNow"),
+      // While the plain sign-in window is up nothing here can see inside it, so that button is the
+      // only way to say "done". The same click means "look again" once the automated window is back.
+      saidDone: () => { if (!state.hurry) return false; state.hurry = false; return true; },
+      onPlainWait: (on) => { state.plainWait = !!on; if (on) { state.hurry = false; state.hurryFirstAt = 0; } },
     });
     state.loginWait = false;
+    if (session.error === "stopped" || stopFlag) { setPhase("stopped"); running(false); return; }
     if (session.error) {
       state.error = session.error === "no-browser" ? tr("gui.noBrowser") : session.error;
       setPhase("error");

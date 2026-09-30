@@ -98,6 +98,7 @@
   "gui.log": "Progress",
   "gui.pickRoom": "Pick at least one room first.",
   "gui.loginHint": "Waiting for a Weverse login in the browser window that just opened.",
+  "gui.plainHint": "Waiting for you to sign in - use the normal window that just opened, then press the button when you are done.",
   "gui.noBrowser": "No Chrome or Edge found. Install one of them, or set browserPath in config.json.",
   "gui.doneText": "Finished: {n} message(s) from {v}.",
   "gui.phase.idle": "Ready",
