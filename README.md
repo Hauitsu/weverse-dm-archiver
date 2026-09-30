@@ -219,6 +219,9 @@ The dark set is white-lettered by design. In light mode the letter colour follow
 of a hand-kept list: the renderer measures each pastel and picks black or white, so the grey ends up
 white on grey while the pastels stay dark - and the message, its translation and its links all move
 together. The heart button in the bar wears whatever colour is picked, so the choice is visible with
+Your own bubble carries no outline at all - the 1px stays there but transparent, so both sides keep the same
+box and nothing shifts. The artist's edge is one nudge toward white (dark) or black (light), tuned to land
+the same 1.25:1 step against every fill; the constant is `OUTLINE_KONTRAS` in `src/render.mjs`.
 the picker closed.
 
 Nothing else is touched. Your own bubble keeps its colour, gift covers keep their brand pink, and a

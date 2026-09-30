@@ -351,6 +351,18 @@ const warnaCahaya = (h) => { const c = warnaRgb(h).map((v) => v / 255).map((v) =
 const warnaKontras = (a, b) => { const x = Math.max(a, b), y = Math.min(a, b); return (x + 0.05) / (y + 0.05); };
 const warnaGeser = (h, d) => '#' + warnaRgb(h).map((v) => Math.max(0, Math.min(255, Math.round(d > 0 ? v + (255 - v) * d : v * (1 + d))))).map((v) => v.toString(16).padStart(2, '0')).join('');
 const warnaTeks = (bg) => { const L = warnaCahaya(bg); return warnaKontras(L, warnaCahaya('#101418')) >= warnaKontras(L, 1) ? '#101418' : '#ffffff'; };
+// How visible the artist bubble's edge is: the smallest nudge that puts the outline exactly this far
+// from the fill - toward white on a dark bubble, toward black on a pastel. One number to tune, and it
+// lands the same on all ten colours instead of getting lost on the darker pastels.
+const OUTLINE_KONTRAS = 1.25;
+const pinggir = (bg, naik) => {
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 16; i++) {
+    const mid = (lo + hi) / 2;
+    if (warnaKontras(warnaCahaya(bg), warnaCahaya(warnaGeser(bg, naik ? mid : -mid))) < OUTLINE_KONTRAS) lo = mid; else hi = mid;
+  }
+  return warnaGeser(bg, naik ? hi : -hi);
+};
 const WARNA_PALET = WARNA.map(([nama, swatch, gelap, terang]) => {
   const lT = warnaTeks(terang);
   return {
@@ -358,8 +370,8 @@ const WARNA_PALET = WARNA.map(([nama, swatch, gelap, terang]) => {
     sw: swatch,
     // Each dark bubble is white-on-deep by design, so there is nothing to calculate there; the light
     // pastels still pick their letter colour by contrast (the grey #45474F comes out white).
-    dk: [gelap, warnaGeser(gelap, 0.18), '#ffffff', '#dbe9fb'],
-    lt: [terang, warnaGeser(terang, -0.12), lT, lT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
+    dk: [gelap, pinggir(gelap, true), '#ffffff', '#dbe9fb'],
+    lt: [terang, pinggir(terang, false), lT, lT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
   };
 });
 const UISKRIP = fs.readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
@@ -481,13 +493,15 @@ h.push('.m.me .col{align-items:flex-end}');
 h.push('.who{font-weight:600;font-size:11px;line-height:1.3;color:#666666;margin:0 4px 2px;word-break:break-word}');
 h.push('.bub{background:#171c25;border:1px solid #232833;border-radius:14px;padding:6px 12px;word-break:break-word}');
 h.push('.tx{white-space:pre-wrap}');
-h.push('.m.artist .bub{background:var(--ab,#016268);border-color:var(--abd,#1f5e63);border-bottom-left-radius:4px}');
+h.push('.m.artist .bub{background:var(--ab,#016268);border-color:var(--abd,#1a7277);border-bottom-left-radius:4px}');
 h.push('/* Only when a colour is picked: letters, translation, links and the deleted note follow it. */');
 h.push('html[data-bub] .m.artist .bub:not(.gift):not(.bare){color:var(--at)}');
 h.push('html[data-bub] .m.artist .bub .en{color:var(--at);opacity:.85}');
 h.push('html[data-bub] .m.artist .bub .im a{color:var(--atl)}');
 h.push('html[data-bub] .m.artist .bub .del{color:var(--at);opacity:.9}');
-h.push('.m.me .bub{background:#1f1f1f;border-color:#2e2e2e;border-bottom-right-radius:4px}');
+// No outline on your own bubble: the 1px is kept but drawn transparent, so the box stays the same
+// size as the artist's and nothing shifts when a colour is picked on the other side.
+h.push('.m.me .bub{background:#1f1f1f;border-color:transparent;border-bottom-right-radius:4px}');
 h.push('.m.cont .bub{border-radius:14px}');
 h.push('.m.cont.artist .bub{border-top-left-radius:4px}');
 h.push('.m.cont.me .bub{border-top-right-radius:4px}');
@@ -549,7 +563,7 @@ if (giftAda) {
   }
 }
 h.push('.m.bm{scroll-margin-top:44px}');
-h.push('.m.bm .bub{border-color:#6a5722}');
+// (the bookmark ring lives with the theme rules further down, after the bubble colours - see there)
 h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
 h.push('.bml{margin:0 0 16px;font-size:12px;border:1px solid #232833;border-radius:8px;background:#141922;padding:6px 10px}');
 h.push('.bml summary{cursor:pointer;color:#e0b341;font-weight:600;outline:none}');
@@ -595,8 +609,13 @@ h.push('html[data-tema="light"] .nav a:hover{background:#eef3fb}');
 h.push('html[data-tema="light"] .day{background:#f7f8fa;color:#6b7280;border-bottom-color:#e3e7ec}');
 h.push('html[data-tema="light"] .who{color:#666666}');
 h.push('html[data-tema="light"] .bub:not(.gift):not(.bare){background:#fff;border-color:#e2e6eb}');
-h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:var(--ab,#bbf3f6);border-color:var(--abd,#a5e7ec)}');
-h.push('html[data-tema="light"] .m.me .bub:not(.gift):not(.bare){background:#f2f3f7;border-color:#e2e6eb}');
+h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:var(--ab,#bbf3f6);border-color:var(--abd,#a8dbdd)}');
+h.push('html[data-tema="light"] .m.me .bub:not(.gift):not(.bare){background:#f2f3f7;border-color:transparent}');
+// The bookmark ring has to outrank the bubble colour above, in both themes - before this it lost on
+// specificity in light mode, so bookmarked bubbles showed no ring there at all. Gift covers and bare
+// media keep their own edges.
+h.push('html .m.bm .bub:not(.gift):not(.bare){border-color:#6a5722}');
+h.push('html[data-tema="light"] .m.bm .bub:not(.gift):not(.bare){border-color:#e0c063}');
 h.push('html[data-tema="light"] .tm{color:#98a1ad}');
 h.push('html[data-tema="light"] .en{color:#3f5568;opacity:1}');
 h.push('html[data-tema="light"] .im a{color:#1f6feb}');
@@ -608,7 +627,6 @@ h.push('html[data-tema="light"] .vfull2{color:#2f6fb3}');
 h.push('html[data-tema="light"] .aud{background:#fff;border-color:#dde3ea}');
 h.push('html[data-tema="light"] .adur{color:#6b7280}');
 h.push('html[data-tema="light"] .gf{color:#9a6b00}');
-h.push('html[data-tema="light"] .m.bm .bub:not(.gift){border-color:#e0c063}');
 h.push('html[data-tema="light"] .bmk{color:#9a6b00}');
 h.push('html[data-tema="light"] .bml{background:#f1f3f6;border-color:#e2e6eb}');
 h.push('html[data-tema="light"] .bml summary{color:#9a6b00}');
