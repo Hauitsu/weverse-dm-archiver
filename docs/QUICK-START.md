@@ -80,11 +80,10 @@ Options:
   buttons update within a second, and a room added to `rooms.unis.json` appears on its own.
   A room backed up from the very start of the group's history (April 2025, and still reaching this
   month) also gets **Share to <name>** in that popup: pressing it shows the collector's short message
-  and a button that opens the shared drive folder to drop the zip into; a room that has no zip yet
-  says so in that same message, pointing back at **Generate zip** in the window behind it. Send the Low quality one,
-  350 MB against 2.5 GB. The same message comes up on its own once per install, right after the first
-  run that leaves you holding such a room; rooms the collector already has (`collectOwned`) are never
-  asked for.
+  and a button that opens the shared drive folder to drop the zip into. A room that has no zip yet
+  says so in that same message, pointing back at **Generate zip** in the window behind it. The same
+  message comes up on its own once per install, right after the first run that leaves you holding
+  such a room; rooms the collector already has (`collectOwned`) are never asked for.
 - **Estimated size** - the line under the list adds up every room you tick; hover it for the
   reasoning. The estimate is a ceiling, not a promise: this group's conversation starts April 2025, a
   room that has never been saved is quoted as up to `estimateGb` (3 GB), a saved room is projected
