@@ -148,7 +148,8 @@ does not work.
 
 ## Room names (emoji included)
 
-The header of an export shows the name the DM list shows for the room, emoji and all. It lives in
+The room row under the bookmarks box shows the name the DM list shows for the room, emoji and all,
+beside the artist's own profile picture. It lives in
 `rowLabel` in `rooms.unis.json`, and `node src/cli.mjs labels` fills it in: it opens the tool's own
 browser window at `https://dm.weverse.io/`, reads each row, and writes the names back. Prefer to do
 it by hand? `node src/cli.mjs labels --snippet` prints a probe for the DevTools console of that page;

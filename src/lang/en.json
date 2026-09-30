@@ -40,10 +40,10 @@
   "md.gift": "    - [gift] {list}",
   "md.fan": "fan",
   "html.fontComment": "/* emoji: Noto Color Emoji, SIL Open Font License 1.1 - see {file} */",
-  "html.title": "Weverse DM backup - {room}",
+  "html.title": "Weverse DM backup",
   "html.metaWhoAll": "{artist} {a}",
   "html.metaWhoMe": " &middot; me {n}",
-  "html.meta": "room {ids} ({room}) &middot; {who} &middot; {n} unique messages &middot; {a} to {b} {tz} &middot; from {pages} pages ({files} parts) &middot; local media {lok}/{tot}",
+  "html.meta": "{who} &middot; {n} unique messages &middot; {a} to {b} {tz} &middot; from {pages} pages ({files} parts) &middot; local media {lok}/{tot}",
   "html.bookmarkSummary": "★ my bookmarks ({n}) - click to open",
   "html.bmMore": "Message options",
   "html.bmAdd": "Bookmark this message",
@@ -146,5 +146,7 @@
   "gui.phase.stopped": "Stopped",
   "html.chipEdit": "Click to rename (15 characters max)",
   "html.bubTitle": "Bubble colour",
-  "html.chipHari": "days together"
+  "html.chipHari": "days together",
+  "html.titleBy": "by Hauitsu",
+  "html.roomIds": "room {ids}"
 }

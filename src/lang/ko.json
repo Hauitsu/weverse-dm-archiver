@@ -40,10 +40,10 @@
   "md.gift": "    - [gift] {list}",
   "md.fan": "팬",
   "html.fontComment": "/* 이모지: Noto Color Emoji, SIL Open Font License 1.1 - {file} 참조 */",
-  "html.title": "Weverse DM 백업 - {room}",
+  "html.title": "Weverse DM 백업",
   "html.metaWhoAll": "{artist} {a}",
   "html.metaWhoMe": " &middot; 나 {n}",
-  "html.meta": "room {ids} ({room}) &middot; {who} &middot; 고유 메시지 {n}개 &middot; {a} ~ {b} {tz} &middot; {pages}페이지 ({files} part) &middot; 로컬 미디어 {lok}/{tot}",
+  "html.meta": "{who} &middot; 고유 메시지 {n}개 &middot; {a} ~ {b} {tz} &middot; {pages}페이지 ({files} part) &middot; 로컬 미디어 {lok}/{tot}",
   "html.bookmarkSummary": "★ 내 북마크 ({n}) - 눌러서 열기",
   "html.bmMore": "메시지 메뉴",
   "html.bmAdd": "이 메시지 북마크",
@@ -146,5 +146,7 @@
   "gui.phase.stopped": "중단됨",
   "html.chipEdit": "클릭해서 이름 바꾸기 (최대 15자)",
   "html.bubTitle": "말풍선 색",
-  "html.chipHari": "일 함께"
+  "html.chipHari": "일 함께",
+  "html.titleBy": "by Hauitsu",
+  "html.roomIds": "room {ids}"
 }

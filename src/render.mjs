@@ -437,7 +437,8 @@ for (const x of norm) x.media.forEach((im, i) => { mediaTot++; if (mediaFile(x, 
 const h = [];
 h.push('<!doctype html><html lang="' + t.lang + '"><head><meta charset="utf-8">');
 h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
-h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title>');
+// The tab keeps the room so several archives stay apart; the visible header (below) does not.
+  h.push('<title>' + esc(t("html.title")) + ' - ' + esc(ROOM_NAME) + ' (' + esc([...roomIds].join(', ')) + ')</title>');
 // Runs before the first paint: a remembered theme is on the page before anything is drawn, so
 // nobody sees a dark flash on the way to light.
 h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
@@ -446,7 +447,17 @@ if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
 h.push('body{font-family:-apple-system,Segoe UI,Roboto,sans-serif,NotoEmojiWeb;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
 h.push('.wrap{max-width:860px;margin:0 auto}h1{font-size:20px;margin-bottom:6px}');
+// The header names the backup, not the room: the room moves down under the bookmark box as a
+// profile picture with its name (see .kepala). "by Hauitsu" rides along in grey.
+h.push('.oleh{color:#8b93a1;font-weight:400}');
 h.push('.meta{color:#8b93a1;font-size:13px;margin-bottom:14px}');
+// One knob for how big the room picture is: the file is 256x256, so --pf:256px shows it 1:1.
+h.push(':root{--pf:96px}');
+h.push('.kepala{display:flex;align-items:center;gap:14px;margin:0 0 18px}');
+h.push('.pf{display:block;flex:0 0 auto;width:var(--pf);height:var(--pf);border-radius:50%;object-fit:cover;background:#232833}');
+h.push('.pf.pfi{display:flex;align-items:center;justify-content:center;font-size:calc(var(--pf) / 2.6);font-weight:600}');
+h.push('.kepala .rn{font-size:17px;font-weight:600;line-height:1.25}');
+h.push('.kepala .rid{color:#8b93a1;font-size:12px;margin-top:2px}');
 h.push('.nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}');
 h.push('.nav a{color:#9ecbff;background:#161b24;border:1px solid #232833;border-radius:6px;padding:3px 8px;font-size:12px;text-decoration:none}');
 h.push('.nav a:hover{background:#1d2531}');
@@ -568,6 +579,10 @@ h.push('   bubble at all, in either theme. */');
 h.push('html[data-tema="light"]{color-scheme:light}');
 h.push('html[data-tema="light"] body{background:#f7f8fa;color:#17181c}');
 h.push('html[data-tema="light"] .meta{color:#6b7280}');
+h.push('html[data-tema="light"] .oleh{color:#6b7280}');
+h.push('html[data-tema="light"] .pf{background:#dfe3e8}');
+h.push('html[data-tema="light"] .pf.pfi{color:#17181c}');
+h.push('html[data-tema="light"] .kepala .rid{color:#6b7280}');
 h.push('html[data-tema="light"] .nav a{color:#1f6feb;background:#fff;border-color:#dde3ea}');
 h.push('html[data-tema="light"] .nav a:hover{background:#eef3fb}');
 h.push('html[data-tema="light"] .day{background:#f7f8fa;color:#6b7280;border-bottom-color:#e3e7ec}');
@@ -644,8 +659,8 @@ h.push('</style></head><body><div class="wrap">');
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
 // Sits next to the button so the right label is there before the message list is parsed.
 h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
-h.push('<h1>' + esc(t("html.title", { room: ROOM_NAME })) + '</h1>');
-h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), room: esc(ROOM_NAME), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
+h.push('<h1>' + esc(t("html.title")) + ' <span class="oleh">' + esc(t("html.titleBy")) + '</span></h1>');
+h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
 h.push('<div class="nav">' + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
 if (BM_ON) {
   // Empty until you fill it: the three dots next to a message add one, and this box lists, exports
@@ -653,6 +668,17 @@ if (BM_ON) {
   h.push('<details class="bml" id="bml"><summary>' + t("html.bmSum0", { n: 0 }) + '</summary>');
   h.push('<div class="bb"><button type="button" id="bmex">' + t("html.bmExport") + '</button><button type="button" id="bmim">' + t("html.bmImport") + '</button><span class="bnota" id="bmnota"></span><input type="file" id="bmfi" accept=".json,application/json" hidden></div>');
   h.push('<div id="bmlist"><div class="bkosong">' + t("html.bmEmpty") + '</div></div></details>');
+}
+// The room, under the bookmark box: the artist's own picture (the file the messages use) with the
+// room name beside it. With bookmarks off - the public export - it lands under the month links.
+{
+  const pfRoom = avWeb('artist');
+  const awal = Array.from(ROOM_NAME)[0] || '?';
+  h.push('<div class="kepala">' + (pfRoom
+    ? '<img class="pf" src="' + esc(pfRoom) + '" alt="' + esc(ROOM_NAME) + '">'
+    : '<div class="pf pfi"><span>' + esc(awal) + '</span></div>')
+    + '<div class="kt"><div class="rn">' + esc(ROOM_NAME) + '</div>'
+    + '<div class="rid">' + t("html.roomIds", { ids: esc([...roomIds].join(', ')) }) + '</div></div></div>');
 }
 lastDay = '';
 let lastMonth = '';
