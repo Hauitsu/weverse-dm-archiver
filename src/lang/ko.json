@@ -62,7 +62,7 @@
   "gui.rooms": "방 목록",
   "gui.selectAll": "전체 선택",
   "gui.selectNone": "선택 해제",
-  "gui.sizeHint": "방을 여러 개 선택하면 한 번에 모두 처리됩니다",
+  "gui.sizeHint": "방을 여러 개 선택하면 한 번에 순서대로 모두 처리됩니다",
   "gui.sizeSaved": "{v} GB 저장됨",
   "gui.totalSel": "{n}개 방 선택 - 전체 대화 최대 {v}",
   "gui.totalNone": "아직 선택한 방이 없습니다",
