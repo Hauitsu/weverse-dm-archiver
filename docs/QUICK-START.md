@@ -47,8 +47,10 @@ Options:
   follows the Windows language instead.
 - **Also make a shareable zip** - after the room is done, write `dist/weverse-dm-<room>.zip`
   containing the public chat, its media and a README in three languages.
-- **Hide this name in the public export** - optional, format `old=new`. Only the public export
-  changes; your private copy keeps the real text.
+- **Alias in the public export** - what readers see instead of your own nickname. You never type
+  your name: the archive records it, and every occurrence - including the sentences where the artist
+  typed it - becomes this alias (`EverAfter` by default). Only the public export changes; your
+  private copy keeps the real text.
 - **Estimated size** - the line under the list adds up every room you tick. The estimate covers the
   whole conversation, which starts April 2025: a room that has never been saved counts as the
   reference size, a saved room is projected from its own measured rate, and ticking the shareable
@@ -116,7 +118,7 @@ rooms/public/        the public export: artist side only, nickname hidden, no bo
 media/               photos/, video/, avatars/, fonts/
 downloads/<room>/    the raw pages, one JSONL line each - delete only if you want to start over
 dist/                share zips with their .sha256 and .manifest.json
-config.json          optional settings (language, tz, browserPath, output, publicRename, pacing)
+config.json          optional settings (language, tz, browserPath, output, publicAlias, pacing)
 ```
 
 `media/fonts/` already comes with the repo (the emoji font the page links to); everything else

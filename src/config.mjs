@@ -16,8 +16,12 @@ export const DEFAULTS = {
   tz: "auto",
   roomsFile: "rooms.unis.json",
   output: "rooms",
-  // Applied to the public export only: name=Someone|other=Other hides a nickname the artist typed.
-  // It is deliberately never set as an environment variable, so the private export keeps the real text.
+  // What the public export shows instead of the fan nickname. The name itself is found in the archive
+  // (the messages the fan sent carry it), so nothing has to be typed; a nickname that changes over
+  // time means every one of them is hidden.
+  publicAlias: "EverAfter",
+  // Optional extra find=replace pairs for the public export: name=Someone|other=Other. Deliberately
+  // never set as an environment variable, so the private export keeps the real text.
   publicRename: "",
   pacing: { minMs: 1500, maxMs: 3000 },
   textOnly: false,

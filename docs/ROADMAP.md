@@ -18,8 +18,8 @@ the page (`src/gui.mjs`), the command line (`src/cli.mjs`) and a dependency-free
 (`src/zip.mjs`).
 
 Every render writes two exports from the same archive: `rooms/` (private - both sides, bookmarks
-per your setting) and `rooms/public/` (artist side only, nickname replaced when `publicRename` is
-set, bookmarks off). The zip is always built from the public one.
+per your setting) and `rooms/public/` (artist side only, your nickname replaced by `publicAlias`,
+bookmarks off). The zip is always built from the public one.
 
 The export always points at the original photos and videos, so there is no quality knob. Reference
 numbers for one room: 18 months of history, 9,574 unique messages (4,119 kept after the artist-only

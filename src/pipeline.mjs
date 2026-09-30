@@ -35,6 +35,28 @@ export function dirs(cfg) {
 }
 
 export const srcFor = (slug) => path.join(REPO, "downloads", slug);
+
+// The public export is the one that leaves the house, so it never shows the fan nickname. The name
+// is already in the archive - the messages the fan sent carry it - so the alias is applied without
+// anyone typing the old name, and a nickname that changed over time hides every version of it.
+// publicRename stays available for extra find=replace pairs.
+export function publicRenameFor(cfg, slug) {
+  const c = cfg || {};
+  const want = c.publicAlias == null || c.publicAlias === "" ? "EverAfter" : c.publicAlias;
+  const alias = String(want).trim().replace(/[|=]/g, "").trim() || "EverAfter";
+  const extra = String(c.publicRename || "").split("|").map((s) => s.trim()).filter((s) => s.indexOf("=") > 0);
+  const pairs = extra.slice();
+  const done = new Set(extra.map((p) => p.slice(0, p.indexOf("=")).trim()));
+  let nicks = [];
+  try { nicks = [...readArchive(srcFor(slug)).nicks]; } catch (e) { nicks = []; }
+  for (const n of nicks) {
+    const old = String(n).trim();
+    if (!old || old === alias || done.has(old)) continue;
+    done.add(old);
+    pairs.push(old + "=" + alias);
+  }
+  return pairs.join("|");
+}
 export const tagFor = (slug) => "weverse-dm-" + slug;
 
 // A zone the user pinned (the page, or config.json) beats the zone in the rooms file. "auto" means

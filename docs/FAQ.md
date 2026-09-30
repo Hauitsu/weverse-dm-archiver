@@ -59,19 +59,22 @@ Every render writes both, from the same archive, so there is nothing to choose u
 | --- | --- | --- |
 | messages | both sides | artist side only |
 | bookmarks | whatever your settings say | never |
+| your nickname | shown as-is | replaced by `publicAlias` (`EverAfter`) |
 | `publicRename` | ignored, the real text is kept | applied |
 | goes into the zip | no | yes |
 
 ## Does the zip contain my nickname?
 
-Not as a sender: the zip is built from the **public** export, so none of your messages appear and
-your nickname is never used as a sender. The artist's messages are stored word for word, though -
-if the artist typed your nickname in a message, that sentence contains it, exactly as it appears in
-the app. That is what `publicRename` is for: set
-`"publicRename": "the name=what to show instead"` in `config.json` (or use the field in the page)
-and every occurrence is replaced in the public export only - your own `rooms/` copy keeps the real
-text. The run reports `render: public export checked, the hidden name is gone` when the scan comes
-back clean, and a warning with a count when it does not.
+Not as a sender: the zip is built from the **public** export, so none of your messages appear. Your
+nickname is still written down, though, because the artist's messages are stored word for word - if
+they typed your name in a sentence, that sentence contains it exactly as it appears in the app. So
+the public export replaces it. The archive already records your nickname (every message you sent
+carries it), so nothing has to be typed: every occurrence becomes the alias from `"publicAlias"` in
+`config.json` - `EverAfter` by default, and the field in the page changes it. A nickname you changed
+at some point is hidden as well. `"publicRename"` is there for extra `find=replace` pairs, and your
+own `rooms/` copy always keeps the real text. The run reports
+`render: public export checked, the hidden name is gone` when the scan comes back clean, and a
+warning with a count when it does not.
 
 ## What is inside the zip?
 

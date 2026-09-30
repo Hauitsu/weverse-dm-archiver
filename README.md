@@ -17,7 +17,8 @@ login tokens, and never touches the tab you are logged in on.
   page that opens offline in any browser, with day sections, artist highlighting,
   deleted-message markers and bookmarks
 - `rooms/public/<room>.html` - the **public** export: the artist side only, never any bookmarks,
-  and a nickname replaced if you asked for it - the copy that is safe to hand to someone else
+  and your own nickname replaced by an alias (`EverAfter` by default) - the copy that is safe to
+  hand to someone else
 - `rooms/<room>.md` and `rooms/<room>.jsonl` - the same conversation as text and as data, written
   in both folders
 - `media/` - every photo, video and audio file the conversation links to, at the quality
@@ -95,10 +96,12 @@ Everything stays on your computer. Nothing is uploaded, there is no telemetry an
 ours; the archive is plain files you can copy to a drive, share or delete.
 
 Every render writes two exports, because they answer two different questions. `rooms/` is yours:
-both sides of the conversation, bookmarks included. `rooms/public/` keeps only the artist side,
-never writes bookmarks, and can hide a nickname the artist typed - put
-`"publicRename": "the name=what to show instead"` in `config.json` (or use the field in the page)
-and the public export uses the replacement. The share zip is always built from the public export,
+both sides of the conversation, bookmarks included, real text. `rooms/public/` keeps only the artist
+side, never writes bookmarks, and hides your own nickname as well. The archive already records that
+name - every message you sent carries it - so each occurrence is replaced without you typing
+anything, including the sentences where the artist typed it. What it becomes is `"publicAlias"` in
+`config.json`, `EverAfter` by default, and the field in the page changes it; `"publicRename"` stays
+for extra `find=replace` pairs. The share zip is always built from the public export,
 and only the media that page points at is copied into it, so nothing you sent is packaged for
 someone else. If you would rather not share anything, `dist/` is just a folder you can delete.
 

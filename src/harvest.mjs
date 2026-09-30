@@ -17,7 +17,7 @@ export const partName = (tag, i) => tag + "-part" + String(i).padStart(3, "0") +
 // the highest part number. Any room-name tag counts, so a folder harvested by an older build
 // keeps working and the walk continues where it stopped instead of starting over.
 export function readArchive(dir) {
-  const out = { seen: new Set(), ids: 0, deepest: null, newest: null, pages: 0, maxPart: 0, bytes: 0, files: [] };
+  const out = { seen: new Set(), nicks: new Set(), ids: 0, deepest: null, newest: null, pages: 0, maxPart: 0, bytes: 0, files: [] };
   let names = [];
   try { names = fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl")); } catch (e) { return out; }
   for (const n of names.sort()) {
@@ -37,7 +37,12 @@ export function readArchive(dir) {
       let body = null;
       try { body = JSON.parse(rec.body || "null"); } catch (e) { body = null; }
       const data = body && Array.isArray(body.data) ? body.data : [];
-      for (const msg of data) if (msg && msg.messageId && !out.seen.has(msg.messageId)) { out.seen.add(msg.messageId); out.ids++; }
+      for (const msg of data) {
+        // The messages the fan sent carry their own nickname; that is how the public export knows
+        // which name to hide without the user typing it.
+        if (msg && msg.nickname && String(msg.userType || "").toUpperCase() !== "ARTIST") out.nicks.add(String(msg.nickname));
+        if (msg && msg.messageId && !out.seen.has(msg.messageId)) { out.seen.add(msg.messageId); out.ids++; }
+      }
     }
   }
   return out;

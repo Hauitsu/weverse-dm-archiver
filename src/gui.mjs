@@ -9,7 +9,7 @@ import path from "node:path";
 import http from "node:http";
 import { loadConfig, saveConfig, CONFIG_FILE } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, GIB } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
 
 const NL = String.fromCharCode(10);
@@ -94,7 +94,7 @@ function page() {
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <input type=\"text\" id=\"tz\" list=\"tzs\" size=\"22\" value=\"" + esc(cfg.tz || "auto") + "\"></label>",
     "<datalist id=\"tzs\">" + opts + "</datalist>",
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div></details>",
-    "<div class=\"grid\" style=\"margin-top:10px\"><label>" + esc(tr("gui.rename")) + " <input type=\"text\" id=\"rename\" size=\"24\" value=\"" + esc(cfg.publicRename || "") + "\"></label>",
+    "<div class=\"grid\" style=\"margin-top:10px\"><label>" + esc(tr("gui.rename")) + " <input type=\"text\" id=\"rename\" size=\"24\" value=\"" + esc(cfg.publicAlias || "EverAfter") + "\"></label>",
     "<span class=\"muted\">" + esc(tr("gui.renameHint")) + "</span></div>",
     "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
@@ -127,7 +127,7 @@ function page() {
     "  var ids=[];",
     "  document.querySelectorAll(\"#rooms input[data-slug]:checked\").forEach(function(c){ids.push(c.dataset.slug);});",
     "  if(!ids.length){alert(MSG.pick);return;}",
-    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value,rename:el(\"#rename\").value})});",
+    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value,alias:el(\"#rename\").value})});",
     "  tick();",
     "}",
     "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
@@ -193,7 +193,7 @@ async function startJob(body) {
   if (!list.length) return;
   const share = body.share === true;
   if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
-  if (body.rename !== undefined && String(body.rename) !== String(cfg.publicRename || "")) { try { cfg = saveConfig({ publicRename: String(body.rename) }); } catch (e) {} }
+    if (body.alias !== undefined && String(body.alias) !== String(cfg.publicAlias || "")) { try { cfg = saveConfig({ publicAlias: String(body.alias) }); } catch (e) {} }
   running(true);
   state.result = null; state.error = ""; state.log = []; state.percent = 0; state.progress = null; state.startedAt = Date.now();
   const tr = t();
@@ -214,7 +214,7 @@ async function startJob(body) {
       state.slug = r.slug; state.roomName = roomName;
       const res = await runRoom({
         slug: r.slug, roomId: r.roomId, roomName: roomName, artist: r.nameKo || r.slug,
-        tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: cfg.publicRename || "", share: share,
+        tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: publicRenameFor(cfg, r.slug), share: share,
         credit: cfg.credit || "", cdp: session.cdp, onLog: push, shouldStop: () => stopFlag,
         onProgress: (p) => {
           setPhaseSilent(p.phase);

@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { loadConfig } from "./config.mjs";
-import { REPO, dirs, rooms, runRoom, renderBoth, publicDirFor, srcFor, openSession, tzFor } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, renderBoth, publicDirFor, srcFor, openSession, tzFor, publicRenameFor } from "./pipeline.mjs";
 import { downloadMedia, pendingItems } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser } from "./browser.mjs";
@@ -67,13 +67,13 @@ const commands = {
   harvest: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: cfg.publicRename || "", cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res.phases.harvest, null, 1));
     });
   },
   render: async () => {
     const r = pick();
-    const res = await renderBoth({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: cfg.publicRename || "", onLog: log });
+    const res = await renderBoth({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), onLog: log });
     // Only claim an output path when the renderer really produced one.
     if (res.private !== 0) { log("render failed (exit " + res.private + "); nothing was written"); process.exit(1); }
     log("private export -> " + path.join(d.rooms, r.slug + ".html"));
@@ -98,7 +98,7 @@ const commands = {
   all: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: cfg.publicRename || "", share: has("share"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), share: has("share"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res, null, 1));
     });
   },
