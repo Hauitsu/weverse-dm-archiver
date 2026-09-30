@@ -15,6 +15,9 @@ export const DEFAULTS = {
   language: "auto",
   tz: "auto",
   roomsFile: "rooms.unis.json",
+  // Ceiling the picker quotes for a room it has never seen: one room of this group measured 2.5 GB
+  // over 18 months, so a whole conversation is at most about this. Only affects the estimate.
+  estimateGb: 3,
   output: "rooms",
   // Extra find=replace pairs for the public export: name=Someone|other=Other. The fan nickname itself
   // needs no entry - it is read from the archive and always becomes EverAfter - so this is only for

@@ -36,7 +36,7 @@ The tool never sees or stores your password, and never reads your login token.
 ## 3. Pick rooms and press Start
 
 Each row is one DM room, with its size. A room that has been archived once shows what it really
-uses; the rest show a rough guess of a whole conversation (about 2.5 GB). Tick one or more rooms
+uses; the rest show the ceiling for a whole conversation (up to 3 GB). Tick one or more rooms
 and press **Start**. Rooms are archived one after another, never at the same time, with 1.5-3
 seconds between pages.
 
@@ -47,10 +47,10 @@ Options:
   follows the Windows language instead.
 - **Also make a shareable zip** - after the room is done, write `dist/weverse-dm-<room>.zip`
   containing the public chat, its media and a README in three languages.
-- **Estimated size** - the line under the list adds up every room you tick. The estimate covers the
-  whole conversation, which starts April 2025: a room that has never been saved counts as the
-  reference size, a saved room is projected from its own measured rate, and ticking the shareable
-  zip adds roughly the same amount again.
+- **Estimated size** - the line under the list adds up every room you tick. It is a ceiling, not a
+  promise: this group's conversation starts April 2025, a room that has never been saved is quoted as
+  up to `estimateGb` (3 GB), a saved room is projected from its own measured rate, and ticking the
+  shareable zip adds roughly the same again.
 - **Advanced settings** - collapsed, so you can ignore it. The time zone lives there: `auto`
   follows the machine, or type an IANA name (`Asia/Jakarta`) to pin one. The timestamps in the
   archive are the only thing it changes.

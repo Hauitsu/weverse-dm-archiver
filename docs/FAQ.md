@@ -36,7 +36,8 @@ do not run two archives of the same room at the same time from two copies of the
 
 ## How big is the result?
 
-About 2.5 GB for a room at full quality. Measured on an 18-month room: 9,574 unique messages
+About 2.5 GB for a room at full quality - the page quotes up to 3 GB until that room has been
+archived once. Measured on an 18-month room: 9,574 unique messages
 (4,119 from the artist, 5,455 from the account owner) and 1,478 media files. The page alone is 2.5 MB of
 HTML, plus 970 KB of Markdown and 8.2 MB of JSONL. Photos and videos are saved exactly as Weverse served them - there is no quality
 knob in this build. A compact variant (480p video, webp photos) is on the roadmap but is

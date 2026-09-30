@@ -107,10 +107,10 @@ function savedBytes(cfg, slug) {
 // How much disk a room takes, for the picker: what is on disk right now (`saved`) and what the whole
 // conversation is expected to cost (`full`). A saved room projects the average size of the months it
 // already covers onto the months still missing, so a half-finished walk shows what finishing costs;
-// a room with nothing on disk falls back to the reference room measured at cfg.estimateGb.
+// a room with nothing on disk falls back to cfg.estimateGb, the ceiling of a full room.
 export function estimateFor(cfg, room) {
   const c = cfg || loadConfig();
-  const guess = Math.round(Number(c.estimateGb || 2.5) * GIB);
+  const guess = Math.round(Number(c.estimateGb || 3) * GIB);
   let months = null;
   let firstMonth = null;
   // rooms/summary.json belongs to whichever room was rendered last, so it only counts when it really
