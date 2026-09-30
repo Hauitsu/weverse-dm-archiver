@@ -191,7 +191,9 @@ const flat = (m) => {
     const clean = keep.split(NL).map((x) => x.trim()).filter(Boolean).join(NL);
     if (clean) keepAll.push(clean);
     if (p.translatedValues && p.translatedValues.en) trans.push(p.translatedValues.en);
-    if (p.extension && p.extension.gift && p.extension.gift.giftCode) gifts.push(p.extension.gift.giftCode);
+    // The same gift is often reported twice inside one message; keeping it once stops the caption
+    // from reading "NORMAL, NORMAL".
+    if (p.extension && p.extension.gift && p.extension.gift.giftCode && gifts.indexOf(p.extension.gift.giftCode) < 0) gifts.push(p.extension.gift.giftCode);
   }
   return { text: keepAll.join(NL), media: media, trans: trans.join(NL), gifts: gifts };
 };
@@ -379,7 +381,10 @@ if (giftAda) {
   h.push('.bub.gift{position:relative}');
   h.push('.bub.gift.txt-only{min-width:150px;min-height:76px}');
   h.push('.m .bub.gift{background:#fc54af;border-color:#ff7fc4}');
-  h.push('.bub.gift .gf{color:#fff;opacity:.92}');
+  // The cover says it better than words: while it is there the caption stays in the page for a
+  // screen reader and for find-on-page, but out of sight. It used to sit under the cover, one
+  // layout change away from showing up again.
+  h.push('.bub.gift .gf{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}');
   h.push('.gfc{position:absolute;inset:0;z-index:5;margin:0;padding:0;border:0;cursor:pointer;border-radius:inherit;background-color:#fc54af;box-shadow:inset 0 0 0 4px #ff7fc4;transition:opacity .35s ease,visibility 0s linear 0s}');
   h.push('.gfc::before{content:"";position:absolute;top:50%;left:4px;right:4px;height:14px;margin-top:-7px;background-repeat:no-repeat;background-size:100% 100%;background-image:url(data:image/png;base64,' + dasar.pita + ')}');
   h.push('.gfc::after{content:"";position:absolute;top:50%;left:50%;width:60px;height:52px;transform:translate(-50%,-50%);background-repeat:no-repeat;background-size:contain;background-image:url(data:image/png;base64,' + dasar.bow + ')}');
@@ -458,7 +463,9 @@ for (const x of norm) {
     }
   }
   if (x.gift) h.push('<div class="gf">' + t("html.gift") + esc(x.gift.join(', ')) + '</div>');
-  if (gKode) h.push('<button class="gfc" type="button" aria-label="' + esc(t("html.giftOpen")) + '" title="' + esc(t("html.gift") + x.gift.join(', ')) + '"></button>');
+  // No title on purpose: the cover is the message, and the same gift code arrives twice inside one
+  // message, so a tooltip would read "NORMAL, NORMAL".
+  if (gKode) h.push('<button class="gfc" type="button" aria-label="' + esc(t("html.giftOpen")) + '"></button>');
   h.push('</div></div>');
   h.push('<div class="tm">' + (bm ? '<span class="bmk" title="' + t("html.bookmarkTitle", { n: bm.bookmarkNo }) + '">&#9733;</span> ' : '') + esc(x.isoWib.slice(11, 16)) + '</div>');
   h.push('</div>');

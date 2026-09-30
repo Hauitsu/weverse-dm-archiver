@@ -19,7 +19,9 @@ login tokens, and never touches the tab you are logged in on.
 - `rooms-public/<room>.html` - the **public** export: the artist side only, never any bookmarks,
   and your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
 - gift bubbles stay covered exactly like in the app - the pink box with the ribbon and bow -
-  and a single tap opens them to reveal the photo, video or voice note inside
+  and a single tap opens them to reveal the photo, video or voice note inside. No `[gift] NORMAL`
+  caption sits on the cover: it stays in the page for screen readers and find-on-page only, and the
+  cover itself carries no tooltip
 - `rooms/<room>.md` and `rooms/<room>.jsonl` - the same conversation as text and as data, written
   in both folders
 - `media/` - every photo, video and audio file the conversation links to, at the quality
