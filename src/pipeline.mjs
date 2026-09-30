@@ -14,7 +14,7 @@ import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
 import { loadConfig } from "./config.mjs";
-import { harvest, readArchive } from "./harvest.mjs";
+import { harvest, readArchive, saveArtistPhoto } from "./harvest.mjs";
 import { downloadMedia } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser, launch, launchPlain, killBrowser, waitExit, profileDir } from "./browser.mjs";
@@ -393,6 +393,13 @@ export async function runRoom(o) {
   });
   out.phases.harvest = h;
   if (stop()) return Object.assign(out, { stopped: true });
+
+  // The artist's picture travels with the conversation: fetch it here so the render below can show it.
+  // Best effort only - a failed download must never fail the harvest that just succeeded.
+  try {
+    const photo = await saveArtistPhoto({ dir: srcFor(o.slug), mediaDir: d.media, slug: o.slug, onLog: log });
+    if (photo) out.phases.artistPhoto = photo;
+  } catch (e) { log("artist photo skipped: " + String(e.message || e)); }
 
   const r1 = await renderBoth({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, rename: o.rename, bookmarks: o.bookmarks, onLog: log });
   out.phases.render = r1.private;

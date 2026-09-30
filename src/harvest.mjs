@@ -16,6 +16,49 @@ export const partName = (tag, i) => tag + "-part" + String(i).padStart(3, "0") +
 // What is already on disk: every message id we have seen, the oldest and newest createDate, and
 // the highest part number. Any room-name tag counts, so a folder harvested by an older build
 // keeps working and the walk continues where it stopped instead of starting over.
+
+// Every message carries the fan's nickname, so the artist's own name is not in the payload - but the
+// picture is: profileImageUrl on the ARTIST side is the artist. Saving it right after a harvest means a
+// room is ready to render with a face, without a separate step.
+export async function saveArtistPhoto(o) {
+  const opts = o || {};
+  const log = opts.onLog || (() => {});
+  const dir = opts.dir, mediaDir = opts.mediaDir, slug = opts.slug;
+  if (!dir || !mediaDir || !slug) return null;
+  const dest = path.join(mediaDir, "avatars");
+  for (const ext of ["png", "jpg", "jpeg", "webp"]) if (fs.existsSync(path.join(dest, slug + "-artist." + ext))) return null;
+  let files = [];
+  try { files = fs.readdirSync(dir).filter((n) => /-part\d+\.jsonl$/.test(n)).sort(); } catch (e) { return null; }
+  let url = null;
+  for (const f of files) {
+    let text = "";
+    try { text = fs.readFileSync(path.join(dir, f), "utf8"); } catch (e) { continue; }
+    for (const line of text.split(NL)) {
+      if (!line) continue;
+      let rec = null;
+      try { rec = JSON.parse(line); } catch (e) { continue; }
+      let page = null;
+      try { page = parsePage(rec.body); } catch (e) { continue; }
+      for (const m of page.data || []) {
+        if (String(m.userType || "").toUpperCase() === "ARTIST" && m.profileImageUrl) { url = String(m.profileImageUrl); break; }
+      }
+      if (url) break;
+    }
+    if (url) break;
+  }
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { headers: { Referer: "https://weverse.io/", "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) { log("artist photo: http " + res.status); return null; }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const kind = String(res.headers.get("content-type") || "").toLowerCase();
+    const ext = kind.indexOf("png") >= 0 ? "png" : kind.indexOf("webp") >= 0 ? "webp" : "jpg";
+    fs.mkdirSync(dest, { recursive: true });
+    fs.writeFileSync(path.join(dest, slug + "-artist." + ext), buf);
+    log("artist photo saved: avatars/" + slug + "-artist." + ext + " (" + Math.round(buf.length / 1024) + " KB)");
+    return slug + "-artist." + ext;
+  } catch (e) { log("artist photo failed: " + String(e.message || e)); return null; }
+}
 export function readArchive(dir) {
   const out = { seen: new Set(), nicks: new Set(), ids: 0, deepest: null, newest: null, pages: 0, maxPart: 0, bytes: 0, files: [] };
   let names = [];
