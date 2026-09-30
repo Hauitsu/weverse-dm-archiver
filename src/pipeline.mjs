@@ -303,8 +303,8 @@ export async function runRoom(o) {
 
   if (o.share) {
     // Always pack the public export: the private one holds the other side of the conversation.
-    const b = await bundle({ slug: o.slug, roomId: o.roomId, roomName: roomName, artist: artist, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: o.credit, onLog: log });
-    out.phases.bundle = { zip: b.zip, sha256: b.sha256, bytes: b.bytes, entries: b.entries };
+    const b = await bundle({ slug: o.slug, roomId: o.roomId, roomName: roomName, artist: artist, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: o.credit, lowQuality: !!o.shareLow, onLog: log });
+    out.phases.bundle = { zip: b.zip, sha256: b.sha256, bytes: b.bytes, entries: b.entries, quality: b.quality, mediaBytes: b.mediaBytes, mediaOriginal: b.mediaOriginal, recompressed: b.recompressed };
   }
   out.elapsedMs = Date.now() - out.startedAt;
   return out;

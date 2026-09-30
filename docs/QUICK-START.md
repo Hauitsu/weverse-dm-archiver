@@ -9,7 +9,8 @@ file, or type a command - but every command is listed too, in case you prefer th
 - **Node.js 20 or newer.** If you do not have it, double-clicking `START.bat` opens the download
   page and stops; install the LTS version and run `START.bat` again.
 - Chrome, Edge, Brave or Vivaldi. The tool starts its own window of whichever it finds first.
-- Disk space: about 3 GB per room, plus the same again if you also make the share zip.
+- Disk space: about 3 GB per room, plus the same again if you also make the share zip (a
+  re-compressed one is a fraction of that).
 
 ## 1. Start it
 
@@ -50,15 +51,20 @@ Options:
   "login success but not detected?" and the **I'm logged in - continue** button appears. It only asks
   for the next check right away (2.5 s becomes 0.25 s); it cannot skip the token check, so a wrong
   press simply keeps waiting.
-- **Also make a shareable zip** - ticked by default. After the room is done it writes
-  `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three languages. Only
-  artist messages and media are inside; your own messages are left out.
+- **Also make a shareable zip** - three choices, remembered in `config.json`. **Yes** (the default)
+  writes `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three
+  languages; only artist messages and media are inside, your own messages are left out. **Yes but Low
+  Quality** packs the same thing from re-compressed copies - 1280px on the long side, h264 video,
+  64 kbps audio - and needs `ffmpeg` on your `PATH`; the archive in `rooms/` and `media/` keeps its
+  originals either way. **No** skips the zip entirely.
 - **Estimated size** - the line under the list adds up every room you tick; hover it for the
   reasoning. The estimate is a ceiling, not a promise: this group's conversation starts April 2025, a
   room that has never been saved is quoted as up to `estimateGb` (3 GB), a saved room is projected
-  from its own measured rate, and ticking the shareable zip (on by default) adds roughly the same
-  again.
-- **Advanced settings** - collapsed, so you can ignore it. The time zone lives there: `auto`
+  from its own measured rate, and the shareable zip adds roughly the same again at **Yes** - a
+  re-compressed one adds far less, and **No** adds nothing.
+- **Advanced settings** - collapsed, so you can ignore it. Two settings live in `config.json`
+  rather than here: `ffmpegPath`, for when `ffmpeg` is not on your `PATH`, and `estimateGb`. The time
+  zone lives there in the picker: `auto`
   follows the machine, or pick a zone from the list (`Asia/Jakarta`) to pin one. The timestamps in the
   archive are the only thing it changes.
 
@@ -90,6 +96,7 @@ the whole `rooms/` + `media/` pair, or the zip, keeps it working.
 ```
 wdm rooms
 wdm all --room yunha --share
+wdm share --room yunha --low     # a re-compressed zip, needs ffmpeg
 ```
 
 The first one lists the rooms and what is already archived; the second harvests, renders,

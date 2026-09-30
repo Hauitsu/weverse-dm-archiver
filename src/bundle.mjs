@@ -16,6 +16,8 @@ import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { writeZip, collect } from "./zip.mjs";
+import { loadConfig } from "./config.mjs";
+import { findFfmpeg, supports, shrinkOne, pool, MAX_SIDE } from "./quality.mjs";
 
 const NL = String.fromCharCode(10);
 
@@ -67,13 +69,14 @@ function readme(o, generatedAt) {
   L.push("  index.html          double-click this one; it opens the chat");
   L.push("  chat/" + o.slug + ".html   every message, photo and video in one page");
   L.push("  chat/" + o.slug + ".md     the same messages as plain text");
-  L.push("  media/              the photos and videos the chat shows");
+  L.push("  media/              the photos and videos the chat shows" + (o.low ? ", re-compressed to keep the zip small" : ""));
   L.push("  The chat works offline. Keep the folder together: if you move the HTML file");
   L.push("  out on its own, its photos will not load.");
   L.push("");
   L.push("한국어");
   L.push("  index.html 을 두 번 클릭하면 채팅이 열립니다.");
   L.push("  chat/" + o.slug + ".html 안에 모든 메시지와 사진, 영상이 들어 있습니다.");
+  if (o.low) L.push("  media/ 안의 사진과 영상은 공유용으로 다시 압축되었습니다.");
   L.push("  인터넷 없이 열립니다. 폴더 전체를 그대로 두세요. HTML 파일만 따로 옮기면");
   L.push("  사진이 보이지 않습니다.");
   L.push("");
@@ -81,7 +84,7 @@ function readme(o, generatedAt) {
   L.push("  index.html          klik dua kali untuk membuka obrolannya");
   L.push("  chat/" + o.slug + ".html   semua pesan, foto, dan video dalam satu halaman");
   L.push("  chat/" + o.slug + ".md     isi pesan yang sama dalam bentuk teks");
-  L.push("  media/              foto dan video yang ditampilkan obrolan");
+  L.push("  media/              foto dan video yang ditampilkan obrolan" + (o.low ? ", dikompres ulang supaya zip-nya kecil" : ""));
   L.push("  Bisa dibuka tanpa internet. Simpan foldernya utuh: kalau file HTML-nya dipindah");
   L.push("  sendirian, fotonya tidak akan muncul.");
   L.push("");
@@ -123,6 +126,8 @@ export async function bundle(opts) {
   const roomDir = o.roomDir;
   const mediaDir = o.mediaDir;
   const distDir = o.distDir;
+  const low = !!o.lowQuality;
+  const cfg = o.cfg || loadConfig();
   const generatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
   const rootName = "weverse-dm-" + slug;
   const stageParent = path.join(os.tmpdir(), "wdm-share-" + slug + "-" + process.pid);
@@ -151,20 +156,44 @@ export async function bundle(opts) {
   const refs = mediaRefs(roomDir, slug);
   let mediaFiles = 0;
   let mediaBytes = 0;
+  let mediaOriginal = 0;
   let refMissing = 0;
+  let shrunk = 0;
+  let kept = 0;
+  // Low quality re-compresses the staged copy instead of hard-linking it. The archive on disk keeps
+  // every original byte; only what travels inside the zip is smaller.
+  const ffmpeg = low ? findFfmpeg(cfg) : "";
+  const compress = low && ffmpeg !== "";
+  const jobs = [];
   for (const rel of refs) {
     const abs = path.join(mediaDir, rel);
     if (!fs.existsSync(abs)) { refMissing++; continue; }
-    link(abs, path.join(root, "media", rel));
-    mediaFiles++;
-    try { mediaBytes += fs.statSync(abs).size; } catch (err) {}
+    jobs.push({ rel: rel, abs: abs });
   }
+  if (low && !ffmpeg) log("warning: low quality needs ffmpeg (set ffmpegPath in config.json if it is not on PATH); the zip keeps the original media");
+  else if (compress) log("quality: re-compressing up to " + jobs.length + " media file(s) to " + MAX_SIDE + "px on the long side - this is the slow part");
+  let done = 0;
+  await pool(jobs, compress ? 4 : 1, async (j) => {
+    let size = 0;
+    try { size = fs.statSync(j.abs).size; } catch (err) {}
+    mediaOriginal += size;
+    done++;
+    if (compress && supports(j.rel)) {
+      const r = await shrinkOne({ ffmpeg: ffmpeg, src: j.abs, dest: path.join(root, "media", j.rel) });
+      if (r.ok) { shrunk++; mediaFiles++; mediaBytes += r.after; if (done % 250 === 0) log("quality: " + done + "/" + jobs.length + " file(s)"); return; }
+      kept++;
+    }
+    link(j.abs, path.join(root, "media", j.rel));
+    mediaFiles++;
+    mediaBytes += size;
+  });
+  if (shrunk) log("quality: re-compressed " + shrunk + " of " + mediaFiles + " media file(s): " + (mediaOriginal / 1048576).toFixed(1) + " MB -> " + (mediaBytes / 1048576).toFixed(1) + " MB" + (kept ? " (" + kept + " would not get smaller, kept as they were)" : ""));
   if (!refs.size && fs.existsSync(mediaDir) && collect(mediaDir, "").some((e) => !e.dir && e.name !== "media-manifest.json")) {
     log("warning: the page does not point at any local media, so the package has no photos or video");
   }
   log("bundle: " + chatFiles + " archive file(s) and " + mediaFiles + " of " + refs.size + " referenced media file(s), " + (mediaBytes / 1048576).toFixed(1) + " MB" + (refMissing ? ", " + refMissing + " not on disk" : ""));
 
-  fs.writeFileSync(path.join(root, "README.txt"), readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "" }, generatedAt), "utf8");
+  fs.writeFileSync(path.join(root, "README.txt"), readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "", low: low }, generatedAt), "utf8");
   fs.writeFileSync(path.join(root, "index.html"), indexHtml({ slug: slug, roomName: o.roomName || slug }), "utf8");
 
   fs.mkdirSync(distDir, { recursive: true });
@@ -177,6 +206,7 @@ export async function bundle(opts) {
   const inside = {
     archive: rootName, slug: slug, roomId: o.roomId || "", roomName: o.roomName || "", artist: o.artist || "",
     generatedAt: generatedAt, chatFiles: chatFiles, mediaFiles: mediaFiles, mediaBytes: mediaBytes,
+    mediaBytesOriginal: mediaOriginal, quality: low ? "low" : "full", recompressed: shrunk, keptOriginal: kept,
     checksum: "see " + zipName + ".sha256 next to this archive",
   };
   const manifestPath = path.join(root, "manifest.json");
@@ -196,5 +226,5 @@ export async function bundle(opts) {
   fs.writeFileSync(zipPath + ".manifest.json", JSON.stringify(manifest, null, 2) + NL, "utf8");
   fs.rmSync(stageParent, { recursive: true, force: true });
   log("bundle: " + zipName + " (" + (zip.zipBytes / 1048576).toFixed(1) + " MB) sha256 " + sum.slice(0, 16) + "...");
-  return { zip: zipPath, sha256: sum, bytes: zip.zipBytes, entries: zip.entries, mediaFiles: mediaFiles, manifest: manifest };
+  return { zip: zipPath, sha256: sum, bytes: zip.zipBytes, entries: zip.entries, mediaFiles: mediaFiles, mediaBytes: mediaBytes, mediaOriginal: mediaOriginal, quality: low ? "low" : "full", recompressed: shrunk, manifest: manifest };
 }

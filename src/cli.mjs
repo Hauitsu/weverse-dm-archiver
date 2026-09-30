@@ -13,6 +13,7 @@ import { loadConfig } from "./config.mjs";
 import { REPO, dirs, rooms, runRoom, renderBoth, publicDirFor, srcFor, openSession, tzFor, publicRenameFor } from "./pipeline.mjs";
 import { downloadMedia, pendingItems } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
+import { findFfmpeg } from "./quality.mjs";
 import { findBrowser } from "./browser.mjs";
 import { readArchive } from "./harvest.mjs";
 
@@ -91,14 +92,14 @@ const commands = {
   },
   share: async () => {
     const r = pick();
-    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: cfg.credit || "", onLog: log });
+    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
     log(b.zip);
     log("sha256 " + b.sha256);
   },
   all: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), share: has("share"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), share: has("share"), shareLow: has("low"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res, null, 1));
     });
   },
@@ -111,11 +112,12 @@ const commands = {
     log("media      " + d.media + (fs.existsSync(d.media) ? "" : "  (will be created)"));
     log("downloads  " + d.downloads);
     log("config     " + (process.env.WDM_CONFIG || path.join(REPO, "config.json")));
+    log("ffmpeg     " + (findFfmpeg(cfg) || "none found - a low quality zip needs it, or set ffmpegPath"));
     const list = rooms(cfg);
     log("rooms file " + list.length + " room(s): " + list.map((r) => r.slug).join(", "));
   },
   help: async () => {
-    log("usage: node src/cli.mjs <rooms|harvest|render|media|share|all|doctor> [--room <slug>] [--share] [--lang en|ko|id]");
+    log("usage: node src/cli.mjs <rooms|harvest|render|media|share|all|doctor> [--room <slug>] [--share] [--low] [--lang en|ko|id]");
   },
 };
 

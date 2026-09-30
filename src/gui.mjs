@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
-import { loadConfig, saveConfig, CONFIG_FILE } from "./config.mjs";
+import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, canHurry, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
@@ -68,6 +68,9 @@ function page() {
   if (curTz !== "auto" && tzList.indexOf(curTz) < 0) tzList.unshift(curTz);
   const opts = tzList.map((z) => "<option value=\"" + esc(z) + "\"" + (z === curTz ? " selected" : "") + ">" + esc(z === "auto" ? machine : z) + "</option>").join("");
   const langs = ["en", "ko", "id"].map((l) => "<option value=\"" + l + "\"" + (pickLang(cfg.language) === l ? " selected" : "") + ">" + l + "</option>").join("");
+  // Yes / Yes but low quality / No, with the last choice remembered in config.json.
+  const shareOpts = [["yes", "gui.shareYes"], ["low", "gui.shareLow"], ["no", "gui.shareNo"]]
+    .map((m) => "<option value=\"" + m[0] + "\"" + (String(cfg.shareMode || "yes") === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>").join("");
   const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li>" + bold(s) + "</li>").join("") + "</ol>";
 
   return [
@@ -102,7 +105,7 @@ function page() {
     "<div id=\"rooms\">" + rows + "</div>",
     "<div class=\"grid\" style=\"margin-top:8px\"><span class=\"tipwrap\"><span id=\"total\" class=\"muted\"></span>",
     "<span class=\"tip\">" + esc(tr("gui.estHint", { v: Number(cfg.estimateGb || 3).toFixed(1) })) + "</span></span></div>",
-    "<div class=\"grid\" style=\"margin-top:8px\"><label><input type=\"checkbox\" id=\"share\" checked> " + esc(tr("gui.share")) + "</label>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.share")) + " <select id=\"share\">" + shareOpts + "</select></label>",
     "<span class=\"muted\">" + esc(tr("gui.shareHint")) + "</span></div>",
     "<details class=\"adv\" style=\"margin-top:10px\"><summary>" + esc(tr("gui.advanced")) + "</summary>",
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <select id=\"tz\">" + opts + "</select></label>",
@@ -133,7 +136,7 @@ function page() {
     "<section id=\"loginNote\" style=\"display:none\">" + noteHtml + "</section>",
     "<section><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + "};",
     "function el(s){return document.querySelector(s);}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var GIB=1073741824;",
@@ -143,9 +146,14 @@ function page() {
     "  if(!n){el(\"#total\").innerHTML=MSG.none;return;}",
     "  var t=MSG.total.replace(\"{n}\",\"<strong>\"+n+\"</strong>\").replace(\"{v}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
     "  if(saved>0)t+=MSG.savedNote.replace(\"{s}\",\"<strong>\"+(saved/GIB).toFixed(1)+\" GB</strong>\");",
-    "  if(el(\"#share\").checked)t+=MSG.zipNote.replace(\"{z}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
-    // What actually ends up on disk when the zip is wanted: the conversation plus the zip beside it.
-    "  if(el(\"#share\").checked)t+=MSG.allNote.replace(\"{t}\",\"<strong>\"+((full*2)/GIB).toFixed(1)+\" GB</strong>\");",
+    "  var mode=el(\"#share\").value;",
+    "  if(mode!==\"no\"){",
+    "    t+=mode===\"low\"?MSG.zipLow:MSG.zipNote.replace(\"{z}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
+    // What ends up on disk: the conversation, plus the zip beside it when one is written. A
+    // re-compressed zip is a fraction of the conversation and guessing that fraction would be
+    // worse than saying "much smaller", so in low mode only the conversation is counted.
+    "    t+=MSG.allNote.replace(\"{t}\",\"<strong>\"+((mode===\"low\"?full:full*2)/GIB).toFixed(1)+\" GB</strong>\");",
+    "  }",
     "  el(\"#total\").innerHTML=t;",
     "}",
     "function hideModal(){el(\"#modal\").style.display=\"none\";}",
@@ -160,7 +168,7 @@ function page() {
     "  var ids=[];",
     "  document.querySelectorAll(\"#rooms input[data-slug]:checked\").forEach(function(c){ids.push(c.dataset.slug);});",
     "  if(!ids.length){alert(MSG.pick);return;}",
-    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value})});",
+    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").value,tz:el(\"#tz\").value})});",
     "  tick();",
     "}",
     "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
@@ -181,7 +189,7 @@ function page() {
     "el(\"#bAll\").addEventListener(\"click\",function(){all(true);});",
     "el(\"#bNone\").addEventListener(\"click\",function(){all(false);});",
     "el(\"#rooms\").addEventListener(\"change\",total);",
-    "el(\"#share\").addEventListener(\"change\",total);",
+    "el(\"#share\").addEventListener(\"change\",function(){total();fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({shareMode:el(\"#share\").value})});});",
     "el(\"#start\").addEventListener(\"click\",askStart);",
     "el(\"#mGo\").addEventListener(\"click\",start);",
     "el(\"#mNo\").addEventListener(\"click\",hideModal);",
@@ -234,7 +242,13 @@ async function startJob(body) {
   const wanted = Array.isArray(body.rooms) ? body.rooms : [];
   const list = rooms(cfg).filter((r) => wanted.indexOf(r.slug) >= 0);
   if (!list.length) return;
-  const share = body.share === true;
+  // The page sends "yes" | "low" | "no"; true/false are still accepted so an older page or a script
+  // keeps working.
+  const asked = body.share === true ? "yes" : body.share === false ? "no" : String(body.share || cfg.shareMode || "yes");
+  const shareMode = SHARE_MODES.indexOf(asked) >= 0 ? asked : "yes";
+  const share = shareMode !== "no";
+  const shareLow = shareMode === "low";
+  if (shareMode !== cfg.shareMode) { try { cfg = saveConfig({ shareMode: shareMode }); } catch (e) {} }
   if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
       running(true);
   state.result = null; state.error = ""; state.log = []; state.percent = 0; state.progress = null; state.startedAt = Date.now();
@@ -263,7 +277,7 @@ async function startJob(body) {
       state.slug = r.slug; state.roomName = roomName;
       const res = await runRoom({
         slug: r.slug, roomId: r.roomId, roomName: roomName, artist: r.nameKo || r.slug,
-        tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: publicRenameFor(cfg, r.slug), share: share,
+        tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: publicRenameFor(cfg, r.slug), share: share, shareLow: shareLow,
         credit: cfg.credit || "", cdp: session.cdp, onLog: push, shouldStop: () => stopFlag,
         onProgress: (p) => {
           setPhaseSilent(p.phase);
@@ -315,6 +329,7 @@ async function handle(req, res) {
     const b = await readBody(req);
     if (b.language) { try { cfg = saveConfig({ language: String(b.language) }); } catch (e) {} }
     if (b.tz) { try { cfg = saveConfig({ tz: String(b.tz) }); } catch (e) {} }
+    if (b.shareMode && SHARE_MODES.indexOf(String(b.shareMode)) >= 0) { try { cfg = saveConfig({ shareMode: String(b.shareMode) }); } catch (e) {} }
     json(200, { ok: true, language: cfg.language, tz: cfg.tz });
     return;
   }

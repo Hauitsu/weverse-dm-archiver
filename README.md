@@ -38,7 +38,7 @@ login tokens, and never touches the tab you are logged in on.
 4. Tick a room and press **Start** - the popup explains the separate browser window first (hovering
    the button says the same) - then confirm. Progress streams page by page.
 5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `dist/` - it is made
-   by default.
+   by default, and the picker can ask for a re-compressed one instead, or for none at all.
 
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,
@@ -112,8 +112,9 @@ someone else. If you would rather not share anything, `dist/` is just a folder y
   `browserPath` in `config.json` at anything unusual).
 - Only rooms your own account can already read - this bypasses no membership and no paywall.
 - One room is around 2.5 GB at full quality (hovering the selected-rooms line quotes a 3 GB ceiling
-  until a room has been archived once). A compact variant is deliberately **not** part of
-  this build; see `docs/ROADMAP.md`.
+  until a room has been archived once). The share zip can be built from re-compressed copies instead
+  ("Yes but Low Quality": 1280px on the long side, h264 video, 64 kbps audio), which needs an
+  `ffmpeg` on `PATH`; the archive on disk keeps its originals either way.
 - Windows is the tested path (`START.bat`, `wdm.bat`). The JavaScript modules run wherever Node
   runs; only the launchers are Windows-specific.
 

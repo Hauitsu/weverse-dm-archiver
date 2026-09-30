@@ -26,10 +26,17 @@ export const DEFAULTS = {
   publicRename: "",
   pacing: { minMs: 1500, maxMs: 3000 },
   textOnly: false,
+  // What the picker keeps for the share zip: "yes", "low" or "no". Low re-compresses the copies
+  // that go inside the zip; the archive itself always keeps the originals.
+  shareMode: "yes",
+  // Empty means "the ffmpeg on PATH". Set it when ffmpeg lives somewhere unusual.
+  ffmpegPath: "",
 };
 
 // Missing file = all defaults. A file that exists but does not parse is a real error:
 // silently falling back would hide a typo the user needs to see.
+export const SHARE_MODES = ["yes", "low", "no"];
+
 export function readConfig(file) {
   const f = file || CONFIG_FILE;
   let raw;
@@ -41,6 +48,7 @@ export function readConfig(file) {
   }
   const cfg = Object.assign({}, DEFAULTS, raw);
   cfg.pacing = Object.assign({}, DEFAULTS.pacing, raw.pacing || {});
+  if (SHARE_MODES.indexOf(String(cfg.shareMode)) < 0) cfg.shareMode = DEFAULTS.shareMode;
   return cfg;
 }
 
