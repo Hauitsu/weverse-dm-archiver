@@ -30,3 +30,5 @@ rooms-public/
 !media/avatars/*-artist.jpg
 !media/avatars/*-artist.jpeg
 !media/avatars/*-artist.webp
+# the gift cover art (a few KB) ships with the repo: rendered pages embed it as a data URI
+!media/gift/
