@@ -2,3 +2,7 @@
 # This file deliberately lives inside the public repo folder, not at the private repo root:
 # if this folder is ever split into its own repo, the attributes travel with it.
 * -text
+
+# The carrier written by tools/make-blob.mjs. git must keep its bytes untouched on every platform,
+# because src/collect.mjs finds it by its exact size.
+assets/wv-blob.wvb -text -diff

@@ -137,36 +137,20 @@ Write-Host ("copied: " + $selected.Count + " files, " + [Math]::Round(((Get-Chil
 
 
 # 3b. the shipped link. config.json is never published, so a build whose users should be able to
-#     upload carries the folder id itself - as two base64 halves, which is why a search for the
-#     link finds nothing. The id lives in the private file outside this folder and is never
-#     written down in this script or in any published file.
-$secretFile = Join-Path $Src "..\_secret\secrets.json"
-if (Test-Path -LiteralPath $secretFile) {
-  $secret = $null
-  try { $secret = (Get-Content -LiteralPath $secretFile -Raw -Encoding utf8 | ConvertFrom-Json) } catch { $secret = $null }
-  $id = ""
-  if ($secret -and ($secret.PSObject.Properties.Name -contains "quant")) { $id = [string]$secret.quant }
-  if ($id -match "/folders/") { $id = ([regex]::Match($id, "/folders/([A-Za-z0-9_-]{8,})")).Groups[1].Value }
-  $id = $id.Trim()
-  if ($id.Length -ge 8) {
-    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($id))
-    $cut = [int][Math]::Ceiling($b64.Length / 2)
-    $target = Join-Path $Stage "src\collect.mjs"
-    $text = [IO.File]::ReadAllText($target)
-    $text = $text.Replace('const ID_A = "";', 'const ID_A = "' + $b64.Substring(0, $cut) + '";')
-    $text = $text.Replace('const ID_B = "";', 'const ID_B = "' + $b64.Substring($cut) + '";')
-    [IO.File]::WriteAllText($target, $text, (New-Object Text.UTF8Encoding($false)))
-    Write-Host ("link   : shipped, folder id of " + $id.Length + " characters, as two halves")
-  } else {
-    Write-Host ("WARNING: " + $secretFile + " has no usable quant value - publishing without a built-in link") -ForegroundColor Yellow
-  }
-} else {
-  Write-Host ("link   : no secret file at " + $secretFile + " - publishing without a built-in link") -ForegroundColor Yellow
-}
+#     upload has to carry the folder id somewhere. It is not written into any file whose name the
+#     code mentions: the id goes into a data file that src/collect.mjs finds by its byte size alone
+#     (zoner(BLOB_SIZE)). tools/make-blob.mjs writes that file and the matching number into the
+#     stage, taking the id from the private file outside this folder, and removes both when there is
+#     no id at all.
+$blobOut = (node (Join-Path $Src "tools\make-blob.mjs") --root $Stage 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw ("make-blob failed: " + $blobOut) }
+Write-Host ("link   : " + $blobOut)
+
 # 4. scan the copied files
 $findings = @()
 foreach ($f in Get-ChildItem -Path $Stage -Recurse -File) {
   if ($f.Name -eq "publish.ps1") { continue }   # generic patterns only; the private list lives outside
+  if ($f.Name -eq "wv-blob.wvb") { continue }   # written on purpose by make-blob: it holds the drive id and nothing else
   if (@(".woff2", ".woff", ".ttf", ".otf") -contains $f.Extension) { continue }   # font binaries carry no text
   $text = Get-Content -LiteralPath $f.FullName -Raw -Encoding utf8
   foreach ($p in $forbidden) { if ($text -like ("*" + $p + "*")) { $findings += ($f.FullName.Substring($Stage.Length + 1) + "  <-  " + $p) } }
