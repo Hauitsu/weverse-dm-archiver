@@ -117,7 +117,7 @@
   "gui.toL7": "Happily Everafter",
   "gui.toDrive": "Open {name}'s Shared Google Drive",
   "gui.toClose": "Not now",
-  "gui.toNoZip": "You have not packed this room yet - press Generate zip in this window first, then come back to this message. The Low quality zip is far smaller to send.",
+  "gui.toNoZip": "You have not packed this room yet - press Generate zip in this window first, then come back to this message.",
   "gui.toNoLink": "No collector link is set in this build yet, so there is nothing to open.",
   "gui.collectOffer": "a complete room, worth offering to {name}: {v}",
   "gui.shareHas": "Zip already exists: {v}",

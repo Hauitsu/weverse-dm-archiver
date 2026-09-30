@@ -117,7 +117,7 @@
   "gui.toL7": "Happily Everafter",
   "gui.toDrive": "{name} 님이 공유한 Google Drive 열기",
   "gui.toClose": "지금은 안 할게요",
-  "gui.toNoZip": "아직 이 방을 zip으로 만들지 않았어요 - 이 창에서 Generate zip을 먼저 누르고 다시 이 메시지를 열어주세요. Low quality가 훨씬 가볍습니다.",
+  "gui.toNoZip": "아직 이 방을 zip으로 만들지 않았어요 - 이 창에서 Generate zip을 먼저 누르고 다시 이 메시지를 열어주세요.",
   "gui.toNoLink": "이 빌드에는 아직 공유 링크가 없어서 열 것이 없습니다.",
   "gui.collectOffer": "{name}님께 공유할 만한 전체 백업: {v}",
   "gui.shareHas": "이미 zip이 있습니다: {v}",
