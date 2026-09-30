@@ -38,7 +38,7 @@ The tool never sees or stores your password, and never reads your login token.
 Each row is one DM room, with its size. A room that has been archived once shows what it really
 uses; the rest show the ceiling for a whole conversation (up to 3 GB). Tick one or more rooms
 and press **Start**. A popup explains it again - fresh profile, log in once, then be back on the
-Weverse Home page - before anything starts; confirm it. Rooms are archived one after another, never at the same time, with 1.5-3
+Weverse Home page with that window still open - before anything starts; confirm it. Rooms are archived one after another, never at the same time, with 1.5-3
 seconds between pages.
 
 Options:

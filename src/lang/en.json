@@ -73,7 +73,7 @@
   "gui.browserHint": "Starting opens a separate browser window that uses its own profile. Log in to Weverse there once; the browser you normally use is never touched.",
   "gui.share": "Also make a shareable zip",
   "gui.shareHint": "only artist messages and media are included in the share folder. fan messages (your messages) are excluded.",
-  "gui.startNote": "After clicking the Start button then a separate browser window will show with a fresh profile.\nLog in to Weverse there once.\nAfter log in success make sure you are in the Home page then come back here.",
+  "gui.startNote": "After clicking the Start button then a separate browser window will show with a fresh profile.\nLog in to Weverse there once.\nAfter log in success make sure you are in the Home page, don't close it then come back here.",
   "gui.advanced": "Advanced: time zone",
   "gui.langHint": "the page and the exported chat are written in this language",
   "gui.tz": "Time zone",
