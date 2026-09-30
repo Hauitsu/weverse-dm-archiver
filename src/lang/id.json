@@ -143,5 +143,9 @@
   "gui.phase.bundle": "Membungkus zip",
   "gui.phase.done": "Selesai",
   "gui.phase.error": "Berhenti karena error",
-  "gui.phase.stopped": "Dihentikan"
+  "gui.phase.stopped": "Dihentikan",
+  "html.chipEdit": "Klik untuk ganti nama (maks 15 huruf)",
+  "html.bubTitle": "Warna bubble",
+  "html.bubReset": "Warna bawaan",
+  "html.chipHari": "hari bersama"
 }

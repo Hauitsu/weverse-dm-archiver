@@ -334,6 +334,38 @@ const idAda = new Set(norm.map((x) => x.messageId));
 const bmEmbed = bmList.filter((t) => t.messageId && idAda.has(t.messageId))
   .map((t) => ({ m: t.messageId, s: t.isoWib || '', p: String(t.preview || '').slice(0, 160) }));
 const BMSKRIP = fs.readFileSync(new URL('./bm.js', import.meta.url), 'utf8');
+// ---- Weverse bubble colours (the swatch behind the days-together chip) --------------------------
+// Ten choices in the app's own order: each has the vivid dark-mode version and the pastel it turns
+// into in light mode. The letter colour is picked by contrast, so the grey (#45474F) gets white
+// text and every pastel gets near-black - nothing hand-kept that could drift from the colours.
+const WARNA = [
+  ['cyan', '#07CBC9', '#bbf3f6'], ['hijau', '#01DC3A', '#DAFDDA'], ['biru', '#2EB3FE', '#D9EFFF'],
+  ['ungu', '#7540FE', '#E4E3FD'], ['pink', '#F75AFF', '#FDE0FE'], ['kuning', '#FFB600', '#FFEDC6'],
+  ['oren', '#FF6E01', '#FFE3D6'], ['merah muda', '#FF3C7E', '#FEDFE4'], ['merah', '#FE2222', '#FFE0DB'],
+  ['abu', '#53565D', '#45474F'],
+];
+const warnaRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const warnaCahaya = (h) => { const c = warnaRgb(h).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+const warnaKontras = (a, b) => { const x = Math.max(a, b), y = Math.min(a, b); return (x + 0.05) / (y + 0.05); };
+const warnaGeser = (h, d) => '#' + warnaRgb(h).map((v) => Math.max(0, Math.min(255, Math.round(d > 0 ? v + (255 - v) * d : v * (1 + d))))).map((v) => v.toString(16).padStart(2, '0')).join('');
+const warnaTeks = (bg) => { const L = warnaCahaya(bg); return warnaKontras(L, warnaCahaya('#101418')) >= warnaKontras(L, 1) ? '#101418' : '#ffffff'; };
+const WARNA_PALET = WARNA.map(([nama, gelap, terang]) => {
+  const dT = warnaTeks(gelap), lT = warnaTeks(terang);
+  return {
+    n: nama,
+    dk: [gelap, warnaGeser(gelap, 0.18), dT, dT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
+    lt: [terang, warnaGeser(terang, -0.12), lT, lT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
+  };
+});
+const UISKRIP = fs.readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
+const hariBersama = Math.max(0, Math.round((new Date(last.createDate) - new Date(first.createDate)) / 86400000));
+const uiData = {
+  room: BASE,
+  angka: '+' + hariBersama,
+  hari: t('html.chipHari'),
+  P: WARNA_PALET,
+  T: { warna: t('html.bubTitle'), reset: t('html.bubReset'), edit: t('html.chipEdit') },
+};
 const bkData = {
   room: BASE, nama: ROOM_NAME, slug: BASE, k0: bmEmbed,
   S: {
@@ -409,7 +441,7 @@ h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title>');
 // Runs before the first paint: a remembered theme is on the page before anything is drawn, so
 // nobody sees a dark flash on the way to light.
-h.push('<script>try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")document.documentElement.setAttribute("data-tema",m);}catch(e){}</script>');
+h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);var b=(JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room];if(b&&typeof b.c==="number"&&WD.P[b.c]){var v=(d.getAttribute("data-tema")==="light")?WD.P[b.c].lt:WD.P[b.c].dk;d.setAttribute("data-bub",WD.P[b.c].n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}}catch(e){}})();</script>');
 h.push('<style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
@@ -432,7 +464,12 @@ h.push('.m.me .col{align-items:flex-end}');
 h.push('.who{font-weight:600;font-size:11px;line-height:1.3;color:#666666;margin:0 4px 2px;word-break:break-word}');
 h.push('.bub{background:#171c25;border:1px solid #232833;border-radius:14px;padding:6px 12px;word-break:break-word}');
 h.push('.tx{white-space:pre-wrap}');
-h.push('.m.artist .bub{background:#1c3b5e;border-color:#2b5480;border-bottom-left-radius:4px}');
+h.push('.m.artist .bub{background:var(--ab,#1c3b5e);border-color:var(--abd,#2b5480);border-bottom-left-radius:4px}');
+h.push('/* Only when a colour is picked: letters, translation, links and the deleted note follow it. */');
+h.push('html[data-bub] .m.artist .bub:not(.gift):not(.bare){color:var(--at)}');
+h.push('html[data-bub] .m.artist .bub .en{color:var(--at);opacity:.85}');
+h.push('html[data-bub] .m.artist .bub .im a{color:var(--atl)}');
+h.push('html[data-bub] .m.artist .bub .del{color:var(--at);opacity:.9}');
 h.push('.m.me .bub{background:#1f1f1f;border-color:#2e2e2e;border-bottom-right-radius:4px}');
 h.push('.m.cont .bub{border-radius:14px}');
 h.push('.m.cont.artist .bub{border-top-left-radius:4px}');
@@ -533,7 +570,7 @@ h.push('html[data-tema="light"] .nav a:hover{background:#eef3fb}');
 h.push('html[data-tema="light"] .day{background:#f7f8fa;color:#6b7280;border-bottom-color:#e3e7ec}');
 h.push('html[data-tema="light"] .who{color:#666666}');
 h.push('html[data-tema="light"] .bub:not(.gift):not(.bare){background:#fff;border-color:#e2e6eb}');
-h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:#bbf3f6;border-color:#a5e7ec}');
+h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:var(--ab,#bbf3f6);border-color:var(--abd,#a5e7ec)}');
 h.push('html[data-tema="light"] .m.me .bub:not(.gift):not(.bare){background:#f2f3f7;border-color:#e2e6eb}');
 h.push('html[data-tema="light"] .tm{color:#98a1ad}');
 h.push('html[data-tema="light"] .en{color:#3f5568;opacity:1}');
@@ -572,6 +609,35 @@ h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex
 h.push('.tt:hover{filter:brightness(1.08)}');
 h.push('.tt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
+/* The days-together chip and its swatch row: fixed to the top-right of the conversation, like the
+   app. Built by src/ui.js so the export stays lean; the colours themselves are inline styles. */
+h.push('.chip{position:relative;display:flex;justify-content:flex-end;margin:2px 0 12px}');
+h.push('.chip .cp{display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
+h.push('.chip .hrt{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:9px;background:#2f9bff;cursor:pointer}');
+h.push('.chip .hrt:hover{filter:brightness(1.12)}');
+h.push('.chip .hrt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
+h.push('.chip .hrt svg{display:block;width:13px;height:13px;fill:#fff}');
+h.push('.chip .angka{font-size:12px;font-weight:600;color:#e6e6e6;cursor:pointer;border-radius:4px}');
+h.push('.chip .angka:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
+h.push('.chip .hari{font-size:12px;font-weight:600;color:#e6e6e6;cursor:pointer;white-space:nowrap}');
+h.push('.chip .hari:focus-visible{outline:2px solid #4da3ff;outline-offset:2px;border-radius:4px}');
+h.push('.chip input.hari{width:15ch;font:inherit;font-size:12px;font-weight:600;color:#e6e6e6;background:#0f1115;border:1px solid #3a4552;border-radius:7px;padding:2px 5px;outline:none}');
+h.push('.chip input.hari:focus{border-color:#4da3ff}');
+h.push('#wpal{position:absolute;right:0;top:calc(100% + 7px);z-index:36;display:flex;flex-wrap:wrap;align-items:center;gap:7px;max-width:min(92vw,330px);padding:9px 10px;background:#171c25;border:1px solid #2b3542;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.45)}');
+h.push('#wpal[hidden]{display:none}');
+h.push('#wpal button.w{width:22px;height:22px;padding:0;border:0;border-radius:50%;cursor:pointer;transition:transform .08s}');
+h.push('#wpal button.w:hover{transform:scale(1.1)}');
+h.push('#wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #171c25,0 0 0 4px #4da3ff}');
+h.push('#wpal button.reset{margin-left:3px;padding:5px 7px;font-size:11px;line-height:1;color:#8b93a1;background:none;border:1px solid #2b3542;border-radius:7px;cursor:pointer}');
+h.push('#wpal button.reset:hover{color:#e6e6e6}');
+h.push('html[data-tema="light"] .chip .cp{background:#fff;border-color:#e6e9ee;box-shadow:0 2px 8px rgba(15,20,30,.08)}');
+h.push('html[data-tema="light"] .chip .hari{color:#17181c}');
+h.push('html[data-tema="light"] .chip .angka{color:#17181c}');
+h.push('html[data-tema="light"] .chip input.hari{color:#17181c;background:#fff;border-color:#bcd0ea}');
+h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-shadow:0 14px 32px rgba(15,20,30,.22)}');
+h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
+h.push('html[data-tema="light"] #wpal button.reset{background:#fff;border-color:#dde3ea;color:#6b7280}');
+h.push('html[data-tema="light"] #wpal button.reset:hover{color:#17181c}');
 h.push('html{color-scheme:dark}');
 h.push('</style></head><body><div class="wrap">');
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
@@ -664,6 +730,8 @@ if (giftAda) h.push('var gfc=[].slice.call(document.querySelectorAll(".bub.gift 
 h.push('</script>');
 if (BM_ON) h.push('<div class="mx" id="mx" role="menu" hidden></div>');
 if (BM_ON) h.push('<script>' + BMSKRIP.split('{{BK}}').join(JSON.stringify(bkData)) + '</script>');
+// Always on, in both exports: the chip is a reader-side preference, not personal chat data.
+h.push('<script>' + UISKRIP + '</script>');
 h.push('</div></body></html>');
 fs.writeFileSync(path.join(OUT, BASE + '.html'), h.join(NL), 'utf8');
 

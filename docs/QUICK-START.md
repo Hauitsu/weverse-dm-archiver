@@ -107,6 +107,11 @@ When it finishes, the Result panel offers:
 Keep a room folder together: the HTML file links to the photos and videos next to it. Copying
 the whole `rooms/` + `media/` pair, or the zip, keeps it working.
 
+The pill at the top of the conversation is the bubble-colour picker: click the **heart** (or the
+`+546`) for the app's ten colours, click the **words** after the number to rename them (15
+characters), and the **↺** on the row to go back to the export's own colours. Both the colour and the
+words are remembered per room in that browser. Nothing is uploaded and no file changes.
+
 ## Doing it without the page
 
 ```

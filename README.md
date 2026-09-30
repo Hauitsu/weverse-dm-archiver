@@ -21,9 +21,13 @@ login tokens, and never touches the tab you are logged in on.
 - day headings read the way the app writes them - `Sat, Sep 26, 2026`, in the page and in the
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
 - a light theme for the page itself, switched from the round button in the bottom-right corner: there the artist
-  bubble is mint (`#bbf3f6`) and yours near-white (`#f2f3f7`), and the dark theme keeps the same pair the other
-  way round (`#1c3b5e` for the artist, `#141b2b` for yours);
-  the choice is remembered per browser and dark stays the default (and unchanged)
+  bubble is mint (`#bbf3f6`) and yours near-white (`#f2f3f7`), and the dark theme keeps the pair the other way
+  round (`#1c3b5e` for the artist, `#1f1f1f` for yours); one nickname grey (`#666666`) on both sides in
+  both themes, and the choice is remembered per browser - dark stays the default
+- the days-together chip the app shows at the top of a conversation, and behind it the app's ten bubble
+  colours: the heart or the `+546` opens the swatch row, the words after the number are yours to rename
+  (15 characters), and `↺` puts everything back. Only the artist bubble takes the colour, only in that
+  room, and only in your browser - see [Bubble colour and the days chip](#bubble-colour-and-the-days-chip)
 - a message that is nothing but a photo or a video gets no bubble at all - the rounded media is
   the message, like in the app. A voice note keeps its bubble (the player needs a body), and so do
   gifts and anything with a caption
@@ -163,6 +167,48 @@ reports are welcome - see `docs/ROADMAP.md`.
 ## License
 
 MIT - see `LICENSE`.
+
+## Bubble colour and the days chip
+
+Every conversation opens with the same pill the app puts there: a heart, the number of days you two
+have been talking (`+546` counts from the first message in the archive to the last), and the words
+after it.
+
+* **The heart, or the number** - opens the ten bubble colours, in the app's own order. Picking one
+  recolours that room's artist bubbles and remembers it in this browser only
+  (`localStorage["wdm-bub"]`, keyed by room).
+* **The words after the number** - click to rename them: anything, up to 15 characters. Enter saves,
+  Esc drops the edit. They start out in the page's language ("days together", "일 함께",
+  "hari bersama").
+* **↺** at the end of the row - back to the export's own colours.
+
+The swatches keep the app's vivid colours in both themes, because that is what the picker looks like
+in the app; the bubble uses the vivid version in dark mode and the pastel version of the same choice
+in light mode.
+
+| choice | dark mode | light mode |
+|---|---|---|
+| cyan | `#07CBC9` | `#bbf3f6` |
+| green | `#01DC3A` | `#DAFDDA` |
+| blue | `#2EB3FE` | `#D9EFFF` |
+| purple | `#7540FE` | `#E4E3FD` |
+| pink | `#F75AFF` | `#FDE0FE` |
+| yellow | `#FFB600` | `#FFEDC6` |
+| orange | `#FF6E01` | `#FFE3D6` |
+| pink-red | `#FF3C7E` | `#FEDFE4` |
+| red | `#FE2222` | `#FFE0DB` |
+| grey | `#53565D` | `#45474F` |
+
+The letter colour follows the bubble instead of a hand-kept list: the renderer measures each colour
+and picks black or white, so the grey ends up white on grey while the pastels stay dark - and the
+message, its translation and its links all move together.
+
+Nothing else is touched. Your own bubble keeps its colour, gift covers keep their brand pink, and a
+message that is nothing but media has no bubble to colour. With nothing picked the export looks
+exactly as it always did.
+
+The chip ships in **both** exports - it is a reading preference like the theme button, and it carries
+none of your chat data. `src/ui.js` builds it after the page loads, so the markup stays lean.
 
 ## Bookmarks
 

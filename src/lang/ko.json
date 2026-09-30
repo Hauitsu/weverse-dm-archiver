@@ -143,5 +143,9 @@
   "gui.phase.bundle": "zip으로 묶는 중",
   "gui.phase.done": "완료",
   "gui.phase.error": "오류로 중단됨",
-  "gui.phase.stopped": "중단됨"
+  "gui.phase.stopped": "중단됨",
+  "html.chipEdit": "클릭해서 이름 바꾸기 (최대 15자)",
+  "html.bubTitle": "말풍선 색",
+  "html.bubReset": "기본 색",
+  "html.chipHari": "일 함께"
 }

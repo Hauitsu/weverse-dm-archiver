@@ -143,5 +143,9 @@
   "gui.phase.bundle": "Packing the zip",
   "gui.phase.done": "Done",
   "gui.phase.error": "Stopped with an error",
-  "gui.phase.stopped": "Stopped"
+  "gui.phase.stopped": "Stopped",
+  "html.chipEdit": "Click to rename (15 characters max)",
+  "html.bubTitle": "Bubble colour",
+  "html.bubReset": "Default colour",
+  "html.chipHari": "days together"
 }
