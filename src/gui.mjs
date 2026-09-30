@@ -515,6 +515,9 @@ async function startJob(body) {
       running(false);
       return;
     }
+    // Login is behind us - either a fresh sign-in or the session already in the profile. Say so
+    // before the first room starts, so the wait never ends in silence.
+    push(tr("gui.loginOk"));
     for (const r of list) {
       if (stopFlag) break;
       const roomName = r.rowLabel || r.slug;

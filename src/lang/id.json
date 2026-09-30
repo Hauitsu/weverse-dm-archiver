@@ -135,6 +135,7 @@
   "gui.log": "Progres",
   "gui.pickRoom": "Pilih minimal satu ruang dulu.",
   "gui.loginHint": "Menunggu login Weverse di jendela browser yang baru terbuka.",
+  "gui.loginOk": "Login berhasil, selamat mengunduh Happily Everafter!",
   "gui.plainHint": "Menunggu kamu login - pakai jendela normal yang baru terbuka, lalu tekan tombolnya kalau sudah selesai.",
   "gui.noBrowser": "Chrome atau Edge tidak ditemukan. Pasang salah satunya, atau setel browserPath di config.json.",
   "gui.doneText": "Selesai: {n} pesan dari {v}.",

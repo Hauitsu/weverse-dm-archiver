@@ -135,6 +135,7 @@
   "gui.log": "진행 상황",
   "gui.pickRoom": "방을 하나 이상 선택하세요.",
   "gui.loginHint": "방금 열린 브라우저 창에서 위버스 로그인을 기다리는 중입니다.",
+  "gui.loginOk": "로그인 성공! Happily Everafter 다운로드에 행운이 함께하길!",
   "gui.plainHint": "로그인을 기다리는 중입니다 - 방금 열린 일반 창에서 로그인한 뒤, 끝나면 버튼을 누르세요.",
   "gui.noBrowser": "Chrome 또는 Edge를 찾지 못했습니다. 설치하거나 config.json의 browserPath를 설정하세요.",
   "gui.doneText": "{v}에서 메시지 {n}개를 저장했습니다.",
