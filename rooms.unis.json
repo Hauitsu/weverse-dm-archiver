@@ -9,28 +9,32 @@
       "nameKo": "윤하",
       "nameEn": "Yunha",
       "roomId": "WRA2W0P",
-      "rowLabel": "윤하땅 별땅"
+      "rowLabel": "윤하땅 별땅",
+      "roomName": "윤하땅 별땅"
     },
     {
       "slug": "gehlee",
       "nameKo": "글리",
       "nameEn": "Gehlee",
       "roomId": "WR8VF44",
-      "rowLabel": "k4ng_j3h33"
+      "rowLabel": "💐k4ng_j3h33",
+      "roomName": "💐k4ng_j3h33"
     },
     {
       "slug": "elisia",
       "nameKo": "엘리시아",
       "nameEn": "Elisia",
       "roomId": "WROQI91",
-      "rowLabel": "이시아"
+      "rowLabel": "이시아🍉",
+      "roomName": "이시아🍉"
     },
     {
       "slug": "seowon",
       "nameKo": "서원",
       "nameEn": "Seowon",
       "roomId": "WRJV08H",
-      "rowLabel": "서워니"
+      "rowLabel": "서워니",
+      "roomName": "서워니"
     },
     {
       "slug": "nana",
@@ -45,21 +49,24 @@
       "nameKo": "코토코",
       "nameEn": "Kotoko",
       "roomId": "WRKR0AC",
-      "rowLabel": "토코토코토"
+      "rowLabel": "토코토코토😼",
+      "roomName": "토코토코토😼"
     },
     {
       "slug": "hyeonju",
       "nameKo": "현주",
       "nameEn": "Hyeonju",
       "roomId": "WR3YJRZ",
-      "rowLabel": "더큰더큰정언니 진현주"
+      "rowLabel": "더큰더큰정언니 진현주",
+      "roomName": "더큰더큰정언니 진현주"
     },
     {
       "slug": "yoona",
       "nameKo": "윤아",
       "nameEn": "Yoona",
       "roomId": "WRKR8AC",
-      "rowLabel": "옹융앙"
+      "rowLabel": "옹융앙😉",
+      "roomName": "옹융앙😉"
     }
   ]
 }
