@@ -10,7 +10,8 @@ import http from "node:http";
 import { spawn } from "node:child_process";
 import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, hurryMode, GIB } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
+import { bundle } from "./bundle.mjs";
 import { openExternal } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
 import { artistLabel } from "./rooms.mjs";
@@ -59,6 +60,86 @@ function roomPage(slug) {
   for (const c of cands) { try { if (fs.existsSync(c)) return c; } catch (e) {} }
   return "";
 }
+// The Share button works off the public export: that is the copy a zip is built from, and the only
+// one that never carries bookmarks or the owner's own nickname.
+function publicExport(slug) {
+  const s = String(slug || "").replace(/[^A-Za-z0-9._-]/g, "");
+  if (!s) return "";
+  const p = path.join(publicDirFor(cfg), s + ".html");
+  try { return fs.existsSync(p) ? p : ""; } catch (e) { return ""; }
+}
+// bundle() never overwrites: a second zip for the same room is written as -v2, -v3 and so on, so
+// "the zip" of a room means the newest one that is lying in share/.
+function shareZips(slug) {
+  const s = String(slug || "").replace(/[^A-Za-z0-9._-]/g, "");
+  const out = [];
+  if (!s) return out;
+  let names = [];
+  try { names = fs.readdirSync(dirs(cfg).share); } catch (e) { return out; }
+  for (const f of names) {
+    const m = /^weverse-dm-(.+?)(-v[0-9]+)?[.]zip$/.exec(f);
+    if (!m || m[1] !== s) continue;
+    const p = path.join(dirs(cfg).share, f);
+    try { const st = fs.statSync(p); out.push({ name: f, path: p, bytes: st.size, at: st.mtimeMs }); } catch (e) {}
+  }
+  out.sort((a, b) => b.at - a.at || (a.name < b.name ? 1 : -1));
+  return out;
+}
+function shareInfo(slug) {
+  const zs = shareZips(slug);
+  const z = zs[0] || null;
+  return { canZip: !!publicExport(slug), zips: zs.length, zip: z ? { name: z.name, bytes: z.bytes, at: z.at } : null };
+}
+
+// Packing a zip is a job of its own: it needs no browser and no login, it runs while the page keeps
+// polling, and it is the only thing this file does that writes into share/.
+const shareJob = { running: false, slug: "", low: false, percent: 0, log: [], error: "", result: null, at: 0 };
+function sharePush(m) {
+  const line = String(m);
+  shareJob.log.push(line);
+  if (shareJob.log.length > 120) shareJob.log.splice(0, shareJob.log.length - 120);
+  // "quality: 250/1479 file(s)" and anything else written as n/m drives the little progress bar.
+  const m2 = /([0-9]+)\s*\/\s*([0-9]+)/.exec(line);
+  if (m2 && Number(m2[2]) > 0) shareJob.percent = Math.min(99, Math.round((Number(m2[1]) / Number(m2[2])) * 100));
+  console.log("[share] " + line);
+}
+async function startShare(body) {
+  if (shareJob.running || state.running) return;
+  const r = rooms(cfg).filter((x) => x.slug === String(body.slug || ""))[0];
+  if (!r) return;
+  shareJob.running = true; shareJob.slug = r.slug; shareJob.low = !!body.low;
+  shareJob.percent = 0; shareJob.log = []; shareJob.error = ""; shareJob.result = null; shareJob.at = Date.now();
+  const tr = t();
+  sharePush(tr("gui.phase.bundle") + ": " + (r.rowLabel || r.slug));
+  try {
+    if (!publicExport(r.slug)) throw new Error(tr("gui.shareNeedPub"));
+    const b = await bundle({
+      slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r),
+      roomDir: publicDirFor(cfg), mediaDir: dirs(cfg).media, shareDir: dirs(cfg).share, verifyDir: dirs(cfg).verify,
+      credit: cfg.credit || "", lowQuality: shareJob.low, onLog: sharePush,
+    });
+    shareJob.result = { name: path.basename(b.zip), bytes: b.bytes, sha256: b.sha256, path: b.zip };
+    shareJob.percent = 100;
+    sharePush("zip: " + path.basename(b.zip) + " (" + fmtSize(b.bytes) + ")");
+  } catch (e) {
+    shareJob.error = String((e && e.message) || e);
+    sharePush("error: " + shareJob.error);
+  } finally { shareJob.running = false; }
+}
+// "Open folder" means the folder that holds the zip, with the zip itself already marked on Windows.
+function openShareFolder(slug) {
+  const z = shareZips(slug)[0];
+  const dir = dirs(cfg).share;
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+  try {
+    if (process.platform === "win32") {
+      spawn("explorer", [z ? "/select," + z.path : dir], { stdio: "ignore", detached: true }).unref();
+      return true;
+    }
+  } catch (e) {}
+  return openExternal(dir);
+}
+
 function page() {
   const tr = t();
   const list = rooms(cfg);
@@ -68,6 +149,11 @@ function page() {
     const size = e.measured ? tr("gui.sizeSaved", { v: fmtSize(e.saved) }) : tr("gui.sizeGuess", { v: fmtSize(e.bytes) });
     const canOpen = !!roomPage(r.slug);
     const openBtn = "<span class=\"op\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-slug=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(tr("gui.openHint")) + "\">" + esc(tr("gui.open")) + "</button></span>";
+    // Share sits left of Open: same row, no popup to hunt for, and its tooltip names the zip that is
+    // already there.
+    const si = shareInfo(r.slug);
+    const shTip = tr("gui.shareHint") + " " + (si.zip ? tr("gui.shareHas", { v: si.zip.name + " (" + fmtSize(si.zip.bytes) + ")" }) : tr("gui.shareNone"));
+    const shareBtn = "<span class=\"sh\"><button type=\"button\" class=\"mini\" data-share=\"" + esc(r.slug) + "\" title=\"" + esc(shTip) + "\">" + esc(tr("gui.shareBtn")) + "</button></span>";
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
     // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
     return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
@@ -75,7 +161,7 @@ function page() {
     // and as a chat room second.
       "<span class=\"nm\">" + esc(a) + "</span>" +
       "<span class=\"who\">" + esc(r.rowLabel || r.slug) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
-      "<span class=\"sz\">" + esc(size) + "</span>" + openBtn + "</label>";
+      "<span class=\"sz\">" + esc(size) + "</span>" + shareBtn + openBtn + "</label>";
   }).join(NL);
   // A real dropdown: a zone is picked from the list instead of typed into a native autocomplete that
   // shows nothing until the first keystroke. A zone pinned by hand but missing from Intl's list is
@@ -97,13 +183,14 @@ function page() {
     ":root{color-scheme:light dark}body{font-family:system-ui,Segoe UI,Malgun Gothic,sans-serif;margin:0;padding:24px;max-width:900px;line-height:1.5}",
     "h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}",
     "section{border:1px solid #8884;border-radius:10px;padding:14px 16px;margin:0 0 14px}",
-    "label.row{display:grid;grid-template-columns:24px 1fr 170px 84px 96px 78px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
+    "label.row{display:grid;grid-template-columns:24px minmax(120px,1fr) 150px 76px 92px 72px 74px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
     ".nm{font-weight:600}.who,.id,.sz{opacity:.75;font-size:13px}",
     "button{font:inherit;padding:7px 14px;border-radius:8px;border:1px solid #8886;background:#8881;cursor:pointer}",
-    "button.mini{padding:3px 9px;font-size:13px;border-radius:6px}.op{text-align:right}",
+    "button.mini{padding:3px 9px;font-size:13px;border-radius:6px}.op,.sh{text-align:right}",
     "button.primary{background:#2f6feb;border-color:#2f6feb;color:#fff}button:disabled{opacity:.45;cursor:default}",
-    "#log{white-space:pre-wrap;font:12px/1.45 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;background:#8881;border-radius:8px;padding:10px;margin:0}",
-    "#bar{height:6px;background:#8883;border-radius:3px;overflow:hidden;margin:10px 0}#fill{display:block;height:100%;width:0;background:#2f6feb;transition:width .4s}",
+    "#log,#shLog{white-space:pre-wrap;font:12px/1.45 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;background:#8881;border-radius:8px;padding:10px;margin:0}",
+    "#shLog{max-height:150px;margin-top:12px}",
+    "#bar,#shBar{height:6px;background:#8883;border-radius:3px;overflow:hidden;margin:10px 0}#fill,#shFill{display:block;height:100%;width:0;background:#2f6feb;transition:width .4s}",
     ".grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.muted{opacity:.7;font-size:13px}",
     // The estimate explains itself on hover only, so the page stays short. Pure CSS, no script.
     ".tipwrap{position:relative;display:inline-block;cursor:help}",
@@ -131,6 +218,22 @@ function page() {
 noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "<div class=\"grid\"><button id=\"mGo\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
 "<button id=\"mNo\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
+// Share has its own popup: quality is one dropdown, the zip is one button, and once a zip exists
+// the folder that holds it is one more click.
+"<div id=\"shModal\" style=\"display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;padding:20px;z-index:10\">",
+"<div style=\"max-width:560px;width:100%;background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:12px;padding:18px 20px\">",
+"<div id=\"shTitle\" style=\"font-size:16px;font-weight:600\"></div>",
+"<div id=\"shNow\" class=\"muted\" style=\"margin:6px 0 14px\"></div>",
+"<div class=\"grid\"><label>" + esc(tr("gui.shareQuality")) + " <select id=\"shQ\">",
+"<option value=\"full\">" + esc(tr("gui.shareFull")) + "</option>",
+"<option value=\"low\">" + esc(tr("gui.shareLowQ")) + "</option>",
+"</select></label><span class=\"tipwrap\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
+"<div class=\"grid\" style=\"margin-top:14px\"><button id=\"shGo\" class=\"primary\">" + esc(tr("gui.shareGenerate")) + "</button>",
+"<button id=\"shFolder\" style=\"display:none\">" + esc(tr("gui.openFolder")) + "</button>",
+"<button id=\"shClose\">" + esc(tr("gui.cancel")) + "</button></div>",
+"<div id=\"shBar\" style=\"display:none\"><i id=\"shFill\"></i></div>",
+"<div id=\"shLog\" style=\"display:none\"></div>",
+"</div></div>",
 
     "<div id=\"under\" style=\"display:none\">",
     "<section>",
@@ -162,7 +265,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<section id=\"logBox\" style=\"display:none\"><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "</div>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + ",shTitle:" + JSON.stringify(tr("gui.sharePopup")) + ",shHave:" + JSON.stringify(tr("gui.shareHas")) + ",shNone:" + JSON.stringify(tr("gui.shareNone")) + ",shNeedPub:" + JSON.stringify(tr("gui.shareNeedPub")) + ",shWorking:" + JSON.stringify(tr("gui.phase.bundle")) + ",shGenerate:" + JSON.stringify(tr("gui.shareGenerate")) + ",shDone:" + JSON.stringify(tr("gui.shareDone")) + ",shFail:" + JSON.stringify(tr("gui.shareFail")) + ",shGoTip:" + JSON.stringify(tr("gui.shareHint")) + "};",
     "function el(s){return document.querySelector(s);}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var fmtSize=" + fmtSize.toString() + ";",
@@ -202,6 +305,42 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function openRoom(slug){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"room\",slug:slug})});}",
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
+    "async function openItSlug(what,slug){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:what,slug:slug})});}",
+    "var shSlug=\"\",lastRooms=[],lastShare=null;",
+    "function roomInfo(slug){for(var i=0;i<lastRooms.length;i++){if(lastRooms[i].slug===slug)return lastRooms[i];}return null;}",
+    "function hideShare(){el(\"#shModal\").style.display=\"none\";}",
+    "function paintShare(info,sh){",
+    "  var can=!!(info&&info.canZip);",
+    "  var line=!can?MSG.shNeedPub:(info&&info.zip?MSG.shHave.replace(\"{v}\",info.zip.name+\" (\"+fmtSize(info.zip.bytes)+\")\"):MSG.shNone);",
+    "  if(sh&&sh.running)line=MSG.shWorking+(sh.low?\" (low)\":\"\")+\"...\";",
+    "  else if(sh&&sh.error)line=MSG.shFail.replace(\"{v}\",sh.error);",
+    "  else if(sh&&sh.result)line=MSG.shDone.replace(\"{v}\",sh.result.name+\" (\"+fmtSize(sh.result.bytes)+\")\");",
+    "  el(\"#shNow\").textContent=line;",
+    "  var busy=!!(sh&&sh.running);",
+    "  el(\"#shGo\").disabled=busy||!can;",
+    "  el(\"#shGo\").textContent=busy?MSG.shWorking+\"...\":MSG.shGenerate;",
+    "  el(\"#shQ\").disabled=busy;",
+    "  el(\"#shFolder\").style.display=(info&&info.zip)?\"\":\"none\";",
+    "  el(\"#shFolder\").disabled=busy;",
+    "  if(busy){el(\"#shBar\").style.display=\"\";el(\"#shLog\").style.display=\"\";}",
+    "}",
+    "function showShare(slug){",
+    "  shSlug=slug;",
+    "  var info=roomInfo(slug)||{};",
+    "  el(\"#shTitle\").textContent=MSG.shTitle.replace(\"{v}\",info.label||slug);",
+    "  el(\"#shQ\").value=(lastShare&&lastShare.lowDefault)?\"low\":\"full\";",
+    "  el(\"#shLog\").textContent=\"\";el(\"#shLog\").style.display=\"none\";",
+    "  el(\"#shBar\").style.display=\"none\";el(\"#shFill\").style.width=\"0%\";",
+    "  paintShare(info,(lastShare&&lastShare.slug===slug&&!lastShare.result&&!lastShare.error)?lastShare:null);",
+    "  el(\"#shModal\").style.display=\"flex\";",
+    "}",
+    "async function genZip(){",
+    "  if(!shSlug)return;",
+    "  var info=roomInfo(shSlug)||{};",
+    "  if(!info.canZip){alert(MSG.shNeedPub);return;}",
+    "  await fetch(\"/api/share\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({slug:shSlug,low:el(\"#shQ\").value===\"low\"})});",
+    "  tick();",
+    "}",
     // The lower half of the page only makes sense once something is picked, so it stays out of the
     // way until a room is ticked (or a run is going on, so its own result never disappears).
     // The progress bar is not an option, it is a report: it appears only once a run has started.
@@ -226,6 +365,15 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  under(!!s.running||!!s.result);",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open;b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
+    "  lastRooms=s.rooms||[];lastShare=s.share||null;",
+    "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
+    "  el(\"#start\").disabled=sbusy;",
+    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);b.disabled=sbusy;if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
+    "  if(shSlug&&el(\"#shModal\").style.display!==\"none\"){",
+    "    var sj=(s.share&&s.share.slug===shSlug)?s.share:null;",
+    "    paintShare(roomInfo(shSlug),sj);",
+    "    if(sj&&sj.running){el(\"#shFill\").style.width=(sj.percent||0)+\"%\";var lg=el(\"#shLog\");lg.textContent=(sj.log||[]).join(String.fromCharCode(10));lg.scrollTop=lg.scrollHeight;}",
+    "  }",
     "}",
     "el(\"#bAll\").addEventListener(\"click\",function(){all(true);});",
     "el(\"#bNone\").addEventListener(\"click\",function(){all(false);});",
@@ -236,12 +384,18 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#mGo\").addEventListener(\"click\",start);",
     "el(\"#mNo\").addEventListener(\"click\",hideModal);",
     "el(\"#modal\").addEventListener(\"click\",function(e){if(e.target===el(\"#modal\"))hideModal();});",
-    "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\")hideModal();});",
+    "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\"){hideModal();hideShare();}});",
     "el(\"#stop\").addEventListener(\"click\",stop);",
     "el(\"#bAuthed\").addEventListener(\"click\",function(){fetch(\"/api/hurry\",{method:\"POST\"});});",
     "el(\"#bChat\").addEventListener(\"click\",function(){openIt(\"chat\");});",
     "el(\"#bFolder\").addEventListener(\"click\",function(){openIt(\"folder\");});",
     "el(\"#bZip\").addEventListener(\"click\",function(){openIt(\"zip\");});",
+    // The row is a label, so the click is stopped before it reaches the checkbox underneath.
+    "el(\"#rooms\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-share]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();showShare(b.dataset.share);});",
+    "el(\"#shGo\").addEventListener(\"click\",genZip);",
+    "el(\"#shClose\").addEventListener(\"click\",hideShare);",
+    "el(\"#shFolder\").addEventListener(\"click\",function(){if(shSlug)openItSlug(\"shareFolder\",shSlug);});",
+    "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))hideShare();});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
     "total();",
@@ -268,7 +422,9 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
     log: state.log, result: state.result, error: state.error,
     // Only what the rows need to keep their Open button honest while a run goes on.
-    rooms: rooms(cfg).map(function (x) { return { slug: x.slug, open: !!roomPage(x.slug) }; }),
+    rooms: rooms(cfg).map(function (x) { const si = shareInfo(x.slug); return { slug: x.slug, label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip }; }),
+    // The Share popup packs one room on its own: no browser, no login, its own small progress log.
+    share: { running: shareJob.running, slug: shareJob.slug, low: shareJob.low, percent: shareJob.percent, error: shareJob.error, result: shareJob.result, log: shareJob.log.slice(-40), lowDefault: String(cfg.shareMode) === "low" },
   };
 }
 
@@ -374,6 +530,7 @@ async function handle(req, res) {
   }
   if (req.method === "GET" && url === "/api/state") { json(200, stateJson()); return; }
   if (req.method === "POST" && url === "/api/start") { const b = await readBody(req); startJob(b); json(200, { ok: true }); return; }
+  if (req.method === "POST" && url === "/api/share") { const b = await readBody(req); startShare(b); json(200, { ok: true, running: shareJob.running, slug: shareJob.slug }); return; }
   if (req.method === "POST" && url === "/api/stop") { stopFlag = true; push("stop requested, finishing the current step"); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/hurry") { state.hurry = true; if (!state.hurryFirstAt) state.hurryFirstAt = Date.now(); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/config") {
@@ -387,6 +544,7 @@ async function handle(req, res) {
   if (req.method === "POST" && url === "/api/open") {
     const b = await readBody(req);
     const r = state.result || {};
+    if (b.what === "shareFolder" && b.slug) { json(200, { ok: openShareFolder(String(b.slug)), target: dirs(cfg).share }); return; }
     const target = b.what === "zip" ? r.share : b.what === "folder" ? r.folder : b.what === "room" ? roomPage(b.slug) : r.html;
     const ok = target ? openExternal(target) : false;
     json(200, { ok: ok, target: target || "" });

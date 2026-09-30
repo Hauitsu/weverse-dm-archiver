@@ -42,6 +42,11 @@ login tokens, and never touches the tab you are logged in on.
 5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `share/` - it is made
    by default, and the picker can ask for a re-compressed one instead, or for none at all.
 
+Every room row carries its own **Share** button next to **Open**: it packs that single room into
+`share/` on the spot - full quality or re-compressed - and once a zip exists the same popup opens
+the folder that holds it. A room that was never run says so instead, because a zip is built from
+the public export and nothing else.
+
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,
 including what each message means, is in `docs/QUICK-START.md`.
