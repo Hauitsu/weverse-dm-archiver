@@ -180,7 +180,7 @@ export async function renderRoom(o) {
     DM_TZ: o.tz || "auto",
     DM_MEDIA: dirs().media,
     DM_MEDIA_REL: "../media",
-    DM_BOOKMARKS: o.bookmarks || "off",
+    DM_BOOKMARKS: o.bookmarks === undefined ? "" : o.bookmarks,
     WDM_LANG: o.lang || "en",
     DM_LANG: o.lang || "en",
   });
@@ -238,13 +238,9 @@ export async function renderBoth(o) {
   const pub = publicDirFor();
   const base = { slug: o.slug, srcDir: o.srcDir, roomName: o.roomName, artist: o.artist, tz: o.tz, lang: o.lang, onLog: log };
   log("render: private export (both sides) -> " + path.join(d.rooms, o.slug + ".html"));
-  // A bookmark panel that was read for this room is picked up on its own: the private export is the
-  // archive of record, and the public one is never allowed to carry bookmarks at all.
-  const panel = path.join(o.srcDir, "bookmarks-panel.json");
-  let bm = o.bookmarks || "off";
-  if (!o.bookmarks) { try { if (fs.existsSync(panel)) bm = panel; } catch (e) { bm = "off"; } }
-  if (bm !== "off") log("render: bookmarks from " + bm);
-  const priv = await renderRoom(Object.assign({}, base, { only: o.only || "", rename: "", bookmarks: bm, outDir: d.rooms, warn: true }));
+  // Bookmarks are made in the browser and kept there (see src/bm.js). A bookmarks.json sitting next
+  // to the room is baked in as the starting list; the public export never carries any.
+  const priv = await renderRoom(Object.assign({}, base, { only: o.only || "", rename: "", bookmarks: o.bookmarks || "", outDir: d.rooms, warn: true }));
   keepSummary(o.slug, d.rooms);
   if (priv !== 0) return { private: priv, public: null };
   log("render: public export (artist only" + (o.rename ? ", nickname hidden" : "") + ") -> " + path.join(pub, o.slug + ".html"));

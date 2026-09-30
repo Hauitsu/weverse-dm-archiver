@@ -261,10 +261,11 @@ const byMonth = new Map();
 for (const x of norm) { const mo = x.isoWib.slice(0, 7); byMonth.set(mo, (byMonth.get(mo) || 0) + 1); }
 const months = [...byMonth.keys()].sort();
 
-// The panel hands out a truncated preview and a date, never a message id, so the message it points at
-// has to be found again among the harvested messages: same day first (the date alone is evidence
-// enough for a short message like "ah"), then up to three days around it with a prefix to go on.
-// Anything ambiguous stays unlinked instead of being guessed.
+// A bookmark normally carries its message id, so nothing has to be guessed. An older file that only
+// has a preview and a date (a panel scan, before bookmarks moved into the page) is resolved the honest
+// way instead: the same day first, where the date alone is evidence enough for a short message like
+// "ah", then up to three days around it with a prefix of the text to go on. Anything ambiguous is left
+// out rather than guessed.
 function geserHari(iso, delta) {
   const t = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) + delta * 86400000;
   return new Date(t).toISOString().slice(0, 10);
@@ -308,7 +309,9 @@ function resolvePanel(items, msgs) {
 }
 
 // ---- Weverse bookmarks (optional; harvested read-only into export/bookmarks.json) ----
-const BOOKMARK_JSON = process.env.DM_BOOKMARKS || path.join(OUT, 'bookmarks.json');
+// Bookmarks are made in the browser (see src/bm.js) and exported next to the room, so the file the
+// renderer bakes in is downloads/<room>/bookmarks.json; DM_BOOKMARKS can point somewhere else.
+const BOOKMARK_JSON = process.env.DM_BOOKMARKS || path.join(SRC_DIR, 'bookmarks.json');
 const BM_OFF = String(process.env.DM_BOOKMARKS || '').toLowerCase() === 'off'; // DM_BOOKMARKS=off -> no bookmark markers at all
 let bmList = [], bmQuota = '', bmDariPanel = 0, bmNggak = 0;
 try {
@@ -324,6 +327,27 @@ try {
 } catch (e) { bmList = []; }
 
 if (RENAME.length) bmList = bmList.map((t) => Object.assign({}, t, { preview: fix(t.preview) }));
+const BM_ON = !BM_OFF;                 // the public export turns the whole feature off
+const idAda = new Set(norm.map((x) => x.messageId));
+// Whatever list the renderer was handed is only the starting point: it is baked into the page, and
+// anything you add by hand in the browser is kept on top of it. src/bm.js is the whole client side.
+const bmEmbed = bmList.filter((t) => t.messageId && idAda.has(t.messageId))
+  .map((t) => ({ m: t.messageId, s: t.isoWib || '', p: String(t.preview || '').slice(0, 160) }));
+const BMSKRIP = fs.readFileSync(new URL('./bm.js', import.meta.url), 'utf8');
+const bkData = {
+  room: BASE, nama: ROOM_NAME, slug: BASE, k0: bmEmbed,
+  S: {
+    more: t("html.bmMore"), tandai: t("html.bmAdd"), buang: t("html.bmDel"), hapus: t("html.bmRemove"),
+    salin: t("html.bmCopy"), waktu: t("html.bmTime"), tersalin: t("html.bmCopied"),
+    kosong: t("html.bmEmpty"), ringkas: t("html.bookmarkSummary"), ringkas0: t("html.bmSum0"),
+    nav: t("html.navBookmark", { n: '{n}' }), navT: t("html.navBookmarkTitle"),
+    tajuk: t("html.bookmarkTitle", { n: '{n}' }), bubble: t("html.bookmarkBubbleTitle"),
+    tanggal: t("html.bookmarkDateTitle"),
+    photo: t("html.bmPhoto"), video: t("html.bmVideo"), voice: t("html.bmVoice"), gift: t("html.bmGift"),
+    ekspor: t("html.bmExported"), impor: t("html.bmImported"), gagal: t("html.bmBad"),
+    yakin: t("html.bmSure"), bersih: t("html.bmCleared"), kosong2: t("html.bmNothing")
+  }
+};
 const bmAda = new Map(bmList.map((t) => [t.messageId, t]));
 
 // ---- 2) Markdown ----
@@ -486,6 +510,22 @@ h.push('.bml a.bd{flex:0 0 auto;color:#8b93a1;font-size:11px}');
 h.push('.bml a.bd:hover{text-decoration:underline}');
 h.push('.bml .bx{flex:1 1 auto;min-width:0;color:#8b93a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
 h.push('.bml .bn{color:#8b93a1}');
+if (BM_ON) {
+  h.push('.bml .bb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:5px 0 3px}');
+  h.push('.bml .bb button{font:inherit;font-size:11px;background:#1b212b;color:#9ecbff;border:1px solid #29313d;border-radius:6px;padding:3px 8px;cursor:pointer}');
+  h.push('.bml .bb button:hover{background:#222a36}');
+  h.push('.bnota{color:#8b93a1;font-size:11px}');
+  h.push('.bml .bkosong{color:#8b93a1;padding:4px 0}');
+  h.push('.bml .bx2{flex:0 0 auto;background:none;border:0;color:#8b93a1;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}');
+  h.push('.bml .bx2:hover{color:#ff9c9c}');
+  h.push('.nav a[hidden]{display:none}');
+  h.push('.tm .bmk{margin-right:4px}');
+  h.push('.dot{border:0;background:none;color:#5f6875;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:5px}');
+  h.push('.dot:hover{color:#cfd6e0}');
+  h.push('.mx{position:fixed;z-index:30;min-width:170px;background:#1b222d;border:1px solid #2b3441;border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.5)}');
+  h.push('.mx button{display:block;width:100%;text-align:left;font:inherit;font-size:13px;background:none;border:0;color:#e8ecf2;padding:7px 9px;border-radius:7px;cursor:pointer}');
+  h.push('.mx button:hover{background:#262f3d}');
+}
 h.push('.del{color:#8b93a1;font-style:italic}');
 h.push('/* Light theme. Nothing above is touched: dark stays exactly as it was, light overrides it.');
 h.push('   The :not(.gift):not(.bare) guards matter - a gift keeps its pink cover and a photo keeps no');
@@ -522,6 +562,17 @@ h.push('html[data-tema="light"] .bml a{color:#1f6feb}');
 h.push('html[data-tema="light"] .bml a.bd{color:#6b7280}');
 h.push('html[data-tema="light"] .bml a:hover{background:#e9eef6}');
 h.push('html[data-tema="light"] .bml .bn{color:#6b7280}');
+if (BM_ON) {
+  h.push('html[data-tema="light"] .bml .bb button{background:#fff;border-color:#dde3ea;color:#1f6feb}');
+  h.push('html[data-tema="light"] .bml .bb button:hover{background:#e9eef6}');
+  h.push('html[data-tema="light"] .bnota,html[data-tema="light"] .bml .bkosong{color:#6b7280}');
+  h.push('html[data-tema="light"] .bml .bx2{color:#98a1ad}');
+  h.push('html[data-tema="light"] .dot{color:#98a1ad}');
+  h.push('html[data-tema="light"] .dot:hover{color:#3c4657}');
+  h.push('html[data-tema="light"] .mx{background:#fff;border-color:#dde3ea;box-shadow:0 10px 28px rgba(15,20,30,.2)}');
+  h.push('html[data-tema="light"] .mx button{color:#17181c}');
+  h.push('html[data-tema="light"] .mx button:hover{background:#e9eef6}');
+}
 h.push('html[data-tema="light"] .del{color:#8b93a1}');
 h.push('/* The theme switch itself: fixed in the corner, above the page, below the lightbox. */');
 h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 13px;border-radius:999px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
@@ -535,25 +586,13 @@ h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.t
 h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
 h.push('<h1>' + esc(t("html.title", { room: ROOM_NAME })) + '</h1>');
 h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), room: esc(ROOM_NAME), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
-h.push('<div class="nav">' + (bmList.length ? '<a href="#bmk-1" title="' + t("html.navBookmarkTitle") + '">' + t("html.navBookmark", { n: bmList.length }) + '</a>' : '') + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
-if (bmList.length) {
-  h.push('<details class="bml"><summary>' + t("html.bookmarkSummary", { n: bmList.length }) + '</summary>');
-  // Two jumps on purpose: the text goes to the message, the date goes to that day's divider. A link is
-  // only drawn when its target is really in this file - a filtered export has fewer messages than the
-  // archive, and a link to nowhere is worse than no link.
-  const hariAda = new Set(norm.map((x) => x.isoWib.slice(0, 10)));
-  const idAda = new Set(norm.map((x) => x.messageId));
-  for (const bk of bmList) {
-    const hari = String(bk.isoWib || '').slice(0, 10);
-    const bolehPesan = bk.messageId && idAda.has(bk.messageId);
-    h.push('<div class="br"><span class="bn">#' + bk.bookmarkNo + '</span>' +
-      (bolehPesan
-        ? '<a href="#bmk-' + bk.bookmarkNo + '" title="' + esc(t("html.bookmarkBubbleTitle")) + '">' + esc(String(bk.preview || '')) + '</a>'
-        : '<span class="bx" title="' + esc(bolehPesan ? "" : t("html.bookmarkNoLink")) + '">' + esc(String(bk.preview || '')) + '</span>') +
-      (hariAda.has(hari) ? '<a class="bd" href="#d-' + hari + '" title="' + esc(t("html.bookmarkDateTitle")) + '">' + esc(String(bk.isoWib || '').slice(0, 16)) + '</a>' : '') +
-      '</div>');
-  }
-  h.push('</details>');
+h.push('<div class="nav">' + (BM_ON ? '<a href="#bml" id="navbm" hidden></a>' : '') + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
+if (BM_ON) {
+  // Empty until you fill it: the three dots next to a message add one, and this box lists, exports
+  // and imports them. Nothing is fetched and nothing on disk is rewritten (see src/bm.js).
+  h.push('<details class="bml" id="bml"><summary>' + t("html.bmSum0", { n: 0 }) + '</summary>');
+  h.push('<div class="bb"><button type="button" id="bmex">' + t("html.bmExport") + '</button><button type="button" id="bmim">' + t("html.bmImport") + '</button><button type="button" id="bmcl">' + t("html.bmClear") + '</button><span class="bnota" id="bmnota"></span><input type="file" id="bmfi" accept=".json,application/json" hidden></div>');
+  h.push('<div id="bmlist"><div class="bkosong">' + t("html.bmEmpty") + '</div></div></details>');
 }
 lastDay = '';
 let lastMonth = '';
@@ -567,8 +606,7 @@ for (const x of norm) {
   const me = x.userType !== 'ARTIST';
   const cont = prevType === x.userType;
   prevType = x.userType;
-  const bm = bmAda.get(x.messageId) || null;
-  h.push('<div class="' + (me ? 'm me' : 'm artist') + (cont ? ' cont' : '') + (bm ? ' bm' : '') + '"' + (bm ? ' id="bmk-' + bm.bookmarkNo + '"' : '') + '>');
+  h.push('<div class="' + (me ? 'm me' : 'm artist') + (cont ? ' cont' : '') + '"' + (BM_ON ? ' data-m="' + esc(x.messageId) + '"' : '') + '>');
   const av = avWeb(me ? 'me' : 'artist');
   h.push(av && !cont ? '<img class="av" src="' + esc(av) + '" alt="">' : '<div class="av" style="background:transparent"></div>');
   h.push('<div class="col">');
@@ -610,7 +648,8 @@ for (const x of norm) {
   // message, so a tooltip would read "NORMAL, NORMAL".
   if (gKode) h.push('<button class="gfc" type="button" aria-label="' + esc(t("html.giftOpen")) + '"></button>');
   h.push('</div></div>');
-  h.push('<div class="tm">' + (bm ? '<span class="bmk" title="' + t("html.bookmarkTitle", { n: bm.bookmarkNo }) + '">&#9733;</span> ' : '') + esc(x.isoWib.slice(11, 16)) + '</div>');
+  const jamTeks = esc(x.isoWib.slice(11, 16));
+  h.push('<div class="tm">' + (BM_ON ? '<span class="bmk"></span><span class="jam">' + jamTeks + '</span>' : jamTeks) + '</div>');
   h.push('</div>');
 }
 h.push('<div class="lb" id="lb"><img id="lbi" alt=""><button class="x" id="lbx">&times;</button><button class="pv" id="lbp">&#8249;</button><button class="nx" id="lbn">&#8250;</button><div class="ct" id="lbc"></div></div>');
@@ -630,6 +669,8 @@ h.push('lb.addEventListener("click",function(e){if(e.target===lb)tutup();});');
 h.push('document.addEventListener("keydown",function(e){if(!lb.classList.contains("on"))return;if(e.key==="Escape")tutup();if(e.key==="ArrowLeft")show(i-1);if(e.key==="ArrowRight")show(i+1);});');
 if (giftAda) h.push('var gfc=[].slice.call(document.querySelectorAll(".bub.gift .gfc"));gfc.forEach(function(c){c.addEventListener("click",function(){c.parentNode.classList.add("open");c.setAttribute("aria-expanded","true");});});if(location.hash==="#gift-open")gfc.forEach(function(c){c.parentNode.classList.add("open");});');
 h.push('</script>');
+if (BM_ON) h.push('<div class="mx" id="mx" role="menu" hidden></div>');
+if (BM_ON) h.push('<script>' + BMSKRIP.split('{{BK}}').join(JSON.stringify(bkData)) + '</script>');
 h.push('</div></body></html>');
 fs.writeFileSync(path.join(OUT, BASE + '.html'), h.join(NL), 'utf8');
 

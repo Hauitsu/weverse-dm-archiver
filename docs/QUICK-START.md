@@ -166,10 +166,15 @@ and `--remove` falls back to the bundled Noto font (see the FAQ).
 
 ## Bookmarks (optional)
 
-Open the room DM together with its bookmark list in your own browser, then:
+Nothing to harvest: bookmarks are made inside the page. Open a private export, press the three dots
+next to a message and pick **Bookmark this message** - the message gets a star and a line in the list
+at the top of that page. The list starts empty and lives in your browser (`localStorage`, per room);
+**Export JSON** in that list saves it as `bookmarks-<slug>.json` and **Import JSON** reads one back.
 
-    node src/cli.mjs bookmarks --room <slug>      # reads that panel, read-only, nothing is clicked
-    node src/cli.mjs render --room <slug>         # the private export picks the panel up on its own
+To bake a list into every future render, drop that file next to the room:
 
-The public export never carries a bookmark. See the README, section Bookmarks, for how a preview is
-matched back to its message.
+    downloads/<slug>/bookmarks.json
+
+`node src/cli.mjs render --room <slug>` then starts the page with those bookmarks already there, and
+you can still add or hide them one by one in the browser. The public export never carries a bookmark.
+See the README, section Bookmarks.
