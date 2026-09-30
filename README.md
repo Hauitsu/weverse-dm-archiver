@@ -51,12 +51,20 @@ including what each message means, is in `docs/QUICK-START.md`.
 | command | what it does |
 | --- | --- |
 | `wdm rooms` | list the rooms in `rooms.unis.json` and what is already archived |
+| `wdm labels` | read the room names off the DM list into `rooms.unis.json` (emoji and all) |
 | `wdm harvest --room yunha` | walk the history backwards (starts the private browser) |
 | `wdm render --room yunha` | build both exports (private + public) from what is on disk |
 | `wdm media --room yunha` | download the photos and video the export points at |
 | `wdm share --room yunha` | one zip in `share/`, built from the public export |
 | `wdm all --room yunha --share` | all of the above, in order |
 | `wdm doctor` | check node, browser, rooms and folders |
+
+The name the page shows for a room comes from `rowLabel` in `rooms.unis.json` - the text the room
+list in the app displays, emoji included. `wdm labels` fills it in: it opens the tool's own browser
+window, reads the names off the DM list page (`https://dm.weverse.io/`) and writes them back.
+`wdm labels --snippet` prints the same probe for pasting into DevTools instead, and
+`wdm labels --from names.json` imports that result. The DM API never carries the artist's own name,
+only your nickname, so the list itself is where the names come from.
 
 ## Output layout
 

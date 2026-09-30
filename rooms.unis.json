@@ -2,7 +2,7 @@
   "group": "UNIS",
   "label": "F&F",
   "tz": "auto",
-  "_note": "roomId: read from the DM room list (from React props, no network request). rowLabel: the row text visible when the id was captured, for convenience only - the tool still reads the real room name from the room itself. roomName: filled automatically on the first harvest. tz: auto follows the machine zone; set an IANA zone name such as Asia/Jakarta to pin one zone, and a room-level tz wins over the group tz.",
+  "_note": "roomId: read from the DM room list (from React props, no network request). rowLabel: the name the DM list shows for that room (emoji and all) - this is what the exports call the room, in the header and above the artist's bubbles; fill it with: node src/cli.mjs labels. roomName: the same name, kept in step by labels. tz: auto follows the machine zone; set an IANA zone name such as Asia/Jakarta to pin one zone, and a room-level tz wins over the group tz.",
   "rooms": [
     {
       "slug": "yunha",

@@ -80,6 +80,10 @@ export function findRoom(obj, key) {
 export const slugify = (s) => String(s == null ? "" : s).toLowerCase()
   .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
 
+// What the page calls the artist: the label the DM list showed for that room, which is the name the
+// artist goes by there (emoji included, if any). The official names are only the fallback.
+export const artistLabel = (r) => String((r && (r.rowLabel || r.nameKo || r.nameEn || r.slug)) || "");
+
 // The time zone actually used for one room: room tz > group tz > "auto".
 export function resolveTz(obj, room) {
   const z = (room && room.tz) || obj.tz || "auto";

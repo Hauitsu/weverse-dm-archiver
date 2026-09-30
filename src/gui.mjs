@@ -13,6 +13,7 @@ import { makeT, pickLang } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, hurryMode, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
+import { artistLabel } from "./rooms.mjs";
 
 const NL = String.fromCharCode(10);
 const argv = process.argv.slice(2);
@@ -326,7 +327,7 @@ async function startJob(body) {
       const roomName = r.rowLabel || r.slug;
       state.slug = r.slug; state.roomName = roomName;
       const res = await runRoom({
-        slug: r.slug, roomId: r.roomId, roomName: roomName, artist: r.nameKo || r.slug,
+        slug: r.slug, roomId: r.roomId, roomName: roomName, artist: artistLabel(r),
         tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: publicRenameFor(cfg, r.slug), share: share, shareLow: shareLow,
         credit: cfg.credit || "", cdp: session.cdp, onLog: push, shouldStop: () => stopFlag,
         onProgress: (p) => {

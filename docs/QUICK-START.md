@@ -137,6 +137,15 @@ does not work.
 - **"the archive would need ZIP64"** - one room is over 4 GB. Zip each room separately (the
   default) rather than all of them at once.
 
+## Room names (emoji included)
+
+The header of an export shows the name the DM list shows for the room, emoji and all. It lives in
+`rowLabel` in `rooms.unis.json`, and `node src/cli.mjs labels` fills it in: it opens the tool's own
+browser window at `https://dm.weverse.io/`, reads each row, and writes the names back. Prefer to do
+it by hand? `node src/cli.mjs labels --snippet` prints a probe for the DevTools console of that page;
+save what it prints and run `node src/cli.mjs labels --from <file>`. Re-render the room afterwards so
+the headers pick the new name up.
+
 ## Where everything lives
 
 ```

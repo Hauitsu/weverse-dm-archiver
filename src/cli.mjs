@@ -5,6 +5,7 @@
 //   node src/cli.mjs render  --room yunha        build both exports (private + public) from disk
 //   node src/cli.mjs media   --room yunha        download the photos and video (no browser if complete)
 //   node src/cli.mjs share   --room yunha        one zip in share/, ready to send
+//   node src/cli.mjs labels                      read the room names off the DM list into rooms.unis.json
 //   node src/cli.mjs all     --room yunha --share
 //   node src/cli.mjs doctor                      check node, browser, rooms and folders
 import fs from "node:fs";
@@ -16,6 +17,8 @@ import { bundle } from "./bundle.mjs";
 import { findFfmpeg } from "./quality.mjs";
 import { findBrowser } from "./browser.mjs";
 import { readArchive } from "./harvest.mjs";
+import { artistLabel, loadRooms, saveRooms } from "./rooms.mjs";
+import { DM_URL, LABEL_PROBE, captureLabels, gotoDm, mergeLabels, readRows } from "./labels.mjs";
 
 const argv = process.argv.slice(2);
 const cmd = (argv[0] || "help").toLowerCase();
@@ -65,16 +68,54 @@ const commands = {
         "  " + a.files.length + " part(s), " + a.seen.size + " message(s)" + (a.deepest == null ? "" : ", oldest " + new Date(a.deepest).toISOString().slice(0, 10)));
     }
   },
+  labels: async () => {
+    // The DM list is the only place the real room names live, emoji and all. Without --from the
+    // tool opens its own window, goes to the DM list and reads them there; the probe never sends
+    // a request of its own.
+    const file = path.resolve(REPO, cfg.roomsFile || "rooms.unis.json");
+    if (has("snippet")) {
+      log("Paste this in the DevTools console of the DM list page (" + DM_URL + "), save what it prints as a .json file, then run:");
+      log("  node src/cli.mjs labels --from <that file>");
+      log("");
+      log(LABEL_PROBE);
+      return;
+    }
+    const obj = loadRooms(file);
+    const from = String(flag("from", ""));
+    let rows = [];
+    let src = "the DM list";
+    if (from) {
+      rows = readRows(path.resolve(from));
+      src = "file " + from;
+    } else {
+      await withSession(async (s) => {
+        await gotoDm(s.cdp, { onLog: log });
+        const got = await captureLabels(s.cdp, { onLog: log, timeoutMs: Number(flag("wait", 90000)) });
+        rows = got.rows || [];
+        if (!rows.length) log("the page showed no room rows; open the DM list in that window and run it again");
+      });
+    }
+    const res = mergeLabels(obj, rows);
+    for (const c of res.changed) log("label: " + c.slug.padEnd(10) + JSON.stringify(c.from) + " -> " + JSON.stringify(c.to));
+    if (res.kept.length) log("already right: " + res.kept.join(", "));
+    if (res.missing.length) log("no name captured for: " + res.missing.join(", "));
+    if (res.unmatched.length) log("on the page but not in the registry: " + res.unmatched.join(", "));
+    if (!res.changed.length) { log("nothing to write (" + rows.length + " row(s) read from " + src + ")"); return; }
+    if (has("dry")) { log("--dry: " + file + " left untouched"); return; }
+    saveRooms(file, obj);
+    log("wrote " + res.changed.length + " label(s) to " + file + " (source: " + src + ")");
+    log("next: node src/cli.mjs render --room <slug>");
+  },
   harvest: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r), tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res.phases.harvest, null, 1));
     });
   },
   render: async () => {
     const r = pick();
-    const res = await renderBoth({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), onLog: log });
+    const res = await renderBoth({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: artistLabel(r), tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), onLog: log });
     // Only claim an output path when the renderer really produced one.
     if (res.private !== 0) { log("render failed (exit " + res.private + "); nothing was written"); process.exit(1); }
     log("private export -> " + path.join(d.rooms, r.slug + ".html"));
@@ -92,14 +133,14 @@ const commands = {
   },
   share: async () => {
     const r = pick();
-    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.share, verifyDir: d.verify, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
+    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r), roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.share, verifyDir: d.verify, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
     log(b.zip);
     log("sha256 " + b.sha256);
   },
   all: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), share: has("share"), shareLow: has("low"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r), tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), share: has("share"), shareLow: has("low"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res, null, 1));
     });
   },

@@ -92,6 +92,17 @@ nickname you changed at some point is hidden as well. `"publicRename"` is there 
 `render: public export checked, the hidden name is gone` when the scan comes back clean, and a
 warning with a count when it does not.
 
+## Where does the room name in the header come from?
+
+From `rowLabel` in `rooms.unis.json`: the text the DM list shows for that room, emoji included. It
+is what the page calls the room - the `<h1>`, the meta line, and the name above the artist's
+bubbles. The DM API does not carry the artist's own name (every message, on both sides, is labelled
+with *your* nickname), so the list page is the only place to read it. `wdm labels` reads the names
+off `https://dm.weverse.io/` in the tool's own browser window; `wdm labels --snippet` prints that
+probe if you would rather paste it into DevTools yourself, and `wdm labels --from names.json`
+imports the result. Re-render afterwards (`wdm render --room <slug>`), and rebuild any zip that
+already exists.
+
 ## What is inside the zip?
 
 One folder per room, holding the page and everything it needs. With **Yes but Low Quality** the
