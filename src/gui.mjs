@@ -149,11 +149,12 @@ function page() {
     const size = e.measured ? tr("gui.sizeSaved", { v: fmtSize(e.saved) }) : tr("gui.sizeGuess", { v: fmtSize(e.bytes) });
     const canOpen = !!roomPage(r.slug);
     const openBtn = "<span class=\"op\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-slug=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(tr("gui.openHint")) + "\">" + esc(tr("gui.open")) + "</button></span>";
-    // Share sits left of Open: same row, no popup to hunt for, and its tooltip names the zip that is
+    // Share stands right of Open and only where Open stands: a room with nothing saved yet has no
+    // page to pack, so the button stays hidden until there is one. Its tooltip names the zip that is
     // already there.
     const si = shareInfo(r.slug);
     const shTip = tr("gui.shareHint") + " " + (si.zip ? tr("gui.shareHas", { v: si.zip.name + " (" + fmtSize(si.zip.bytes) + ")" }) : tr("gui.shareNone"));
-    const shareBtn = "<span class=\"sh\"><button type=\"button\" class=\"mini\" data-share=\"" + esc(r.slug) + "\" title=\"" + esc(shTip) + "\">" + esc(tr("gui.shareBtn")) + "</button></span>";
+    const shareBtn = "<span class=\"sh\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-share=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(shTip) + "\">" + esc(tr("gui.shareBtn")) + "</button></span>";
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
     // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
     return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
@@ -161,7 +162,7 @@ function page() {
     // and as a chat room second.
       "<span class=\"nm\">" + esc(a) + "</span>" +
       "<span class=\"who\">" + esc(r.rowLabel || r.slug) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
-      "<span class=\"sz\">" + esc(size) + "</span>" + shareBtn + openBtn + "</label>";
+      "<span class=\"sz\">" + esc(size) + "</span>" + openBtn + shareBtn + "</label>";
   }).join(NL);
   // A real dropdown: a zone is picked from the list instead of typed into a native autocomplete that
   // shows nothing until the first keystroke. A zone pinned by hand but missing from Intl's list is
@@ -183,7 +184,7 @@ function page() {
     ":root{color-scheme:light dark}body{font-family:system-ui,Segoe UI,Malgun Gothic,sans-serif;margin:0;padding:24px;max-width:900px;line-height:1.5}",
     "h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}",
     "section{border:1px solid #8884;border-radius:10px;padding:14px 16px;margin:0 0 14px}",
-    "label.row{display:grid;grid-template-columns:24px minmax(120px,1fr) 150px 76px 92px 72px 74px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
+    "label.row{display:grid;grid-template-columns:24px minmax(120px,1fr) 150px 76px 92px 74px 72px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
     ".nm{font-weight:600}.who,.id,.sz{opacity:.75;font-size:13px}",
     "button{font:inherit;padding:7px 14px;border-radius:8px;border:1px solid #8886;background:#8881;cursor:pointer}",
     "button.mini{padding:3px 9px;font-size:13px;border-radius:6px}.op,.sh{text-align:right}",
@@ -368,7 +369,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  lastRooms=s.rooms||[];lastShare=s.share||null;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
     "  el(\"#start\").disabled=sbusy;",
-    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);b.disabled=sbusy;if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
+    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
     "  if(shSlug&&el(\"#shModal\").style.display!==\"none\"){",
     "    var sj=(s.share&&s.share.slug===shSlug)?s.share:null;",
     "    paintShare(roomInfo(shSlug),sj);",

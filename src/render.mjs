@@ -455,7 +455,9 @@ const h = [];
 h.push('<!doctype html><html lang="' + t.lang + '"><head><meta charset="utf-8">');
 h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 // The tab keeps the room so several archives stay apart; the visible header (below) does not.
-  h.push('<title>' + esc(t("html.title")) + ' - ' + esc(ROOM_NAME) + ' (' + esc([...roomIds].join(', ')) + ')</title>');
+// The tab title is the room itself - a row of open rooms reads as their names. The name with its id
+// still lives in the header row under the bookmarks, and the h1 keeps saying what this file is.
+h.push('<title>' + esc(ROOM_NAME) + '</title>');
 // Runs before the first paint: a remembered theme is on the page before anything is drawn, so
 // nobody sees a dark flash on the way to light.
 h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
