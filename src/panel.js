@@ -1,5 +1,5 @@
-/* The side panel: the month jump and your bookmarks, out of the reading column until you press one
-   of the two buttons next to the theme switch. Plain ES5 like src/ui.js and src/bm.js; the panel only
+/* The side panel: the month jump and your bookmarks, out of the reading column until you press one of
+   the two icon buttons in the top-right corner. Plain ES5 like src/ui.js and src/bm.js; the panel only
    shows and hides what the renderer already wrote, and the bookmark list itself stays bm.js' business. */
 (function () {
   var p = document.getElementById("panel");
@@ -47,6 +47,16 @@
   if (tab.j) tab.j.onclick = function () { pilih("j"); };
   if (tab.b) tab.b.onclick = function () { pilih("b"); };
   document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") tutup(); });
+  // Anything else on the page - a message, a photo, the theme switch - puts the panel away again. The
+  // two icons are left alone: they carry their own toggle, so clicking them must not close twice.
+  var bar = document.getElementById("pico");
+  document.addEventListener("click", function (ev) {
+    if (!p.classList.contains("buka")) return;
+    var el = ev.target;
+    if (!el || p.contains(el)) return;
+    if (bar && bar.contains(el)) return;
+    tutup();
+  });
   // A month chip or a bookmark link is meant to be followed: get the panel out of the way first.
   p.addEventListener("click", function (ev) {
     var a = ev.target && ev.target.closest ? ev.target.closest("a[href^='#']") : null;

@@ -27,7 +27,8 @@ login tokens, and never touches the tab you are logged in on.
   under the date; one nickname grey (`#666666`) on both sides in both themes, and the choice is remembered
   per browser - dark stays the default
 - two round icon buttons in the top-right corner open one panel from the right: the date jump first,
-  your bookmarks second (the ★ carries the count as a small badge, both carry a tooltip). The month chips are a list of links there instead of a row under the title, the
+  your bookmarks second (the ★ carries the count as a small badge, both carry a tooltip). The panel
+  closes on its own button, on ✕, on Esc, and on any click outside it. The month chips are a list of links there instead of a row under the title, the
   bookmark tab carries the JSON export and import, and a wide window steps the reading column aside
   rather than hiding it behind the panel
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
