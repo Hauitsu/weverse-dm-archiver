@@ -54,6 +54,9 @@ if (Test-Path $privateList) {
 # 3. what is never copied (work output / large / local)
 $skipDir     = @(".git", "node_modules", "profile", "media", "downloads", "rooms", "dist", ".vscode")
 $skipPattern = @("^export", "\.log$", "\.zip$", "^config\.json$", "^\.env")
+# media/ is work output and can be gigabytes, but media/fonts/ is a shipped asset (the emoji font the
+# page links to). It is the only exempt path: everything else under media/ stays local.
+$keepRel     = @("media/fonts/")
 
 if ($Reset -and (Test-Path $Stage)) { Remove-Item $Stage -Recurse -Force }
 if (Test-Path $Stage) {
@@ -71,6 +74,7 @@ $selected = $all | Where-Object {
   $parts = $rel.Split("/")
   $badDir = $false
   foreach ($d in $parts[0..([Math]::Max(0, $parts.Count - 2))]) { if ($skipDir -contains $d) { $badDir = $true } }
+  if ($badDir) { foreach ($k in $keepRel) { if ($rel.StartsWith($k)) { $badDir = $false; break } } }
   $badPattern = $false
   foreach ($p in $skipPattern) { if ($rel -match $p) { $badPattern = $true } }
   (-not $badDir) -and (-not $badPattern)

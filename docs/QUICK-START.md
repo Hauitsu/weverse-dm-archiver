@@ -106,3 +106,7 @@ downloads/<room>/    the raw pages, one JSONL line each - delete only if you wan
 dist/                share zips with their .sha256 and .manifest.json
 config.json          optional settings (language, tz, browserPath, output, pacing)
 ```
+
+`media/fonts/` already comes with the repo (the emoji font the page links to); everything else
+under `media/` is downloaded output. Add `media/avatars/artist.png` and `media/avatars/me.png`
+yourself if you want the avatar circles next to the messages.

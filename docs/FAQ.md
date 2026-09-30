@@ -78,6 +78,14 @@ weverse-dm-<room>/
 
 Everything is offline: the page reads the files next to it and never touches the network.
 
+## Where do the emoji and the avatar circles come from?
+
+The emoji font ships with the repo in `media/fonts/` (Noto Color Emoji, OFL-1.1), so the page looks
+the same on every machine instead of depending on what the visitor has installed, and nothing is
+fetched from a CDN. The avatar circles are optional: put your own `media/avatars/artist.png` and
+`media/avatars/me.png` there before rendering and the page shows them next to the messages. Without
+those two files the page is rendered without avatars - no broken image, just no avatar.
+
 ## Can I reuse an archive I made earlier?
 
 Yes. Put the old part files in their own folder under `downloads/`, named after the room:

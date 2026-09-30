@@ -1,5 +1,9 @@
 # work output / large files
-media/
+# everything under media/ is downloaded work output, except the emoji font: the generated page
+# references fonts/ and the archive is meant to look the same on every machine, so that one
+# directory ships with the repo (~2 MB).
+media/*
+!media/fonts/
 downloads/
 rooms/
 dist/

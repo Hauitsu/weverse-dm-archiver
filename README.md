@@ -64,6 +64,12 @@ Rooms never share a folder under `downloads/`, so one room history can never lea
 room export. The export always points at the original media, so there is no quality knob: one
 room is roughly 2.5 GB, almost all of it photos and video.
 
+`media/fonts/` is the one exception to "media is downloaded output": the emoji font ships with the
+repo (Noto Color Emoji, OFL-1.1), so a fresh clone renders the page the same way on every machine
+and never loads a font from the internet. The avatar circles are optional - drop your own
+`media/avatars/artist.png` and `media/avatars/me.png` there before rendering and the page shows
+them next to the messages; without those two files the page is simply rendered without avatars.
+
 ## Safety rules this tool follows
 
 | rule | why |
