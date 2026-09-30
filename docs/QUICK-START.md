@@ -76,6 +76,8 @@ Options:
 - **Share** (on a room row) - packs that one room on the spot, without touching the others. The
   popup says what the zip is expected to weigh, counted from the files that would go in, and the
   number changes with the quality choice in the same popup.
+  The list keeps itself current: once a run ends, the row sizes, the total and the Open and Share
+  buttons update within a second, and a room added to `rooms.unis.json` appears on its own.
   If a collector link is configured (`collectUrl`), the popup also shows **Share to <name>**: it opens
   that page in your browser so you can pass the zip on - send the Low quality one, 350 MB against 2.5 GB.
 - **Estimated size** - the line under the list adds up every room you tick; hover it for the

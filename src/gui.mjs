@@ -10,7 +10,8 @@ import http from "node:http";
 import { spawn } from "node:child_process";
 import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
+import { rowNumbers, listSignature } from "./rowinfo.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
 import { openExternal } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
@@ -148,8 +149,10 @@ function page() {
   const list = rooms(cfg);
   const machine = "auto (" + (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") + ")";
   const rows = list.map((r) => {
-    const e = estimateFor(cfg, r);
-    const size = e.measured ? tr("gui.sizeSaved", { v: fmtSize(e.saved) }) : tr("gui.sizeGuess", { v: fmtSize(e.bytes) });
+    // The numbers come from the same place the state poll uses, so what this page prints and what a
+    // later poll patches in can never drift apart.
+    const e = rowNumbers(cfg, r, tr);
+    const size = e.text;
     const canOpen = !!roomPage(r.slug);
     const openBtn = "<span class=\"op\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-slug=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(tr("gui.openHint")) + "\">" + esc(tr("gui.open")) + "</button></span>";
     // Share stands right of Open and only where Open stands: a room with nothing saved yet has no
@@ -328,7 +331,11 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
     "async function openItSlug(what,slug){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:what,slug:slug})});}",
-    "var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,lastCollect=false;",
+    // The page was built from exactly this list of rooms. When the poll reports a different one - a room
+// added to rooms.unis.json while the window was open - only a fresh page can show that row.
+"var ROWSIG=" + JSON.stringify(listSignature(list)) + ";",
+"var lastReload=0;",
+"var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,lastCollect=false;",
     "function roomInfo(slug){for(var i=0;i<lastRooms.length;i++){if(lastRooms[i].slug===slug)return lastRooms[i];}return null;}",
     "function hideShare(){el(\"#shModal\").style.display=\"none\";}",
     "function paintShare(info,sh){",
@@ -411,6 +418,17 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
     "  el(\"#start\").disabled=sbusy;",
     "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
+// The rows own numbers are the one thing the page cannot work out for itself: they need the room
+// page and every media file it points at. The server hands them over, and this writes them back
+// only when they really moved, so a page sitting idle does no work at all.
+    "  var nubah=false;",
+    "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===c.dataset.slug)hit=x;});if(!hit||hit.text===undefined)return;",
+    "    if(String(hit.full)!==c.dataset.full||String(hit.saved)!==c.dataset.saved){c.dataset.full=hit.full;c.dataset.saved=hit.saved;nubah=true;}",
+    "    var z=c.parentNode?c.parentNode.querySelector(\".sz\"):null;if(z&&z.textContent!==hit.text)z.textContent=hit.text;});",
+    "  if(nubah)total();",
+// A row that was not there when this page was built cannot be patched in, so that one case waits
+// for an idle moment and then reloads the page itself. The five seconds keep a churn from looping.
+    "  if(s.rowsig&&s.rowsig!==ROWSIG&&!sbusy&&Date.now()-lastReload>5000){lastReload=Date.now();location.reload();}",
     "  if(shSlug&&el(\"#shModal\").style.display!==\"none\"){",
     "    var sj=(s.share&&s.share.slug===shSlug)?s.share:null;",
     "    paintShare(roomInfo(shSlug),sj);",
@@ -462,13 +480,17 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
     text += " - " + state.roomName + (state.progress ? " (" + state.progress.line + ")" : "");
   }
   if (state.phase === "idle") state.percent = 0;
+  const list = rooms(cfg);
   return {
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
     // Whether this build ships a "share to <name>" link; the page shows the button only then.
     collect: !!String(cfg.collectUrl || "").trim(),
     log: state.log, result: state.result, error: state.error,
     // Only what the rows need to keep their Open button honest while a run goes on.
-    rooms: rooms(cfg).map(function (x) { const si = shareInfo(x.slug); return { slug: x.slug, label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip }; }),
+    // The room set itself: the page patches numbers when they move, but a row it never had needs a
+    // fresh page.
+    rowsig: listSignature(list),
+    rooms: list.map(function (x) { const si = shareInfo(x.slug); const er = rowNumbers(cfg, x, tr); return { slug: x.slug, label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip, text: er.text, full: er.full, saved: er.saved }; }),
     // The Share popup packs one room on its own: no browser, no login, its own small progress log.
     share: { running: shareJob.running, slug: shareJob.slug, low: shareJob.low, percent: shareJob.percent, error: shareJob.error, result: shareJob.result, log: shareJob.log.slice(-40) },
   };
