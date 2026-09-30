@@ -68,6 +68,7 @@ function page() {
   if (curTz !== "auto" && tzList.indexOf(curTz) < 0) tzList.unshift(curTz);
   const opts = tzList.map((z) => "<option value=\"" + esc(z) + "\"" + (z === curTz ? " selected" : "") + ">" + esc(z === "auto" ? machine : z) + "</option>").join("");
   const langs = ["en", "ko", "id"].map((l) => "<option value=\"" + l + "\"" + (pickLang(cfg.language) === l ? " selected" : "") + ">" + l + "</option>").join("");
+  const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li>" + bold(s) + "</li>").join("") + "</ol>";
 
   return [
     "<!doctype html><html lang=\"" + pickLang(cfg.language) + "\"><head><meta charset=\"utf-8\">",
@@ -112,7 +113,7 @@ function page() {
     // open its own browser window, so the click waits here until the user has read that.
     "<div id=\"modal\" style=\"display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;padding:20px;z-index:9\">",
     "<div style=\"max-width:540px;background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:12px;padding:18px 20px\">",
-    "<ol style=\"margin:0 0 16px;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li>" + bold(s) + "</li>").join("") + "</ol>",
+    noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<div class=\"grid\"><button id=\"mGo\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"mNo\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
 
@@ -123,6 +124,9 @@ function page() {
     "<button id=\"bZip\">" + esc(tr("gui.openZip")) + "</button>",
     "<span class=\"muted\" id=\"resmeta\"></span></div></section>",
 
+    // The same steps the Start popup shows, still on the page while the login wait runs, so nobody
+    // has to remember what the popup said after dismissing it.
+    "<section id=\"loginNote\" style=\"display:none\">" + noteHtml + "</section>",
     "<section><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "<script>",
     "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + "};",
@@ -164,6 +168,7 @@ function page() {
     "  var box=el(\"#log\"); box.textContent=s.log.join(String.fromCharCode(10)); box.scrollTop=box.scrollHeight;",
     "  el(\"#start\").disabled=s.running; el(\"#stop\").disabled=!s.running;",
     "  el(\"#authedWrap\").style.display=s.canHurry?\"\":\"none\";",
+    "  el(\"#loginNote\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "}",
