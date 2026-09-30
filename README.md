@@ -111,8 +111,8 @@ someone else. If you would rather not share anything, `dist/` is just a folder y
 - Node.js 20 or newer, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; point
   `browserPath` in `config.json` at anything unusual).
 - Only rooms your own account can already read - this bypasses no membership and no paywall.
-- One room is around 2.5 GB at full quality (the page quotes a 3 GB ceiling until a room has been
-  archived once). A compact variant is deliberately **not** part of
+- One room is around 2.5 GB at full quality (hovering the selected-rooms line quotes a 3 GB ceiling
+  until a room has been archived once). A compact variant is deliberately **not** part of
   this build; see `docs/ROADMAP.md`.
 - Windows is the tested path (`START.bat`, `wdm.bat`). The JavaScript modules run wherever Node
   runs; only the launchers are Windows-specific.
