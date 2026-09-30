@@ -56,8 +56,10 @@ function page() {
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
     // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
     return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
-      "<span class=\"nm\">" + esc(r.rowLabel || r.slug) + "</span>" +
-      "<span class=\"who\">" + esc(a) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
+    // The stage name leads and the room's own title follows it, so a row reads as a person first
+    // and as a chat room second.
+      "<span class=\"nm\">" + esc(a) + "</span>" +
+      "<span class=\"who\">" + esc(r.rowLabel || r.slug) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
       "<span class=\"sz\">" + esc(size) + "</span></label>";
   }).join(NL);
   // A real dropdown: a zone is picked from the list instead of typed into a native autocomplete that
