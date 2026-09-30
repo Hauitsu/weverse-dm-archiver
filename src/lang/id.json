@@ -98,7 +98,6 @@
   "gui.browserHint": "Menekan Start membuka jendela browser terpisah dengan profilnya sendiri. Login ke Weverse di jendela itu sekali saja; browser yang biasa kamu pakai tidak disentuh.",
   "gui.share": "Sekalian buat zip untuk dibagikan",
   "gui.shareYes": "Ya",
-  "gui.shareLow": "Ya tapi kualitas rendah",
   "gui.shareNo": "Tidak",
   "gui.shareHint": "hanya pesan artist dan medianya yang masuk ke folder berbagi. pesan fan (pesanmu) tidak disertakan.",
   "gui.shareBtn": "Bagikan",

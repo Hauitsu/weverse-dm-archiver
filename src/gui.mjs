@@ -175,9 +175,11 @@ function page() {
   if (curTz !== "auto" && tzList.indexOf(curTz) < 0) tzList.unshift(curTz);
   const opts = tzList.map((z) => "<option value=\"" + esc(z) + "\"" + (z === curTz ? " selected" : "") + ">" + esc(z === "auto" ? machine : z) + "</option>").join("");
   const langs = ["en", "ko", "id"].map((l) => "<option value=\"" + l + "\"" + (pickLang(cfg.language) === l ? " selected" : "") + ">" + l + "</option>").join("");
-  // Yes / Yes but low quality / No, with the last choice remembered in config.json.
-  const shareOpts = [["yes", "gui.shareYes"], ["low", "gui.shareLow"], ["no", "gui.shareNo"]]
-    .map((m) => "<option value=\"" + m[0] + "\"" + (String(cfg.shareMode || "yes") === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>").join("");
+  // Yes / No, remembered in config.json. A re-compressed zip is no longer a batch choice: it lives
+  // in the Share popup (and in `wdm share --low`), so a config still saying "low" reads as "yes" here.
+  const curShare = String(cfg.shareMode) === "no" ? "no" : "yes";
+  const shareOpts = [["yes", "gui.shareYes"], ["no", "gui.shareNo"]]
+    .map((m) => "<option value=\"" + m[0] + "\"" + (curShare === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>").join("");
   const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li style=\"margin:0 0 10px\">" + emph(s) + "</li>").join("") + "</ol>";
 
   return [
@@ -361,7 +363,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  shSlug=slug;",
     "  var info=roomInfo(slug)||{};",
     "  el(\"#shTitle\").textContent=MSG.shTitle.replace(\"{v}\",info.label||slug);",
-    "  el(\"#shQ\").value=(lastShare&&lastShare.lowDefault)?\"low\":\"full\";",
+    "  el(\"#shQ\").value=\"full\";",
     "  el(\"#shLog\").textContent=\"\";el(\"#shLog\").style.display=\"none\";",
     "  el(\"#shBar\").style.display=\"none\";el(\"#shFill\").style.width=\"0%\";",
     "  paintShare(info,(lastShare&&lastShare.slug===slug&&!lastShare.result&&!lastShare.error)?lastShare:null);",
@@ -459,7 +461,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
     // Only what the rows need to keep their Open button honest while a run goes on.
     rooms: rooms(cfg).map(function (x) { const si = shareInfo(x.slug); return { slug: x.slug, label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip }; }),
     // The Share popup packs one room on its own: no browser, no login, its own small progress log.
-    share: { running: shareJob.running, slug: shareJob.slug, low: shareJob.low, percent: shareJob.percent, error: shareJob.error, result: shareJob.result, log: shareJob.log.slice(-40), lowDefault: String(cfg.shareMode) === "low" },
+    share: { running: shareJob.running, slug: shareJob.slug, low: shareJob.low, percent: shareJob.percent, error: shareJob.error, result: shareJob.result, log: shareJob.log.slice(-40) },
   };
 }
 

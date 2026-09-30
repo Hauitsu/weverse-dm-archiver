@@ -66,15 +66,16 @@ Options:
   retries on its own, you decide when it is worth another look.
 - **Signing in with Google** - the button above is also the "done" signal for the normal sign-in
   window; the moment you press it the tool closes that window and takes the session over - and if that session still is not there, the sign-in window comes back instead of the run ending.
-- **Also make a shareable zip** - three choices, remembered in `config.json`. **Yes** (the default)
+- **Also make a shareable zip** - two choices, remembered in `config.json`. **Yes** (the default)
   writes `share/weverse-dm-<room>.zip` with the public chat, its media and a README in three
-  languages; only artist messages and media are inside, your own messages are left out. **Yes but Low
-  Quality** packs the same thing from re-compressed copies - 1280px on the long side, h264 video,
-  64 kbps audio - and needs `ffmpeg` on your `PATH`; the archive in `rooms/` and `media/` keeps its
-  originals either way. **No** skips the zip entirely.
+  languages; only artist messages and media are inside, your own messages are left out. **No** skips
+  the zip entirely. A re-compressed zip is not a batch choice: ask for it per room, in that room's
+  **Share** popup (next bullet), which is where **Low quality** lives - 1280px on the long side, h264
+  video, 64 kbps audio, needing `ffmpeg` on your `PATH`. The archive in `rooms/` and `media/` keeps
+  its originals either way.
 - **Share** (on a room row) - packs that one room on the spot, without touching the others. The
   popup says what the zip is expected to weigh, counted from the files that would go in, and the
-  number follows the quality choice above it.
+  number changes with the quality choice in the same popup.
 - **Estimated size** - the line under the list adds up every room you tick; hover it for the
   reasoning. The estimate is a ceiling, not a promise: this group's conversation starts April 2025, a
   room that has never been saved is quoted as up to `estimateGb` (3 GB), a saved room is projected

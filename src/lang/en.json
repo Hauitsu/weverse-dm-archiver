@@ -98,7 +98,6 @@
   "gui.browserHint": "Starting opens a separate browser window that uses its own profile. Login to Weverse there once; the browser you normally use is never touched.",
   "gui.share": "Also make a shareable zip",
   "gui.shareYes": "Yes",
-  "gui.shareLow": "Yes but Low Quality",
   "gui.shareNo": "No",
   "gui.shareHint": "only artist messages and media are included in the share folder. fan messages (your messages) are excluded.",
   "gui.shareBtn": "Share",

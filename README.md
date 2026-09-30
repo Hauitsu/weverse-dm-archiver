@@ -72,7 +72,8 @@ login tokens, and never touches the tab you are logged in on.
 4. Tick a room and press **Start** - the popup explains the separate browser window first (hovering
    the button says the same) - then confirm. Progress streams page by page.
 5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `share/` - it is made
-   by default, and the picker can ask for a re-compressed one instead, or for none at all.
+   by default, and the picker can turn it off. A re-compressed zip is a per-room choice, asked for
+   in that room's **Share** popup.
 
 Every room row carries its own **Share** button next to **Open**: it packs that single room into
 `share/` on the spot - full quality or re-compressed - and once a zip exists the same popup opens
@@ -171,9 +172,9 @@ someone else. If you would rather not share anything, `share/` is just a folder 
   `browserPath` in `config.json` at anything unusual).
 - Only rooms your own account can already read - this bypasses no membership and no paywall.
 - One room is around 2.5 GB at full quality (hovering the selected-rooms line quotes a 3 GB ceiling
-  until a room has been archived once). The share zip can be built from re-compressed copies instead
-  ("Yes but Low Quality": 1280px on the long side, h264 video, 64 kbps audio), which needs an
-  `ffmpeg` on `PATH`; the archive on disk keeps its originals either way.
+  until a room has been archived once). The share zip can be built from re-compressed copies instead ("Low quality" in a room's **Share**
+popup: 1280px on the long side, h264 video, 64 kbps audio), which needs an `ffmpeg` on `PATH`; the
+archive on disk keeps its originals either way.
 - Windows is the tested path (`START.bat`, `wdm.bat`). The JavaScript modules run wherever Node
   runs; only the launchers are Windows-specific.
 
