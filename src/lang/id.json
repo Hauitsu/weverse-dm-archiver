@@ -148,5 +148,8 @@
   "html.bubTitle": "Warna bubble",
   "html.chipHari": "hari bersama",
   "html.titleBy": "by Hauitsu",
-  "html.roomIds": "room {ids}"
+  "html.roomIds": "room {ids}",
+  "html.panelBm": "Bookmark saya",
+  "html.panelClose": "Tutup",
+  "html.panelJump": "Lompat ke tanggal"
 }

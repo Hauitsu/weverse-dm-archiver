@@ -95,9 +95,10 @@ warning with a count when it does not.
 ## Where does the room name in the header come from?
 
 From `rowLabel` in `rooms.unis.json`: the text the DM list shows for that room, emoji included. It
-is what the page calls the room - the row under the bookmarks box, next to the artist's picture, and
-the name above the artist's bubbles. The `<h1>` is the fixed title `Weverse DM backup` and the room id
-leads the grey meta line underneath it (`room WRA2W0P &middot; ...`). The DM API does not carry the artist's own name (every message, on both sides, is labelled
+is what the page calls the room - the row under the meta line, next to the artist's picture, and the
+name above the artist's bubbles. The `<h1>` is the fixed title `Weverse DM backup` and the room id
+leads the grey meta line underneath it (`room WRA2W0P &middot; ...`). The DM API does not carry the
+artist's own name (every message, on both sides, is labelled
 with *your* nickname), so the list page is the only place to read it. `wdm labels` also saves the profile pictures the rows point at as `media/avatars/<room>-artist`,
 which is what puts a face next to the messages. `wdm labels` reads the names
 off `https://dm.weverse.io/` in the tool's own browser window; `wdm labels --snippet` prints that

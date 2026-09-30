@@ -148,5 +148,8 @@
   "html.bubTitle": "말풍선 색",
   "html.chipHari": "일 함께",
   "html.titleBy": "by Hauitsu",
-  "html.roomIds": "room {ids}"
+  "html.roomIds": "room {ids}",
+  "html.panelBm": "내 북마크",
+  "html.panelClose": "닫기",
+  "html.panelJump": "날짜로 이동"
 }

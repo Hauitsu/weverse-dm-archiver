@@ -2,7 +2,9 @@
   publish.ps1 - publication gate for the weverse-dm-archiver folder.
 
   Flow:
-    1. make sure this folder contains no nested git repo (a gitlink means the content is NOT backed up)
+    1. make sure this folder contains no nested git repo (a .git here, or a gitlink in the private repo,
+       means the content is NOT backed up), then lock the stage folder: two runs at once overwrite each
+       other's copies and one of them reports a bogus "no changes"
     2. copy this folder to the stage folder, skipping large/local files
     3. scan the copied files: tokens, cookies, real nicknames, personal paths
     4. prepare the git repo in the stage folder (init + remote) and print a summary
@@ -30,9 +32,54 @@ Write-Host ("source : " + $Src)
 Write-Host ("stage  : " + $Stage)
 Write-Host ("remote : " + $Remote + " (" + $Branch + ")")
 
-# 1. no gitlink / nested repo allowed inside this folder
-$link = @(git -C $Src ls-files -s -- . 2>$null | Select-String "^160000")
-if ($link.Count -gt 0) { throw ("FOUND " + $link.Count + " gitlink(s) in this folder; remove the nested .git first so the content is really backed up.") }
+# 1. this folder must stay plain content of the private repo. A .git inside it (folder or file) or a
+#    gitlink entry in the private repo means the folder is recorded as a SHA only: the files are NOT
+#    backed up and cloning the private repo gives an empty folder.
+$nestedGit = @()
+if (Test-Path -LiteralPath (Join-Path $Src ".git")) { $nestedGit += ".git" }
+if ($nestedGit.Count -gt 0) {
+  throw ("nested git metadata found in this folder (" + ($nestedGit -join ", ") + "); delete it first - with a .git here the private repo records a gitlink (mode 160000) and the content is NOT backed up.")
+}
+# git writes to stderr when this folder sits outside any repo, and PowerShell 5.1 turns that into a
+# terminating error while $ErrorActionPreference is "Stop". This probe is allowed to come back empty.
+$probe = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
+$owner = (git -C $Src rev-parse --show-toplevel 2>$null | Select-Object -First 1)
+$ErrorActionPreference = $probe
+if (-not $owner) {
+  Write-Host "WARNING: no git repo above this folder - the gitlink check is skipped" -ForegroundColor Yellow
+} elseif (($owner.Trim() -replace "/", "\") -eq $Src.TrimEnd("\")) {
+  # git answers with this folder itself -> it IS its own repo (a .git we did not see, e.g. a worktree
+  # link). Publishing from it would change which repo "owns" the files, so stop instead of guessing.
+  throw ("this folder is its own git repo (git rev-parse --show-toplevel = " + $owner.Trim() + "); remove the nested .git first so the content is really backed up.")
+} else {
+  $link = @(git -C $Src ls-files -s -- . 2>$null | Select-String "^160000")
+  if ($link.Count -gt 0) { throw ("FOUND " + $link.Count + " gitlink(s) in this folder; remove the nested .git first so the content is really backed up.") }
+  Write-Host ("git    : tracked by " + $owner.Trim())
+}
+
+# 1b. the stage folder is shared state outside this repo and it is reused on every run. Two runs at the
+#     same time copy over each other, and then one of them can look at a half-built stage and print
+#     "no changes in the stage folder" - a wrong answer that looks like a real result. One run at a time.
+#     The lock is a directory: creating an already existing directory fails on every PowerShell version.
+$lock = $Stage.TrimEnd("\") + ".lock"
+if (Test-Path $lock) {
+  $lockRaw = (Get-Content -LiteralPath (Join-Path $lock "pid") -Raw -ErrorAction SilentlyContinue)
+  $lockPid = ""
+  $alive = $false
+  if ($lockRaw) {
+    $lockPid = (($lockRaw.Trim() -split "\s+") | Select-Object -First 1)
+    if ($lockPid -match "^\d+$") { $alive = [bool](Get-Process -Id ([int]$lockPid) -ErrorAction SilentlyContinue) }
+  }
+  if ($alive) {
+    throw ("another publish run is active (pid " + $lockPid + ", " + $lockRaw.Trim() + "); wait for it to finish, or delete " + $lock + " if you are sure that run is dead.")
+  }
+  Write-Host ("WARNING: stale stage lock (" + $(if ($lockRaw) { $lockRaw.Trim() } else { "no pid recorded" }) + ") - taking it over") -ForegroundColor Yellow
+  Remove-Item -LiteralPath $lock -Recurse -Force
+}
+New-Item -ItemType Directory -Path $lock -ErrorAction Stop | Out-Null
+Set-Content -LiteralPath (Join-Path $lock "pid") -Value ($PID.ToString() + " " + (Get-Date).ToString("s")) -Encoding ascii
+try {
 
 # 2. forbidden patterns (file content)
 $forbidden = @(
@@ -163,3 +210,7 @@ else        { Write-Host ((G @("push", "-u", "origin", $Branch)).Trim()) }
 Write-Host ("DONE - sent to " + $Remote) -ForegroundColor Green
 Write-Host ((G @("log", "--oneline", "-1")).Trim())
 Write-Host ("files in commit: " + @(git -C $Stage ls-tree -r HEAD --name-only).Count)
+} finally {
+  # always release the stage lock, including on an early return (dry run) or an aborted scan
+  Remove-Item -LiteralPath $lock -Recurse -Force -ErrorAction SilentlyContinue
+}

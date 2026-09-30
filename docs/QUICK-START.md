@@ -148,7 +148,7 @@ does not work.
 
 ## Room names (emoji included)
 
-The room row under the bookmarks box shows the name the DM list shows for the room, emoji and all,
+The room row under the meta line shows the name the DM list shows for the room, emoji and all,
 beside the artist's own profile picture. It lives in
 `rowLabel` in `rooms.unis.json`, and `node src/cli.mjs labels` fills it in: it opens the tool's own
 browser window at `https://dm.weverse.io/`, reads each row, and writes the names back. Prefer to do
@@ -177,8 +177,10 @@ and `--remove` falls back to the bundled Noto font (see the FAQ).
 ## Bookmarks (optional)
 
 Nothing to harvest: bookmarks are made inside the page. Open a private export, press the three dots
-next to a message and pick **Bookmark this message** - the message gets a star and a line in the list
-at the top of that page. The list starts empty and lives in your browser (`localStorage`, per room);
+next to a message and pick **Bookmark this message** - the message gets a star and a line in the
+bookmarks panel, behind the ★ button in the bottom-right corner, next to the theme switch. The list
+starts empty and lives in your
+browser (`localStorage`, per room);
 **Export JSON** in that list saves it as `bookmarks-<slug>.json` and **Import JSON** reads one back.
 
 To bake a list into every future render, drop that file next to the room:

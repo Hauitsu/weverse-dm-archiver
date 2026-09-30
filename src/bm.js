@@ -1,8 +1,8 @@
 // The bookmarks you make yourself.
 //
 // The renderer can bake a list in, but this script is the one that matters day to day: press the three
-// dots next to any message, pick "bookmark", and the message gets a star and a line in the list at the
-// top of the page. Nothing is ever sent anywhere and the file on disk is never rewritten - your list
+// dots next to any message, pick "bookmark", and the message gets a star and a line in the bookmarks
+// panel - the star button in the corner, left of the theme switch. Nothing is ever sent anywhere and the file on disk is never rewritten - your list
 // lives in localStorage under "wdm-bm", per room, on your own machine.
 //
 // The list can be exported and imported as the very same bookmarks.json the renderer reads, so a list
@@ -140,6 +140,8 @@
     if (!n) { var kosong = el("div", "bkosong"); kosong.textContent = S.kosong; kotak.appendChild(kosong); }
     var sum = det ? q("summary", det) : null;
     if (sum) sum.textContent = (n ? S.ringkas : S.ringkas0).split("{n}").join(n);
+    // The count lives on the buttons now: the corner one and the tab that opens this list.
+    qa("[data-bmn]").forEach(function (e) { e.textContent = "(" + n + ")"; });
   }
 
   function tanda(mid, on) {

@@ -16,8 +16,8 @@ login tokens, and never touches the tab you are logged in on.
 - `rooms/<room>.html` - the **private** export: every message from both sides, one self-contained
   page that opens offline in any browser, with day sections, artist highlighting,
   deleted-message markers and bookmarks
-- `rooms-public/<room>.html` - the **public** export: the artist side only, never any bookmarks,
-  and your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
+- `rooms-public/<room>.html` - the **public** export: the artist side only, never any bookmarks and no
+  panel, and your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
 - day headings read the way the app writes them - `Sat, Sep 26, 2026`, in the page and in the
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
 - a light theme for the page itself, switched from the round button in the bottom-right corner: there your own
@@ -26,6 +26,10 @@ login tokens, and never touches the tab you are logged in on.
   page behind them pure black (`#000`) - the sticky day band wears the same black, so nothing shows through
   under the date; one nickname grey (`#666666`) on both sides in both themes, and the choice is remembered
   per browser - dark stays the default
+- two round buttons in the bottom-right corner, left of the theme switch, open one panel from the left:
+  the date jump first, your bookmarks second. The month chips are a list of links there instead of a row under the title, the
+  bookmark tab carries the JSON export and import, and a wide window steps the reading column aside
+  rather than hiding it behind the panel
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
   scrolls, parking just under the day header so the two read as one HUD. The number is **live** -
   every day you open the archive it says one more - and behind it sit the app's ten bubble colours:
@@ -33,7 +37,7 @@ login tokens, and never touches the tab you are logged in on.
   (15 characters). Only the artist bubble takes the colour, only in that room, and only in your
   browser - see [Bubble colour and the days chip](#bubble-colour-and-the-days-chip)
 - a header that names the backup instead of the room: `Weverse DM backup` with a grey `by Hauitsu`, and the
-  room moved down under the bookmarks box - the artist's own picture, round and 96px wide (`--pf`, one line of
+  room sits right under that grey line - the artist's own picture, round and 96px wide (`--pf`, one line of
   CSS, and the file itself is 256x256 if you want it 1:1) with the room name beside it. The room id rides in
   the grey line under the title, at the front. The tab title is the room name followed by `DM`, so a row of
   open archives reads as the rooms themselves
@@ -239,7 +243,8 @@ app has - it fades in when the pointer is on that row (and stays out of the way 
 space always reserved so nothing shifts), and on a touch screen, where there is no hover, it is
 always there. It offers
 
-* **Bookmark this message** - the message gets a star and a line in the list at the top of the page,
+* **Bookmark this message** - the message gets a star and a line in the bookmarks panel, the ★ button in
+  the bottom-right corner next to the theme switch (its first tab is the date jump),
 * **Copy text** - the words to the clipboard (or the media link, or what kind of media it was),
 * **Copy date and time** - the stamp, for quoting a message somewhere else.
 
