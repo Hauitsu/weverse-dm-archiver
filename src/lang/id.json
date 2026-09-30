@@ -72,7 +72,7 @@
   "gui.totalAll": " - total ukuran diperkirakan {t}",
   "gui.estHint": "Perkiraan ini adalah batas atas, bukan janji: kalau kamu berlangganan artis sejak percakapan grup ini mulai April 2025, ruang yang belum pernah disimpan dihitung maksimal {v} GB, dan ruang yang sudah disimpan dihitung dari laju nyatanya. share zip otomatis menambah ukuran lagi kalau disertakan.",
   "gui.sizeGuess": "maksimal {v} GB",
-  "gui.browserHint": "Menekan Start membuka jendela browser terpisah dengan profilnya sendiri. Login ke Weverse di jendela itu **sekali** saja; browser yang biasa kamu pakai tidak disentuh.",
+  "gui.browserHint": "Menekan Start membuka jendela browser terpisah dengan profilnya sendiri. Login ke Weverse di jendela itu sekali saja; browser yang biasa kamu pakai tidak disentuh.",
   "gui.share": "Sekalian buat zip untuk dibagikan",
   "gui.shareYes": "Ya",
   "gui.shareLow": "Ya tapi kualitas rendah",
