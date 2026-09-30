@@ -142,6 +142,7 @@
     if (sum) sum.textContent = (n ? S.ringkas : S.ringkas0).split("{n}").join(n);
     // The count lives on the buttons now: the corner one and the tab that opens this list.
     qa("[data-bmn]").forEach(function (e) { e.textContent = "(" + n + ")"; });
+    qa("[data-bmn-n]").forEach(function (e) { e.textContent = n; });
   }
 
   function tanda(mid, on) {

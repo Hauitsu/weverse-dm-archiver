@@ -573,9 +573,13 @@ h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
    buttons in the bottom-left corner asks for it. Fixed and full height, so the page behind it does
    not move; the message column only shifts aside when the window is really wide. bm.js keeps
    #bmlist and #bmnota up to date, this file only shows and hides them. */
-h.push('.tts{position:fixed;right:14px;bottom:14px;z-index:40;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;max-width:calc(100vw - 28px)}');
-h.push('.tts .tt{position:static;right:auto;bottom:auto}');
-h.push('.pnl{position:fixed;top:0;bottom:0;left:0;width:min(320px,86vw);z-index:45;display:none;flex-direction:column;font-size:12px;background:#141922;border-right:1px solid #232833;box-shadow:0 0 34px rgba(0,0,0,.5)}');
+h.push('.pico{position:fixed;top:10px;right:12px;z-index:41;display:flex;gap:6px}');
+h.push('.ico{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-family:inherit;font-size:15px;line-height:1;border-radius:11px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
+h.push('.ico:hover{filter:brightness(1.08)}');
+h.push('.ico:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
+h.push('.ico[aria-expanded="true"]{border-color:#4da3ff;background:#1d2531}');
+h.push('.ico .n{position:absolute;top:-6px;right:-6px;min-width:15px;padding:0 3px;border-radius:999px;border:1px solid #29313d;background:#141922;color:#e0b341;font-size:10px;font-weight:700;line-height:14px;text-align:center}');
+h.push('.pnl{position:fixed;top:0;bottom:0;right:0;width:min(320px,86vw);z-index:45;display:none;flex-direction:column;font-size:12px;background:#141922;border-left:1px solid #232833;box-shadow:-8px 0 26px rgba(0,0,0,.5)}');
 h.push('.pnl.buka{display:flex}');
 h.push('.phead{display:flex;align-items:flex-start;gap:4px;padding:8px 8px 0}');
 h.push('.tabs{display:flex;flex:1 1 auto;gap:4px;min-width:0}');
@@ -661,12 +665,15 @@ if (BM_ON) {
   h.push('html[data-tema="light"] .mx button:hover{background:#e9eef6}');
 }
 h.push('html[data-tema="light"] .del{color:#8b93a1}');
-// The corner row: the date jump, the bookmarks and the theme switch, left to right, above the page and
-// below the lightbox. The pills themselves are static - src/render.mjs places the whole row.
-h.push('.tt{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 13px;border-radius:999px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
+// The theme switch: its own pill in the bottom-right corner, above the page and below the lightbox. It
+// steps aside when the panel is open so the two never sit on top of each other.
+h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 13px;border-radius:999px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:right .2s ease}');
 h.push('.tt:hover{filter:brightness(1.08)}');
 h.push('.tt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
+h.push('html[data-tema="light"] .ico{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
+h.push('html[data-tema="light"] .ico[aria-expanded="true"]{background:#eef3fb;border-color:#2f9bff}');
+h.push('html[data-tema="light"] .ico .n{background:#fff;border-color:#dde3ea;color:#9a6b00}');
 // The same panel in daylight, and the one place the page itself moves: a wide window shifts the
 // message column aside instead of letting the panel cover it.
 h.push('html[data-tema="light"] .pnl{background:#fff;border-right-color:#dde3ea;box-shadow:0 0 34px rgba(15,20,30,.18)}');
@@ -679,13 +686,17 @@ h.push('html[data-tema="light"] .pane a{color:#1f6feb}');
 h.push('html[data-tema="light"] .pane a.bd{color:#6b7280}');
 h.push('html[data-tema="light"] .pane a:hover{background:#e9eef6}');
 h.push('html[data-tema="light"] .pane .bn{color:#6b7280}');
-h.push('@media (min-width:1180px){body.pnel .wrap{margin-left:min(320px,86vw)}}');
-h.push('@media (max-width:700px){body.pnel .tts{display:none}}');
+h.push('@media (min-width:1180px){body.pnel .wrap{margin-right:min(320px,86vw)}}');
+h.push('body.pnel .tt{right:calc(min(320px,86vw) + 14px)}');
+h.push('body.pnel .pico{right:calc(min(320px,86vw) + 12px)}');
+h.push('@media (max-width:700px){body.pnel .tt,body.pnel .pico{opacity:0;pointer-events:none}}');
 /* The days-together chip and its swatch row: pinned to the top-right of the conversation like the
    day header is pinned to the top-left, so the two read as one HUD while the page scrolls. Built by
    src/ui.js so the export stays lean; the colours themselves are inline styles. The row is
    transparent to the mouse - only the pill itself takes clicks - so it never blocks a message. */
 h.push('.chip{position:sticky;top:var(--chip-atas,34px);z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
+// The two icons float over the top-right corner, so the sticky pill parks below them.
+h.push('body.pico .chip{top:calc(var(--chip-atas,34px) + 12px)}');
 h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
 // The heart button wears the colour that is picked, so the bar shows the live choice even while the
 // palette is closed; the icon flips with it (white on the deep set and on the grey, near-black on a
@@ -712,16 +723,16 @@ h.push('html[data-tema="light"] .chip input.hari{color:#17181c;background:#fff;b
 h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-shadow:0 14px 32px rgba(15,20,30,.22)}');
 h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
 h.push('html{color-scheme:dark}');
-h.push('</style></head><body><div class="wrap">');
-// The corner row: the date jump and the bookmarks first, then the theme switch. src/panel.js opens and
-// closes the panel those two ask for; the public export has no panel, so the row is the switch alone.
-h.push('<div class="tts">');
+h.push('</style></head><body' + (BM_ON ? ' class="pico"' : '') + '><div class="wrap">');
+// Two icon buttons in the top-right corner open the panel (src/panel.js); the theme switch keeps its
+// own pill in the bottom-right. The public export has no panel, so it gets no icons either.
 if (BM_ON) {
-  h.push('<button class="tt" id="pj" type="button" aria-controls="panel" aria-expanded="false">&#128197; ' + esc(t("html.panelJump")) + '</button>');
-  h.push('<button class="tt" id="pb" type="button" aria-controls="panel" aria-expanded="false">&#9733; ' + esc(t("html.panelBm")) + ' <span data-bmn>(0)</span></button>');
+  h.push('<div class="pico">');
+  h.push('<button class="ico" id="pj" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelJump")) + '" aria-label="' + esc(t("html.panelJump")) + '">&#128197;</button>');
+  h.push('<button class="ico" id="pb" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelBm")) + '" aria-label="' + esc(t("html.panelBm")) + '">&#9733;<span class="n" data-bmn-n>0</span></button>');
+  h.push('</div>');
 }
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
-h.push('</div>');
 // Sits next to the button so the right label is there before the message list is parsed.
 h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
 h.push('<h1>' + esc(t("html.title")) + ' <span class="oleh">' + esc(t("html.titleBy")) + '</span></h1>');
@@ -732,7 +743,7 @@ const navHTML = months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byM
 if (!BM_ON) h.push('<div class="nav">' + navHTML + '</div>');
 // The room, right under the title: the artist's own picture (the file the messages use) with the room
 // name beside it. Nothing else lives in the reading column now - the month jump and the bookmarks sit
-// behind the two buttons in the bottom-left corner.
+// behind the two icon buttons in the top-right corner.
 {
   const pfRoom = avWeb('artist');
   const awal = Array.from(ROOM_NAME)[0] || '?';

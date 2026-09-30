@@ -26,8 +26,8 @@ login tokens, and never touches the tab you are logged in on.
   page behind them pure black (`#000`) - the sticky day band wears the same black, so nothing shows through
   under the date; one nickname grey (`#666666`) on both sides in both themes, and the choice is remembered
   per browser - dark stays the default
-- two round buttons in the bottom-right corner, left of the theme switch, open one panel from the left:
-  the date jump first, your bookmarks second. The month chips are a list of links there instead of a row under the title, the
+- two round icon buttons in the top-right corner open one panel from the right: the date jump first,
+  your bookmarks second (the ★ carries the count as a small badge, both carry a tooltip). The month chips are a list of links there instead of a row under the title, the
   bookmark tab carries the JSON export and import, and a wide window steps the reading column aside
   rather than hiding it behind the panel
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
@@ -244,7 +244,7 @@ space always reserved so nothing shifts), and on a touch screen, where there is 
 always there. It offers
 
 * **Bookmark this message** - the message gets a star and a line in the bookmarks panel, the ★ button in
-  the bottom-right corner next to the theme switch (its first tab is the date jump),
+  the top-right corner (its first tab is the date jump),
 * **Copy text** - the words to the clipboard (or the media link, or what kind of media it was),
 * **Copy date and time** - the stamp, for quoting a message somewhere else.
 

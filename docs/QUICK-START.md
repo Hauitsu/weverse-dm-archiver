@@ -178,8 +178,7 @@ and `--remove` falls back to the bundled Noto font (see the FAQ).
 
 Nothing to harvest: bookmarks are made inside the page. Open a private export, press the three dots
 next to a message and pick **Bookmark this message** - the message gets a star and a line in the
-bookmarks panel, behind the ★ button in the bottom-right corner, next to the theme switch. The list
-starts empty and lives in your
+bookmarks panel, behind the ★ icon in the top-right corner. The list starts empty and lives in your
 browser (`localStorage`, per room);
 **Export JSON** in that list saves it as `bookmarks-<slug>.json` and **Import JSON** reads one back.
 
