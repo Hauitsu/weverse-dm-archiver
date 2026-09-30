@@ -42,9 +42,12 @@ const setPhaseSilent = (p) => { state.phase = p; };
 const t = () => makeT(cfg.language);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]));
 
-// **word** in a translation becomes real emphasis, so the popup can number its lines and bold the
-// words that matter without putting markup into the language files beyond those two asterisks.
-const bold = (s) => esc(String(s)).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+// **word** in a translation becomes bold and *word* becomes italic, so the popup can number its
+// lines and emphasize the words that matter without putting markup into the language files beyond
+// those asterisks. One pass alternates the two patterns, so a run of asterisks can never be read as
+// one long span: "*a* then **b**" is three pieces, not one.
+const emph = (s) => esc(String(s)).replace(/\*\*([^*]+)\*\*|\*([^*]+)\*/g, (m, b, i) => (b !== undefined ? "<strong>" + b + "</strong>" : "<em>" + i + "</em>"));
+const bold = emph;
 
 function zones() {
   try { return Intl.supportedValuesOf("timeZone"); } catch (e) { return ["UTC", "Asia/Jakarta", "Asia/Seoul", "Asia/Tokyo"]; }
@@ -175,7 +178,7 @@ function page() {
   // Yes / Yes but low quality / No, with the last choice remembered in config.json.
   const shareOpts = [["yes", "gui.shareYes"], ["low", "gui.shareLow"], ["no", "gui.shareNo"]]
     .map((m) => "<option value=\"" + m[0] + "\"" + (String(cfg.shareMode || "yes") === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>").join("");
-  const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li>" + bold(s) + "</li>").join("") + "</ol>";
+  const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li style=\"margin:0 0 10px\">" + emph(s) + "</li>").join("") + "</ol>";
 
   return [
     "<!doctype html><html lang=\"" + pickLang(cfg.language) + "\"><head><meta charset=\"utf-8\">",
@@ -202,6 +205,7 @@ function page() {
     ".info{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border:1px solid #8888;border-radius:50%;font-size:11px;font-weight:700;font-style:italic;line-height:1;opacity:.75}",
     "input[type=text],select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #8886;background:transparent}",
     "details.adv summary{cursor:pointer;font-size:13px;opacity:.75}details.adv[open] summary{margin-bottom:2px}",
+    "em{font-style:italic}em strong,strong em{font-style:normal;font-weight:700}",
     "</style></head><body>",
     "<h1>" + esc(tr("gui.title")) + " <span class=\"oleh\">" + esc(tr("gui.titleBy")) + "</span></h1><p class=\"sub\">" + esc(tr("gui.tagline")) + "</p>",
     "<div class=\"grid\" style=\"margin:-6px 0 16px\"><label>" + esc(tr("gui.language")) + " <select id=\"lang\">" + langs + "</select></label>",
@@ -266,24 +270,33 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<section id=\"logBox\" style=\"display:none\"><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "</div>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + ",shTitle:" + JSON.stringify(tr("gui.sharePopup")) + ",shHave:" + JSON.stringify(tr("gui.shareHas")) + ",shNone:" + JSON.stringify(tr("gui.shareNone")) + ",shNeedPub:" + JSON.stringify(tr("gui.shareNeedPub")) + ",shWorking:" + JSON.stringify(tr("gui.phase.bundle")) + ",shGenerate:" + JSON.stringify(tr("gui.shareGenerate")) + ",shDone:" + JSON.stringify(tr("gui.shareDone")) + ",shFail:" + JSON.stringify(tr("gui.shareFail")) + ",shGoTip:" + JSON.stringify(tr("gui.shareHint")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",self:" + JSON.stringify(tr("gui.totalSelf")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + ",shTitle:" + JSON.stringify(tr("gui.sharePopup")) + ",shHave:" + JSON.stringify(tr("gui.shareHas")) + ",shNone:" + JSON.stringify(tr("gui.shareNone")) + ",shNeedPub:" + JSON.stringify(tr("gui.shareNeedPub")) + ",shWorking:" + JSON.stringify(tr("gui.phase.bundle")) + ",shGenerate:" + JSON.stringify(tr("gui.shareGenerate")) + ",shDone:" + JSON.stringify(tr("gui.shareDone")) + ",shFail:" + JSON.stringify(tr("gui.shareFail")) + ",shGoTip:" + JSON.stringify(tr("gui.shareHint")) + "};",
     "function el(s){return document.querySelector(s);}",
+    // The page script is plain text sent to the browser, so every helper it calls has to travel with
+    // it. em() below calls esc(), so esc() is inlined here the same way fmtSize() is further down -
+    // without it every estimate threw "esc is not defined" and #total stayed empty.
+    "var esc=" + esc.toString() + ";",
+    "function em(s){return esc(String(s)).replace(/\\*\\*([^*]+)\\*\\*|\\*([^*]+)\\*/g,function(m,b,i){return b!==undefined?\"<strong>\"+b+\"</strong>\":\"<em>\"+i+\"</em>\";});}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var fmtSize=" + fmtSize.toString() + ";",
     "function total(){",
     "  under();",
-    "  var n=0,full=0,saved=0;",
-    "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){if(!c.checked)return;n++;full+=Number(c.dataset.full||0);saved+=Number(c.dataset.saved||0);});",
+    // Nothing ticked still has an answer: the whole list is quoted, so the number is there before any
+    // click. A tick narrows the same estimate down to what is actually selected.
+    "  var n=0,full=0,saved=0,all=0,allFull=0,allSaved=0;",
+    "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){all++;var fu=Number(c.dataset.full||0),sa=Number(c.dataset.saved||0);allFull+=fu;allSaved+=sa;if(!c.checked)return;n++;full+=fu;saved+=sa;});",
+    "  var mine=n>0;",
+    "  if(!mine){n=all;full=allFull;saved=allSaved;}",
     "  if(!n){el(\"#total\").innerHTML=MSG.none;return;}",
-    "  var t=MSG.total.replace(\"{n}\",\"<strong>\"+n+\"</strong>\").replace(\"{v}\",\"<strong>\"+fmtSize(full)+\"</strong>\");",
-    "  if(saved>0)t+=MSG.savedNote.replace(\"{s}\",\"<strong>\"+fmtSize(saved)+\"</strong>\");",
+    "  var t=em(mine?MSG.total:MSG.self).replace(\"{n}\",\"<strong>\"+n+\"</strong>\").replace(\"{v}\",\"<strong>\"+fmtSize(full)+\"</strong>\");",
+    "  if(saved>0)t+=em(MSG.savedNote).replace(\"{s}\",\"<strong>\"+fmtSize(saved)+\"</strong>\");",
     "  var mode=el(\"#share\").value;",
     "  if(mode!==\"no\"){",
-    "    t+=mode===\"low\"?MSG.zipLow:MSG.zipNote.replace(\"{z}\",\"<strong>\"+fmtSize(full)+\"</strong>\");",
+    "    t+=mode===\"low\"?em(MSG.zipLow):em(MSG.zipNote).replace(\"{z}\",\"<strong>\"+fmtSize(full)+\"</strong>\");",
     // What ends up on disk: the conversation, plus the zip beside it when one is written. A
     // re-compressed zip is a fraction of the conversation and guessing that fraction would be
     // worse than saying "much smaller", so in low mode only the conversation is counted.
-    "    t+=MSG.allNote.replace(\"{t}\",\"<strong>\"+fmtSize(mode===\"low\"?full:full*2)+\"</strong>\");",
+    "    t+=em(MSG.allNote).replace(\"{t}\",\"<strong>\"+fmtSize(mode===\"low\"?full:full*2)+\"</strong>\");",
     "  }",
     "  el(\"#total\").innerHTML=t;",
     "}",
