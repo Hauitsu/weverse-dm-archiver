@@ -91,9 +91,10 @@ function page() {
     ".grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.muted{opacity:.7;font-size:13px}",
     // The estimate explains itself on hover only, so the page stays short. Pure CSS, no script.
     ".tipwrap{position:relative;display:inline-block;cursor:help}",
-    ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;min-width:min(460px,100%);margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003}",
+    ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;min-width:460px;margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003}",
     ".tipwrap:hover .tip{display:block}",
     ".tipwrap.flow{position:static}",
+    ".tipwrap.flow .tip{min-width:min(460px,100%)}",
     ".info{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border:1px solid #8888;border-radius:50%;font-size:11px;font-weight:700;font-style:italic;line-height:1;opacity:.75}",
     "input[type=text],select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #8886;background:transparent}",
     "details.adv summary{cursor:pointer;font-size:13px;opacity:.75}details.adv[open] summary{margin-bottom:2px}",
