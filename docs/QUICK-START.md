@@ -42,6 +42,9 @@ and press **Start**. A popup explains it again - fresh profile, log in once, the
 Weverse Home page with that window still open - before anything starts; confirm it. Rooms are archived one after another, never at the same time, with 1.5-3
 seconds between pages.
 
+The lower half of the page - the size estimate, the zip choice, the Start button - stays hidden
+until at least one room is ticked.
+
 Options:
 
 - **Language (top of the page)** - English, Korean or Indonesian. It switches the whole tool at
