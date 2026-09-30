@@ -71,6 +71,20 @@ export function rooms(cfg) {
   return (Array.isArray(list) ? list : []).map((r) => Object.assign({}, r, { tz: r.tz || raw.tz || c.tz || "auto" }));
 }
 
+// The order matters here: the renderer only links media that is already on disk, so a render that
+// runs before `media` produces a page with no photos in it. Say so, instead of letting the user
+// wonder where the images went.
+function warnMissingMedia(o, outDir, log) {
+  let s = null;
+  for (const n of [o.slug + ".summary.json", "summary.json"]) {
+    try { s = JSON.parse(fs.readFileSync(path.join(outDir, n), "utf8")); break; } catch (e) { s = null; }
+  }
+  if (!s) return;
+  if (Number(s.mediaTotal || 0) > 0 && Number(s.mediaLokal || 0) === 0) {
+    log("warning: no media is on disk yet, so this page has no photos or video in it: run `media --room " + o.slug + "`, then render again");
+  }
+}
+
 // Run the renderer as its own process. It is a script, not a library: importing it would start a
 // render, and running it apart keeps its environment exactly as documented.
 export async function renderRoom(o) {
@@ -102,6 +116,7 @@ export async function renderRoom(o) {
     proc.on("error", (e) => { log("render: " + String(e.message || e)); });
     proc.on("close", (code) => {
       try { fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, o.slug + "-render.log"), lines.join(NL) + NL, "utf8"); } catch (e) {}
+      if (code === 0) warnMissingMedia(o, outDir, log);
       resolve(code == null ? -1 : code);
     });
   });

@@ -74,7 +74,8 @@ const commands = {
   render: async () => {
     const r = pick();
     const code = await renderRoom({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, only: "artist", onLog: log, outDir: d.rooms });
-    log("render exit " + code + " -> " + path.join(d.rooms, r.slug + ".html"));
+    // Only claim an output path when the renderer really produced one.
+    log(code === 0 ? "render exit 0 -> " + path.join(d.rooms, r.slug + ".html") : "render failed (exit " + code + "); nothing was written");
     process.exit(code === 0 ? 0 : 1);
   },
   media: async () => {
