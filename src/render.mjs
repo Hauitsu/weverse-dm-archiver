@@ -363,7 +363,7 @@ const uiData = {
   mulai: first.createDate,
   hari: t('html.chipHari'),
   P: WARNA_PALET,
-  T: { warna: t('html.bubTitle'), reset: t('html.bubReset'), edit: t('html.chipEdit') },
+  T: { warna: t('html.bubTitle'), edit: t('html.chipEdit') },
 };
 const bkData = {
   room: BASE, nama: ROOM_NAME, slug: BASE, k0: bmEmbed,
@@ -440,7 +440,7 @@ h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title>');
 // Runs before the first paint: a remembered theme is on the page before anything is drawn, so
 // nobody sees a dark flash on the way to light.
-h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);var b=(JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room];if(b&&typeof b.c==="number"&&WD.P[b.c]){var v=(d.getAttribute("data-tema")==="light")?WD.P[b.c].lt:WD.P[b.c].dk;d.setAttribute("data-bub",WD.P[b.c].n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}}catch(e){}})();</script>');
+h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
 h.push('<style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
@@ -551,8 +551,12 @@ if (BM_ON) {
   h.push('.bml .bx2{flex:0 0 auto;background:none;border:0;color:#8b93a1;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}');
   h.push('.bml .bx2:hover{color:#ff9c9c}');
   h.push('.tm .bmk{margin-right:4px}');
-  h.push('.dot{border:0;background:none;color:#5f6875;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:5px}');
+  h.push('.dot{border:0;background:none;color:#5f6875;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:5px;opacity:0;transition:opacity .12s}');
   h.push('.dot:hover{color:#cfd6e0}');
+  // The three dots belong to the row they sit on: they fade in with the pointer, and stay put for
+  // keyboards (focus) and for touch screens, which have no hover to give.
+  h.push('.m:hover .dot,.m:focus-within .dot,.dot:focus-visible{opacity:1}');
+  h.push('@media (hover:none){.dot{opacity:1}}');
   h.push('.mx{position:fixed;z-index:30;min-width:170px;background:#1b222d;border:1px solid #2b3441;border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.5)}');
   h.push('.mx button{display:block;width:100%;text-align:left;font:inherit;font-size:13px;background:none;border:0;color:#e8ecf2;padding:7px 9px;border-radius:7px;cursor:pointer}');
   h.push('.mx button:hover{background:#262f3d}');
@@ -612,7 +616,7 @@ h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#
    day header is pinned to the top-left, so the two read as one HUD while the page scrolls. Built by
    src/ui.js so the export stays lean; the colours themselves are inline styles. The row is
    transparent to the mouse - only the pill itself takes clicks - so it never blocks a message. */
-h.push('.chip{position:sticky;top:0;z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
+h.push('.chip{position:sticky;top:var(--chip-atas,34px);z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
 h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
 h.push('.chip .hrt{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:9px;background:#2f9bff;cursor:pointer}');
 h.push('.chip .hrt:hover{filter:brightness(1.12)}');
@@ -629,16 +633,12 @@ h.push('#wpal[hidden]{display:none}');
 h.push('#wpal button.w{width:22px;height:22px;padding:0;border:0;border-radius:50%;cursor:pointer;transition:transform .08s}');
 h.push('#wpal button.w:hover{transform:scale(1.1)}');
 h.push('#wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #171c25,0 0 0 4px #4da3ff}');
-h.push('#wpal button.reset{margin-left:3px;padding:5px 7px;font-size:11px;line-height:1;color:#8b93a1;background:none;border:1px solid #2b3542;border-radius:7px;cursor:pointer}');
-h.push('#wpal button.reset:hover{color:#e6e6e6}');
 h.push('html[data-tema="light"] .chip .cp{background:#fff;border-color:#e6e9ee;box-shadow:0 2px 8px rgba(15,20,30,.08)}');
 h.push('html[data-tema="light"] .chip .hari{color:#17181c}');
 h.push('html[data-tema="light"] .chip .angka{color:#17181c}');
 h.push('html[data-tema="light"] .chip input.hari{color:#17181c;background:#fff;border-color:#bcd0ea}');
 h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-shadow:0 14px 32px rgba(15,20,30,.22)}');
 h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
-h.push('html[data-tema="light"] #wpal button.reset{background:#fff;border-color:#dde3ea;color:#6b7280}');
-h.push('html[data-tema="light"] #wpal button.reset:hover{color:#17181c}');
 h.push('html{color-scheme:dark}');
 h.push('</style></head><body><div class="wrap">');
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');

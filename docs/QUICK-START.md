@@ -107,11 +107,14 @@ When it finishes, the Result panel offers:
 Keep a room folder together: the HTML file links to the photos and videos next to it. Copying
 the whole `rooms/` + `media/` pair, or the zip, keeps it working.
 
-The pill at the top of the conversation follows you down the page, like the day heading on the left.
+The pill at the top of the conversation follows you down the page and settles under the day heading.
 The `+548` counts from the first message to today and goes up by itself as the days pass. Click the
-**heart** (or that number) for the app's ten colours, click the **words** after it to rename them
-(15 characters), and the **↺** on the row to go back to the export's own colours. Both the colour and
-the words are remembered per room in that browser. Nothing is uploaded and no file changes.
+**heart** (or that number) for the app's ten colours - a room starts on cyan, the leftmost one, and
+one choice covers both themes - or click the **words** after the number to rename them (15
+characters). Both the colour and the words are remembered per room in that browser. Nothing is
+uploaded and no file changes.
+
+The three-dot bookmark button only appears on the row your pointer is on.
 
 ## Doing it without the page
 

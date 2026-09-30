@@ -4,15 +4,15 @@
 (function () {
   "use strict";
   var WD = window.WD || {}, T = WD.T || {}, PAL = WD.P || [], KEY = "wdm-bub", ROM = WD.room || "";
-  var st = { c: -1, t: "" };
+  var st = { c: 0, t: "" };
 
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
   function muat() {
     try {
       var j = JSON.parse(localStorage.getItem(KEY) || "{}") || {}, b = j[ROM] || {};
-      st.c = (typeof b.c === "number" && b.c >= 0 && PAL[b.c]) ? b.c : -1;
+      st.c = (typeof b.c === "number" && b.c >= 0 && PAL[b.c]) ? b.c : 0;
       st.t = (typeof b.t === "string" && b.t) ? b.t : "";
-    } catch (e) { st.c = -1; st.t = ""; }
+    } catch (e) { st.c = 0; st.t = ""; }
   }
   function simpan() {
     try {
@@ -21,16 +21,12 @@
       localStorage.setItem(KEY, JSON.stringify(j));
     } catch (e) {}
   }
-  // Dark pick carries the vivid swatch, light pick the pastel; absent means "leave the export alone".
+  // One pick covers both themes: the vivid swatch in dark, the pastel of the same choice in light.
+  // There is no "no colour" state, so there is nothing to reset - every room opens on cyan.
   function terapkan() {
-    var d = document.documentElement;
-    if (st.c < 0 || !PAL[st.c]) {
-      d.removeAttribute("data-bub");
-      d.style.removeProperty("--ab"); d.style.removeProperty("--abd");
-      d.style.removeProperty("--at"); d.style.removeProperty("--atl");
-      return;
-    }
-    var p = PAL[st.c], v = d.getAttribute("data-tema") === "light" ? p.lt : p.dk;
+    var d = document.documentElement, p = PAL[st.c] || PAL[0];
+    if (!p) return;
+    var v = d.getAttribute("data-tema") === "light" ? p.lt : p.dk;
     d.setAttribute("data-bub", p.n);
     d.style.setProperty("--ab", v[0]);
     d.style.setProperty("--abd", v[1]);
@@ -77,13 +73,6 @@
     b.onclick = function (ev) { ev.stopPropagation(); st.c = i; simpan(); terapkan(); tanda(); };
     pal.appendChild(b);
   });
-  var rs = el("button", "reset");
-  rs.type = "button";
-  rs.textContent = "\u21ba";
-  rs.title = T.reset || "";
-  rs.setAttribute("aria-label", T.reset || "");
-  rs.onclick = function (ev) { ev.stopPropagation(); st.c = -1; simpan(); terapkan(); tanda(); };
-  pal.appendChild(rs);
   chip.appendChild(pal);
   function tanda() {
     var bs = pal.querySelectorAll("button.w");
@@ -149,6 +138,9 @@
     if (!wrap || document.querySelector(".chip")) return;
     var d = wrap.querySelector(".day, .m");
     if (d) wrap.insertBefore(chip, d); else wrap.appendChild(chip);
+    // Park the sticky pill just below the day header instead of on top of the date.
+    var hd = wrap.querySelector(".day");
+    if (hd) chip.style.setProperty("--chip-atas", Math.round(hd.offsetHeight) + "px");
     tulisAngka();
     tulis();
     tanda();
