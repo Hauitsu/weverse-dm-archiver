@@ -53,7 +53,7 @@ if (Test-Path $privateList) {
 # 3. what is never copied (work output / large / local)
 # 3. what is never copied (work output / large / local)
 $skipDir = @(".git", "node_modules", "profile", "media", "downloads", "rooms", "dist", "share", ".vscode", "verify", "rooms-public")
-$skipPattern = @("^export", "\.log$", "\.zip$", "^config\.json$", "^\.env", "^media/fonts/apple-emoji\.")
+$skipPattern = @("^export", "\.log$", "\.zip$", "^config\.json$", "^\.env")
 # media/ is work output and can be gigabytes, but media/fonts/ is a shipped asset (the emoji font the
 # page links to). It is the only exempt path: everything else under media/ stays local.
 $keepRel     = @("media/fonts/")
@@ -92,6 +92,7 @@ Write-Host ("copied: " + $selected.Count + " files, " + [Math]::Round(((Get-Chil
 $findings = @()
 foreach ($f in Get-ChildItem -Path $Stage -Recurse -File) {
   if ($f.Name -eq "publish.ps1") { continue }   # generic patterns only; the private list lives outside
+  if (@(".woff2", ".woff", ".ttf", ".otf") -contains $f.Extension) { continue }   # font binaries carry no text
   $text = Get-Content -LiteralPath $f.FullName -Raw -Encoding utf8
   foreach ($p in $forbidden) { if ($text -like ("*" + $p + "*")) { $findings += ($f.FullName.Substring($Stage.Length + 1) + "  <-  " + $p) } }
 }

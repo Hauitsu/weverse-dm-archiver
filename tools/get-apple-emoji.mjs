@@ -10,8 +10,9 @@
 //   node tools/get-apple-emoji.mjs --from X.ttf     use a font file you already have
 //   node tools/get-apple-emoji.mjs --remove         delete it and go back to Noto
 //
-// The result stays on this machine: .gitignore keeps media/fonts/apple-emoji.* out of the repo,
-// because Apple does not license redistribution of its emoji font, while Noto is OFL and ships.
+// The result ships with the repo, next to the Noto fallback, so a fresh clone shows Apple emoji
+// without running this script. Apple's designs belong to Apple and the upstream repository states
+// educational use only, so keep the archive for personal use.
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";

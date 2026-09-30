@@ -151,6 +151,6 @@ config.json          optional settings (language, tz, browserPath, output, publi
 
 `media/fonts/` already comes with the repo (the emoji font the page links to); everything else
 under `media/` is downloaded output. Add `media/avatars/artist.png` and `media/avatars/me.png`
-yourself if you want the avatar circles next to the messages. Prefer Apple's emoji?
-`node tools/get-apple-emoji.mjs` swaps the font the page links to (see the FAQ); the file it
-writes stays local.
+yourself if you want the avatar circles next to the messages. The emoji font the page links to
+already ships in `media/fonts/` (Apple); `node tools/get-apple-emoji.mjs` re-cuts it from upstream
+and `--remove` falls back to the bundled Noto font (see the FAQ).

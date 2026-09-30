@@ -79,12 +79,13 @@ and never loads a font from the internet. The avatar circles are optional - drop
 `media/avatars/artist.png` and `media/avatars/me.png` there before rendering and the page shows
 them next to the messages; without those two files the page is simply rendered without avatars.
 
-Want Apple's emoji instead? `node tools/get-apple-emoji.mjs` downloads a release of
-[samuelngs/apple-emoji-ttf](https://github.com/samuelngs/apple-emoji-ttf), cuts it down to the
-emoji your archives actually use (about 3 MB) and installs it as `media/fonts/apple-emoji.woff2`;
-every render after that links that file instead of Noto. It stays on your machine: `.gitignore`
-and the publish script both skip it, because Apple does not license redistribution of its emoji
-font while Noto is OFL and ships with the repo. `--remove` goes back to Noto.
+Apple's emoji are what the page uses: `media/fonts/apple-emoji.woff2` ships with the repo, cut
+down to the emoji your archives actually use (about 3 MB), so a fresh clone renders with Apple
+emoji without running anything. `node tools/get-apple-emoji.mjs` rebuilds that cut from a release
+of [samuelngs/apple-emoji-ttf](https://github.com/samuelngs/apple-emoji-ttf), and `--remove`
+deletes it so the page falls back to the Noto Color Emoji (OFL-1.1) that also ships here. Apple's
+emoji designs belong to Apple - the upstream repository states educational use only - so treat the
+archive as personal use.
 
 ## Safety rules this tool follows
 
