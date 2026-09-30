@@ -102,7 +102,17 @@ function page() {
     "<button id=\"bAll\">" + esc(tr("gui.selectAll")) + "</button>",
     "<button id=\"bNone\">" + esc(tr("gui.selectNone")) + "</button>",
     "<span class=\"muted\">" + esc(tr("gui.sizeHint")) + "</span></div>",
-    "<div id=\"rooms\">" + rows + "</div>",
+    "<div id=\"rooms\">" + rows + "</div></section>",
+    // The same sentence the Start button shows on hover, repeated as a confirmation: starting really
+    // does open its own browser window, so the click waits here until the user has read that.
+    "<div id=\"modal\" style=\"display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;padding:20px;z-index:9\">",
+"<div style=\"max-width:540px;background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:12px;padding:18px 20px\">",
+noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
+"<div class=\"grid\"><button id=\"mGo\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
+"<button id=\"mNo\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
+
+    "<div id=\"under\" style=\"display:none\">",
+    "<section>",
     "<div class=\"grid\" style=\"margin-top:8px\"><span class=\"tipwrap\"><span id=\"total\" class=\"muted\"></span>",
     "<span class=\"tip\">" + esc(tr("gui.estHint", { v: Number(cfg.estimateGb || 3).toFixed(1) })) + "</span></span></div>",
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.share")) + " <select id=\"share\">" + shareOpts + "</select></label>",
@@ -116,13 +126,7 @@ function page() {
     "<span id=\"authedWrap\" style=\"display:none\"><span class=\"muted\">" + esc(tr("gui.authedHint")) + "</span> <button id=\"bAuthed\">" + esc(tr("gui.authed")) + "</button></span>",
     "<span id=\"phase\" class=\"muted\"></span></div>",
     "<div id=\"bar\"><i id=\"fill\"></i></div></section>",
-    // The same sentence that sits under the buttons, repeated as a confirmation: starting really does
-    // open its own browser window, so the click waits here until the user has read that.
-    "<div id=\"modal\" style=\"display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;padding:20px;z-index:9\">",
-    "<div style=\"max-width:540px;background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:12px;padding:18px 20px\">",
-    noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
-    "<div class=\"grid\"><button id=\"mGo\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
-    "<button id=\"mNo\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
+
 
     "<section id=\"result\" style=\"display:none\"><strong>" + esc(tr("gui.result")) + "</strong>",
     "<p id=\"resline\"></p><div class=\"grid\">",
@@ -135,12 +139,14 @@ function page() {
     // has to remember what the popup said after dismissing it.
     "<section id=\"loginNote\" style=\"display:none\">" + noteHtml + "</section>",
     "<section><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
+    "</div>",
     "<script>",
     "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + "};",
     "function el(s){return document.querySelector(s);}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var GIB=1073741824;",
     "function total(){",
+    "  under();",
     "  var n=0,full=0,saved=0;",
     "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){if(!c.checked)return;n++;full+=Number(c.dataset.full||0);saved+=Number(c.dataset.saved||0);});",
     "  if(!n){el(\"#total\").innerHTML=MSG.none;return;}",
@@ -174,6 +180,15 @@ function page() {
     "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
+    // The lower half of the page only makes sense once something is picked, so it stays out of the
+    // way until a room is ticked (or a run is going on, so its own result never disappears).
+    "var busy=false;",
+    "function under(flag){",
+    "  if(flag!==undefined)busy=!!flag;",
+    "  var n=0;",
+    "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){if(c.checked)n++;});",
+    "  el(\"#under\").style.display=(n>0||busy)?\"\":\"none\";",
+    "}",
     "async function tick(){",
     "  var s=null;",
     "  try{ s=await (await fetch(\"/api/state\")).json(); }catch(e){ return; }",
@@ -184,6 +199,7 @@ function page() {
     "  el(\"#authedWrap\").style.display=s.canHurry?\"\":\"none\";",
     "  el(\"#loginNote\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
+    "  under(!!s.running||!!s.result);",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "}",
     "el(\"#bAll\").addEventListener(\"click\",function(){all(true);});",
