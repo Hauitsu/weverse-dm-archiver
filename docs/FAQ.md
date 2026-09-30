@@ -43,8 +43,9 @@ HTML, plus 970 KB of Markdown and 8.2 MB of JSONL. Photos and videos are saved e
 knob in this build. A compact variant (480p video, webp photos) is on the roadmap but is
 deliberately not part of this release.
 
-If you only want to *send* the archive to someone, use the share zip: it is the same data, but
-one file per room instead of thousands.
+If you only want to *send* the archive to someone, use the share zip: it is the same data (artist
+messages and media only - your own messages are left out), but one file per room instead of
+thousands.
 
 ## What timezone are the timestamps in?
 

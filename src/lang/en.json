@@ -72,7 +72,7 @@
   "gui.sizeGuess": "up to {v} GB",
   "gui.browserHint": "Starting opens a separate browser window that uses its own profile. Log in to Weverse there once; the browser you normally use is never touched.",
   "gui.share": "Also make a shareable zip",
-  "gui.shareHint": "one file per room in dist/, with the chat and its media inside",
+  "gui.shareHint": "only artist messages and media are included in the share folder. fan messages (your messages) are excluded.",
   "gui.advanced": "Advanced: time zone",
   "gui.langHint": "the page and the exported chat are written in this language",
   "gui.tz": "Time zone",

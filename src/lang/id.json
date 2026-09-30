@@ -72,7 +72,7 @@
   "gui.sizeGuess": "maksimal {v} GB",
   "gui.browserHint": "Menekan Start membuka jendela browser terpisah dengan profilnya sendiri. Login ke Weverse di jendela itu sekali saja; browser yang biasa kamu pakai tidak disentuh.",
   "gui.share": "Sekalian buat zip untuk dibagikan",
-  "gui.shareHint": "satu berkas per ruang di dist/, berisi obrolan beserta medianya",
+  "gui.shareHint": "hanya pesan artist dan medianya yang masuk ke folder berbagi. pesan fan (pesanmu) tidak disertakan.",
   "gui.advanced": "Pengaturan lanjutan: zona waktu",
   "gui.langHint": "halaman ini dan obrolan hasil ekspor memakai bahasa ini",
   "gui.tz": "Zona waktu",

@@ -45,12 +45,13 @@ Options:
 - **Language (top of the page)** - English, Korean or Indonesian. It switches the whole tool at
   once: the page, the log lines and the exported chat all follow it. `auto` in `config.json`
   follows the Windows language instead.
-- **Also make a shareable zip** - after the room is done, write `dist/weverse-dm-<room>.zip`
-  containing the public chat, its media and a README in three languages.
+- **Also make a shareable zip** - ticked by default. After the room is done it writes
+  `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three languages. Only
+  artist messages and media are inside; your own messages are left out.
 - **Estimated size** - the line under the list adds up every room you tick. It is a ceiling, not a
   promise: this group's conversation starts April 2025, a room that has never been saved is quoted as
   up to `estimateGb` (3 GB), a saved room is projected from its own measured rate, and ticking the
-  shareable zip adds roughly the same again.
+  shareable zip (on by default) adds roughly the same again.
 - **Advanced settings** - collapsed, so you can ignore it. The time zone lives there: `auto`
   follows the machine, or type an IANA name (`Asia/Jakarta`) to pin one. The timestamps in the
   archive are the only thing it changes.

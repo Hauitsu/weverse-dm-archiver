@@ -36,7 +36,8 @@ login tokens, and never touches the tab you are logged in on.
    picks another one and the console prints the address it used).
 3. Log in to Weverse once in that browser window.
 4. Tick a room, press **Start**. Progress streams page by page.
-5. When it finishes: **Open chat**, **Open folder**, or tick "shareable zip" next time.
+5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `dist/` - it is made
+   by default.
 
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,

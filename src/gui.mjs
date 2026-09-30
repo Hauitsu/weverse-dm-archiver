@@ -88,7 +88,7 @@ function page() {
     "<div class=\"grid\" style=\"margin-top:8px\"><span id=\"total\" class=\"muted\"></span></div>",
     "<p class=\"muted\">" + esc(tr("gui.estHint", { v: Number(cfg.estimateGb || 3).toFixed(1) })) + "</p>",
     "<p class=\"muted\">" + esc(tr("gui.browserHint")) + "</p>",
-    "<div class=\"grid\"><label><input type=\"checkbox\" id=\"share\"> " + esc(tr("gui.share")) + "</label>",
+    "<div class=\"grid\"><label><input type=\"checkbox\" id=\"share\" checked> " + esc(tr("gui.share")) + "</label>",
     "<span class=\"muted\">" + esc(tr("gui.shareHint")) + "</span></div>",
     "<details class=\"adv\" style=\"margin-top:10px\"><summary>" + esc(tr("gui.advanced")) + "</summary>",
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <input type=\"text\" id=\"tz\" list=\"tzs\" size=\"22\" value=\"" + esc(cfg.tz || "auto") + "\"></label>",
