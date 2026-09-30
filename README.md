@@ -81,9 +81,10 @@ Rooms never share a folder under `downloads/`, so one room history can never lea
 room export. The export always points at the original media, so there is no quality knob: one
 room is roughly 2.5 GB, almost all of it photos and video.
 
-`media/fonts/` is the one exception to "media is downloaded output": the emoji fonts ship with the
-repo (Apple Color Emoji, with Noto Color Emoji as the OFL-1.1 fallback), so a fresh clone renders the
-page the same way on every machine and never loads a font from the internet. The avatar circles are
+`media/fonts/` and `media/avatars/<room>-artist.*` are the exception to "media is downloaded output":
+the emoji fonts and the artist pictures ship with the repo (Apple Color Emoji, with Noto Color Emoji as
+the OFL-1.1 fallback), so a fresh clone renders the page the same way on every machine and never loads a
+font or a face from the internet. The full-size originals stay in `media/avatar-src/` (not published). The avatar circles are
 optional: `wdm labels` saves one picture per room as `media/avatars/<room>-artist.<ext>`, and a shared
 `media/avatars/artist.png` / `me.png` still works as the fallback. With none of those files the page is
 simply rendered without avatars.
