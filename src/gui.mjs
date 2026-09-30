@@ -88,6 +88,8 @@ function page() {
     "<datalist id=\"tzs\">" + opts + "</datalist>",
     "<label>" + esc(tr("gui.language")) + " <select id=\"lang\">" + langs + "</select></label>",
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div>",
+    "<div class=\"grid\" style=\"margin-top:10px\"><label>" + esc(tr("gui.rename")) + " <input type=\"text\" id=\"rename\" size=\"24\" value=\"" + esc(cfg.publicRename || "") + "\"></label>",
+    "<span class=\"muted\">" + esc(tr("gui.renameHint")) + "</span></div>",
     "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
     "<span id=\"phase\" class=\"muted\"></span></div>",
@@ -109,7 +111,7 @@ function page() {
     "  var ids=[];",
     "  document.querySelectorAll(\"#rooms input[data-slug]:checked\").forEach(function(c){ids.push(c.dataset.slug);});",
     "  if(!ids.length){alert(MSG.pick);return;}",
-    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value})});",
+    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value,rename:el(\"#rename\").value})});",
     "  tick();",
     "}",
     "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
@@ -172,6 +174,7 @@ async function startJob(body) {
   if (!list.length) return;
   const share = body.share === true;
   if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
+  if (body.rename !== undefined && String(body.rename) !== String(cfg.publicRename || "")) { try { cfg = saveConfig({ publicRename: String(body.rename) }); } catch (e) {} }
   running(true);
   state.result = null; state.error = ""; state.log = []; state.percent = 0; state.progress = null; state.startedAt = Date.now();
   const tr = t();
@@ -192,7 +195,7 @@ async function startJob(body) {
       state.slug = r.slug; state.roomName = roomName;
       const res = await runRoom({
         slug: r.slug, roomId: r.roomId, roomName: roomName, artist: r.nameKo || r.slug,
-        tz: tzFor(cfg, r), lang: pickLang(cfg.language), only: "artist", share: share,
+        tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: cfg.publicRename || "", share: share,
         credit: cfg.credit || "", cdp: session.cdp, onLog: push, shouldStop: () => stopFlag,
         onProgress: (p) => {
           setPhaseSilent(p.phase);

@@ -13,14 +13,19 @@ login tokens, and never touches the tab you are logged in on.
 
 ## What you get
 
-- `rooms/<room>.html` - one self-contained page that opens offline in any browser, with day
-  sections, artist highlighting, deleted-message markers and bookmarks
-- `rooms/<room>.md` and `rooms/<room>.jsonl` - the same conversation as text and as data
+- `rooms/<room>.html` - the **private** export: every message from both sides, one self-contained
+  page that opens offline in any browser, with day sections, artist highlighting,
+  deleted-message markers and bookmarks
+- `rooms/public/<room>.html` - the **public** export: the artist side only, never any bookmarks,
+  and a nickname replaced if you asked for it - the copy that is safe to hand to someone else
+- `rooms/<room>.md` and `rooms/<room>.jsonl` - the same conversation as text and as data, written
+  in both folders
 - `media/` - every photo, video and audio file the conversation links to, at the quality
   Weverse served
 - timestamps in **your** timezone, detected from the machine
-- optionally `dist/weverse-dm-<room>.zip` - one file per room with the chat and its media
-  inside, plus a three-language `README.txt` for whoever you send it to
+- optionally `dist/weverse-dm-<room>.zip` - one file per room, built from the **public** export
+  plus exactly the media that page points at, with a three-language `README.txt` for whoever you
+  send it to
 
 ## Quick start
 
@@ -45,16 +50,17 @@ including what each message means, is in `docs/QUICK-START.md`.
 | --- | --- |
 | `wdm rooms` | list the rooms in `rooms.unis.json` and what is already archived |
 | `wdm harvest --room yunha` | walk the history backwards (starts the private browser) |
-| `wdm render --room yunha` | build html/md/jsonl from what is already on disk |
+| `wdm render --room yunha` | build both exports (private + public) from what is on disk |
 | `wdm media --room yunha` | download the photos and video the export points at |
-| `wdm share --room yunha` | one zip in `dist/`, ready to send |
+| `wdm share --room yunha` | one zip in `dist/`, built from the public export |
 | `wdm all --room yunha --share` | all of the above, in order |
 | `wdm doctor` | check node, browser, rooms and folders |
 
 ## Output layout
 
 ```
-rooms/               <room>.html, <room>.md, <room>.jsonl, summary.json, fonts/
+rooms/               private export: <room>.html, <room>.md, <room>.jsonl, summary.json, fonts/
+rooms/public/        public export: the same files for the artist side only
 media/               photos/, video/, avatars/, fonts/ at original quality
 downloads/<room>/    one JSONL line per page of history (this is what makes it resumable)
 dist/                share zips: weverse-dm-<room>.zip, .sha256, .manifest.json
@@ -88,9 +94,13 @@ are nervous.
 Everything stays on your computer. Nothing is uploaded, there is no telemetry and no account of
 ours; the archive is plain files you can copy to a drive, share or delete.
 
-The share zip is built from your export, and an export keeps only the **artist side** of the
-conversation by default, so your own nickname does not end up in the file you send to someone.
-If you would rather not share anything, `dist/` is just a folder you can delete.
+Every render writes two exports, because they answer two different questions. `rooms/` is yours:
+both sides of the conversation, bookmarks included. `rooms/public/` keeps only the artist side,
+never writes bookmarks, and can hide a nickname the artist typed - put
+`"publicRename": "the name=what to show instead"` in `config.json` (or use the field in the page)
+and the public export uses the replacement. The share zip is always built from the public export,
+and only the media that page points at is copied into it, so nothing you sent is packaged for
+someone else. If you would rather not share anything, `dist/` is just a folder you can delete.
 
 ## Limits
 

@@ -103,6 +103,18 @@ function indexHtml(o) {
   ].join(NL);
 }
 
+// The relative paths a rendered page points at, read from the page itself, so it works for whatever
+// the media folder holds: photos/, video/, avatars/, or anything added later.
+function mediaRefs(roomDir, slug) {
+  const out = new Set();
+  for (const f of [slug + ".html", slug + ".md"]) {
+    let text = "";
+    try { text = fs.readFileSync(path.join(roomDir, f), "utf8"); } catch (e) { continue; }
+    for (const hit of text.match(/\.\.\/media\/[^"'\s)\\<>]+/g) || []) out.add(hit.slice("../media/".length));
+  }
+  return out;
+}
+
 // Pack one room. Returns the paths it wrote, or throws with a readable reason.
 export async function bundle(opts) {
   const o = opts || {};
@@ -125,7 +137,7 @@ export async function bundle(opts) {
     const own = name === "summary.json" && fs.existsSync(path.join(roomDir, slug + ".summary.json")) ? slug + ".summary.json" : name;
     const abs = path.join(roomDir, own);
     if (name === "summary.json" && fs.existsSync(abs)) { packageSummary(abs, path.join(root, "chat", name), slug); chatFiles++; continue; }
-    if (!fs.existsSync(abs)) { if (name === slug + ".html") throw new Error("bundle: " + abs + " is missing; render the room first"); continue; }
+    if (!fs.existsSync(abs)) { if (name === slug + ".html") throw new Error("bundle: " + abs + " is missing; run a render first (the public export is built next to the private one)"); continue; }
     link(abs, path.join(root, "chat", name));
     chatFiles++;
   }
@@ -133,20 +145,24 @@ export async function bundle(opts) {
   const hasFonts = fs.existsSync(fontsDir);
   if (hasFonts) for (const e of collect(fontsDir, "")) if (!e.dir) { link(e.abs, path.join(root, "chat", "fonts", path.relative(fontsDir, e.abs))); chatFiles++; }
 
+  // Only the media this page really points at travels with it. The private export holds the other side
+  // of the conversation, so media/ can hold files that have no business in a package meant for someone
+  // else - unreferenced files would be invisible in the page and still shipped.
+  const refs = mediaRefs(roomDir, slug);
   let mediaFiles = 0;
   let mediaBytes = 0;
-  if (fs.existsSync(mediaDir)) {
-    for (const e of collect(mediaDir, "")) {
-      if (e.dir) continue;
-      if (e.name === "media-manifest.json") continue;
-      if (hasFonts && e.name.indexOf("fonts/") === 0) continue;
-      const dest = path.join(root, "media", e.name);
-      link(e.abs, dest);
-      mediaFiles++;
-      try { mediaBytes += fs.statSync(e.abs).size; } catch (err) {}
-    }
+  let refMissing = 0;
+  for (const rel of refs) {
+    const abs = path.join(mediaDir, rel);
+    if (!fs.existsSync(abs)) { refMissing++; continue; }
+    link(abs, path.join(root, "media", rel));
+    mediaFiles++;
+    try { mediaBytes += fs.statSync(abs).size; } catch (err) {}
   }
-  log("bundle: " + chatFiles + " archive file(s) and " + mediaFiles + " media file(s), " + (mediaBytes / 1048576).toFixed(1) + " MB");
+  if (!refs.size && fs.existsSync(mediaDir) && collect(mediaDir, "").some((e) => !e.dir && e.name !== "media-manifest.json")) {
+    log("warning: the page does not point at any local media, so the package has no photos or video");
+  }
+  log("bundle: " + chatFiles + " archive file(s) and " + mediaFiles + " of " + refs.size + " referenced media file(s), " + (mediaBytes / 1048576).toFixed(1) + " MB" + (refMissing ? ", " + refMissing + " not on disk" : ""));
 
   fs.writeFileSync(path.join(root, "README.txt"), readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "" }, generatedAt), "utf8");
   fs.writeFileSync(path.join(root, "index.html"), indexHtml({ slug: slug, roomName: o.roomName || slug }), "utf8");

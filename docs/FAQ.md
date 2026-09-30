@@ -36,8 +36,8 @@ do not run two archives of the same room at the same time from two copies of the
 
 ## How big is the result?
 
-About 2.5 GB for a room at full quality. Measured on an 18-month room: 9,574 unique messages,
-4,119 of them kept after the artist-only filter, 1,478 media files. The page alone is 2.5 MB of
+About 2.5 GB for a room at full quality. Measured on an 18-month room: 9,574 unique messages
+(4,119 from the artist, 5,455 from the account owner) and 1,478 media files. The page alone is 2.5 MB of
 HTML, plus 970 KB of Markdown and 8.2 MB of JSONL. Photos and videos are saved exactly as Weverse served them - there is no quality
 knob in this build. A compact variant (480p video, webp photos) is on the roadmap but is
 deliberately not part of this release.
@@ -51,12 +51,27 @@ Yours, detected from your machine (`auto`). The API only sends absolute UTC time
 Weverse app renders them in the viewer device zone, so this matches what you already see in the
 app. You can pin a zone in the page or with `DM_TZ=Asia/Jakarta` if you want a fixed one.
 
+## What is the difference between `rooms/` and `rooms/public/`?
+
+Every render writes both, from the same archive, so there is nothing to choose up front:
+
+| | `rooms/` (private) | `rooms/public/` (public) |
+| --- | --- | --- |
+| messages | both sides | artist side only |
+| bookmarks | whatever your settings say | never |
+| `publicRename` | ignored, the real text is kept | applied |
+| goes into the zip | no | yes |
+
 ## Does the zip contain my nickname?
 
-Your own messages are not in it: an export keeps only the **artist side** of the conversation by
-default, so your messages never appear and your nickname is never used as a sender. The artist's
-messages are stored word for word, though - if the artist typed your nickname in a message, that
-sentence contains it, exactly as it appears in the app.
+Not as a sender: the zip is built from the **public** export, so none of your messages appear and
+your nickname is never used as a sender. The artist's messages are stored word for word, though -
+if the artist typed your nickname in a message, that sentence contains it, exactly as it appears in
+the app. That is what `publicRename` is for: set
+`"publicRename": "the name=what to show instead"` in `config.json` (or use the field in the page)
+and every occurrence is replaced in the public export only - your own `rooms/` copy keeps the real
+text. The run reports `render: public export checked, the hidden name is gone` when the scan comes
+back clean, and a warning with a count when it does not.
 
 ## What is inside the zip?
 
@@ -75,6 +90,10 @@ weverse-dm-<room>/
   media/photos/       photos, exactly as Weverse served them
   media/video/        videos and voice messages
 ```
+
+It is always built from `rooms/public/<room>.html`, so the other side of the conversation can never
+end up in it, and only the media that page really points at is copied in: files nothing references
+are left out.
 
 Everything is offline: the page reads the files next to it and never touches the network.
 

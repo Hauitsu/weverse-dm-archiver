@@ -2,7 +2,7 @@
 //
 //   node src/cli.mjs rooms                       list the rooms in rooms.unis.json
 //   node src/cli.mjs harvest --room yunha        walk the history (starts the private browser)
-//   node src/cli.mjs render  --room yunha        build html/md/jsonl from what is on disk
+//   node src/cli.mjs render  --room yunha        build both exports (private + public) from disk
 //   node src/cli.mjs media   --room yunha        download the photos and video (no browser if complete)
 //   node src/cli.mjs share   --room yunha        one zip in dist/, ready to send
 //   node src/cli.mjs all     --room yunha --share
@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { loadConfig } from "./config.mjs";
-import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, renderBoth, publicDirFor, srcFor, openSession, tzFor } from "./pipeline.mjs";
 import { downloadMedia, pendingItems } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser } from "./browser.mjs";
@@ -67,16 +67,18 @@ const commands = {
   harvest: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, only: "artist", cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: cfg.publicRename || "", cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res.phases.harvest, null, 1));
     });
   },
   render: async () => {
     const r = pick();
-    const code = await renderRoom({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, only: "artist", onLog: log, outDir: d.rooms });
+    const res = await renderBoth({ slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: cfg.publicRename || "", onLog: log });
     // Only claim an output path when the renderer really produced one.
-    log(code === 0 ? "render exit 0 -> " + path.join(d.rooms, r.slug + ".html") : "render failed (exit " + code + "); nothing was written");
-    process.exit(code === 0 ? 0 : 1);
+    if (res.private !== 0) { log("render failed (exit " + res.private + "); nothing was written"); process.exit(1); }
+    log("private export -> " + path.join(d.rooms, r.slug + ".html"));
+    log("public export  -> " + path.join(publicDirFor(), r.slug + ".html") + (res.public === 0 ? "" : "  (FAILED, exit " + res.public + ")"));
+    process.exit(res.public === 0 ? 0 : 1);
   },
   media: async () => {
     const r = pick();
@@ -89,14 +91,14 @@ const commands = {
   },
   share: async () => {
     const r = pick();
-    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: d.rooms, mediaDir: d.media, distDir: d.dist, credit: cfg.credit || "", onLog: log });
+    const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: cfg.credit || "", onLog: log });
     log(b.zip);
     log("sha256 " + b.sha256);
   },
   all: async () => {
     const r = pick();
     await withSession(async (s) => {
-      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, only: "artist", share: has("share"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
+      const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: r.nameKo || r.slug, tz: tzFor(cfg, r), lang: lang, rename: cfg.publicRename || "", share: has("share"), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res, null, 1));
     });
   },

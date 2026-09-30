@@ -4,6 +4,7 @@
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
   "output": "rooms",
+  "publicRename": "",
   "pacing": {
     "minMs": 1500,
     "maxMs": 3000

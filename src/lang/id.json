@@ -73,6 +73,8 @@
   "gui.language": "Bahasa",
   "gui.start": "Mulai",
   "gui.stop": "Stop",
+  "gui.rename": "Sembunyikan nama ini di ekspor publik",
+  "gui.renameHint": "Opsional, format lama=baru. Hanya ekspor publik yang berubah; ekspor privat tetap memakai teks asli.",
   "gui.result": "Hasil",
   "gui.openChat": "Buka obrolan",
   "gui.openFolder": "Buka folder",

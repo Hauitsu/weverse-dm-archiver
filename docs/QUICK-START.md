@@ -42,7 +42,9 @@ the same time, with 1.5-3 seconds between pages.
 Options:
 
 - **Also make a shareable zip** - after the room is done, write `dist/weverse-dm-<room>.zip`
-  containing the chat, its media and a README in three languages.
+  containing the public chat, its media and a README in three languages.
+- **Hide this name in the public export** - optional, format `old=new`. Only the public export
+  changes; your private copy keeps the real text.
 - **Time zone** - `auto` follows the machine. Type an IANA name (`Asia/Jakarta`) to pin one; the
   timestamps in the archive are the only thing this changes.
 - **Language** - English, Korean or Indonesian for the page you are looking at.
@@ -61,7 +63,8 @@ message already on disk.
 
 When it finishes, the Result panel offers:
 
-- **Open chat** - `rooms/<room>.html` in your normal browser. It works offline.
+- **Open chat** - `rooms/<room>.html` in your normal browser. It works offline. That is your own
+  copy (both sides); the shareable twin is `rooms/public/<room>.html`.
 - **Open folder** - the folder holding the archive.
 - **Open dist folder** - where the share zips live.
 
@@ -100,11 +103,12 @@ does not work.
 ## Where everything lives
 
 ```
-rooms/               the finished exports: html, md, jsonl, summary.json, fonts/
+rooms/               the private export: html, md, jsonl, summary.json, fonts/ (both sides)
+rooms/public/        the public export: artist side only, nickname hidden, no bookmarks
 media/               photos/, video/, avatars/, fonts/
 downloads/<room>/    the raw pages, one JSONL line each - delete only if you want to start over
 dist/                share zips with their .sha256 and .manifest.json
-config.json          optional settings (language, tz, browserPath, output, pacing)
+config.json          optional settings (language, tz, browserPath, output, publicRename, pacing)
 ```
 
 `media/fonts/` already comes with the repo (the emoji font the page links to); everything else

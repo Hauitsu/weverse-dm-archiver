@@ -73,6 +73,8 @@
   "gui.language": "Language",
   "gui.start": "Start",
   "gui.stop": "Stop",
+  "gui.rename": "Hide this name in the public export",
+  "gui.renameHint": "Optional, format old=new. Only the public export changes; the private one keeps the real text.",
   "gui.result": "Result",
   "gui.openChat": "Open chat",
   "gui.openFolder": "Open folder",

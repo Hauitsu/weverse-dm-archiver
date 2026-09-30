@@ -1,10 +1,11 @@
 // src/pipeline.mjs -- the order of operations, shared by the window and the command line.
 //
 //   harvest  signed GETs, one page at a time, appended to downloads/<slug>/
-//   render   turns those pages into rooms/<slug>.html, .md and .jsonl
-//   media    downloads the photos and video the export points at
-//   render   again, so the page now links to the files that are actually on disk
-//   bundle   optional: one zip per room, ready to send to someone
+//   render   turns those pages into two exports: rooms/<slug>.* (private, both sides) and
+//            rooms/public/<slug>.* (artist messages only, nickname hidden, safe to send)
+//   media    downloads the photos and video the private export points at
+//   render   again, so both pages link to the files that are actually on disk
+//   bundle   optional: one zip per room, built from the public export
 //
 // Each room keeps its own folder under downloads/. The renderer merges every part file it finds,
 // so keeping rooms apart is what stops one room history from leaking into another.
@@ -104,6 +105,8 @@ export async function renderRoom(o) {
     DM_LANG: o.lang || "en",
   });
   if (o.only) env.DM_ONLY = o.only;
+  // Only ever set for the public export: DM_RENAME is deliberately not part of the global config env.
+  if (o.rename) env.DM_RENAME = o.rename;
   const log = o.onLog || (() => {});
   const lines = [];
   return await new Promise((resolve) => {
@@ -116,10 +119,49 @@ export async function renderRoom(o) {
     proc.on("error", (e) => { log("render: " + String(e.message || e)); });
     proc.on("close", (code) => {
       try { fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, o.slug + "-render.log"), lines.join(NL) + NL, "utf8"); } catch (e) {}
-      if (code === 0) warnMissingMedia(o, outDir, log);
+      if (code === 0 && o.warn !== false) warnMissingMedia(o, outDir, log);
       resolve(code == null ? -1 : code);
     });
   });
+}
+
+// The public export is the shareable twin of the private one, and lives next to it so the relative
+// "../media" links keep working from both.
+export const publicDirFor = (cfg) => path.join(dirs(cfg).rooms, "public");
+
+// Two exports per room, because they answer two different questions:
+//   rooms/<slug>.*         private - every message, for the person who owns the account
+//   rooms/public/<slug>.*  public  - artist messages only, nickname hidden, safe to hand to anyone
+// The private one is the archive of record and is also what the media download works from, so nothing
+// the user sent goes missing from their own copy. The public one is what gets packed.
+export async function renderBoth(o) {
+  const log = o.onLog || (() => {});
+  const d = dirs();
+  const pub = publicDirFor();
+  const base = { slug: o.slug, srcDir: o.srcDir, roomName: o.roomName, artist: o.artist, tz: o.tz, lang: o.lang, onLog: log };
+  log("render: private export (both sides) -> " + path.join(d.rooms, o.slug + ".html"));
+  const priv = await renderRoom(Object.assign({}, base, { only: o.only || "", rename: "", bookmarks: o.bookmarks || "off", outDir: d.rooms, warn: true }));
+  keepSummary(o.slug, d.rooms);
+  if (priv !== 0) return { private: priv, public: null };
+  log("render: public export (artist only" + (o.rename ? ", nickname hidden" : "") + ") -> " + path.join(pub, o.slug + ".html"));
+  const p = await renderRoom(Object.assign({}, base, { only: "artist", rename: o.rename || "", bookmarks: "off", outDir: pub, warn: false }));
+  keepSummary(o.slug, pub);
+  if (p === 0) auditPublic(o, pub, log);
+  return { private: priv, public: p };
+}
+
+// build-public.mjs used to count leftover occurrences of the hidden name by hand. Keep that check: a
+// shareable export that still contains the nickname is worse than no export at all.
+function auditPublic(o, dir, log) {
+  const names = String(o.rename || "").split("|").filter((p) => p.indexOf("=") > 0).map((p) => p.slice(0, p.indexOf("=")));
+  if (!names.length) return;
+  let left = 0;
+  for (const f of [o.slug + ".html", o.slug + ".md", o.slug + ".jsonl", "summary.json"]) {
+    let text = "";
+    try { text = fs.readFileSync(path.join(dir, f), "utf8"); } catch (e) { continue; }
+    for (const n of names) { const hits = text.split(n).length - 1; if (hits) { left += hits; log("warning: the hidden name still appears " + hits + "x in the public " + f); } }
+  }
+  log(left === 0 ? "render: public export checked, the hidden name is gone" : "warning: " + left + " occurrence(s) of the hidden name are still in the public export");
 }
 
 // Start the private browser window and wait until it can talk to the API.
@@ -157,10 +199,10 @@ export async function runRoom(o) {
   out.phases.harvest = h;
   if (stop()) return Object.assign(out, { stopped: true });
 
-  const r1 = await renderRoom({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, onLog: log, outDir: d.rooms });
-  out.phases.render = r1;
-  if (r1 !== 0) return Object.assign(out, { error: "render" });
-  keepSummary(o.slug, d.rooms);
+  const r1 = await renderBoth({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, rename: o.rename, bookmarks: o.bookmarks, onLog: log });
+  out.phases.render = r1.private;
+  out.phases.renderPublic = r1.public;
+  if (r1.private !== 0) return Object.assign(out, { error: "render" });
 
   const m = await downloadMedia({
     jsonl: path.join(d.rooms, o.slug + ".jsonl"), mediaDir: d.media, roomId: o.roomId, cdp: o.cdp,
@@ -170,12 +212,13 @@ export async function runRoom(o) {
   if (stop()) return Object.assign(out, { stopped: true });
 
   // The second pass is what makes the gallery show the files we now have locally.
-  const r2 = await renderRoom({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, onLog: log, outDir: d.rooms });
-  out.phases.render2 = r2;
-  keepSummary(o.slug, d.rooms);
+  const r2 = await renderBoth({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, rename: o.rename, bookmarks: o.bookmarks, onLog: log });
+  out.phases.render2 = r2.private;
+  out.phases.render2Public = r2.public;
 
   if (o.share) {
-    const b = await bundle({ slug: o.slug, roomId: o.roomId, roomName: roomName, artist: artist, roomDir: d.rooms, mediaDir: d.media, distDir: d.dist, credit: o.credit, onLog: log });
+    // Always pack the public export: the private one holds the other side of the conversation.
+    const b = await bundle({ slug: o.slug, roomId: o.roomId, roomName: roomName, artist: artist, roomDir: publicDirFor(), mediaDir: d.media, distDir: d.dist, credit: o.credit, onLog: log });
     out.phases.bundle = { zip: b.zip, sha256: b.sha256, bytes: b.bytes, entries: b.entries };
   }
   out.elapsedMs = Date.now() - out.startedAt;

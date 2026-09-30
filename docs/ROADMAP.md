@@ -2,10 +2,10 @@
 
 | # | milestone | content | status |
 | --- | --- | --- | --- |
-| M1 | i18n | `src/i18n.mjs` + EN/KO/ID dictionaries, renderer ported to `src/render.mjs` | **done** (3 languages x 92 keys; render byte-identical to the reference) |
+| M1 | i18n | `src/i18n.mjs` + EN/KO/ID dictionaries, renderer ported to `src/render.mjs` | **done** (3 languages x 94 keys; render byte-identical to the reference) |
 | M2 | launcher | `START.bat` + local GUI (defaults to `127.0.0.1:8787`, walks to the next free port when the system reserves it), private browser profile, live log | **done** |
 | M3 | batch | several rooms from the picker, one at a time, resumable per room | **done** |
-| M4 | share | one zip per room (full quality, `store`), `.sha256` + `.manifest.json` + 3-language README | **done** (exercised on a real 2.5 GB room: 1,507 entries, every media reference resolves, an extracted photo is byte-identical, checksum confirmed with `Get-FileHash`) |
+| M4 | share | one zip per room (full quality, `store`), built from the public export, `.sha256` + `.manifest.json` + 3-language README | **done** (exercised on a real 2.5 GB room: 1,507 entries, every media reference resolves, an extracted photo is byte-identical, checksum confirmed with `Get-FileHash`) |
 | M5 | publish gate | `tools/publish.ps1`: file selection + secret scan + commit | **done** |
 | M6 | docs/demo | README, quick start, FAQ and roadmap updated; still open: screenshots, and a small synthetic demo archive to try the tool without an account | partial |
 | M7 | optional light package | 480p video + webp photos for people who need something small enough to send | optional, deliberately not in this build |
@@ -16,6 +16,10 @@ Engine already in place: resumable JSONL page fetching (`src/net.mjs`), room reg
 (`src/media.mjs`), the renderer (`src/render.mjs`), the order of operations (`src/pipeline.mjs`),
 the page (`src/gui.mjs`), the command line (`src/cli.mjs`) and a dependency-free ZIP writer
 (`src/zip.mjs`).
+
+Every render writes two exports from the same archive: `rooms/` (private - both sides, bookmarks
+per your setting) and `rooms/public/` (artist side only, nickname replaced when `publicRename` is
+set, bookmarks off). The zip is always built from the public one.
 
 The export always points at the original photos and videos, so there is no quality knob. Reference
 numbers for one room: 18 months of history, 9,574 unique messages (4,119 kept after the artist-only

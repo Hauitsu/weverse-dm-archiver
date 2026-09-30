@@ -73,6 +73,8 @@
   "gui.language": "언어",
   "gui.start": "시작",
   "gui.stop": "중지",
+  "gui.rename": "공개 내보내기에서 이 이름 숨기기",
+  "gui.renameHint": "선택 사항, old=new 형식입니다. 공개 내보내기만 바뀌고 개인 내보내기에는 원래 텍스트가 남습니다.",
   "gui.result": "결과",
   "gui.openChat": "채팅 열기",
   "gui.openFolder": "폴더 열기",

@@ -16,6 +16,9 @@ export const DEFAULTS = {
   tz: "auto",
   roomsFile: "rooms.unis.json",
   output: "rooms",
+  // Applied to the public export only: name=Someone|other=Other hides a nickname the artist typed.
+  // It is deliberately never set as an environment variable, so the private export keeps the real text.
+  publicRename: "",
   pacing: { minMs: 1500, maxMs: 3000 },
   textOnly: false,
 };
