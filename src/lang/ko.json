@@ -55,6 +55,7 @@
   "html.voiceMissing": "음성 메시지 - 로컬에 없음",
   "html.original": "원본",
   "html.gift": "[gift] ",
+  "html.giftOpen": "선물 - 눌러서 열기",
   "html.bookmarkTitle": "Weverse 북마크 #{n}",
   "html.deleted": "(삭제된 메시지)",
   "gui.title": "위버스 DM 아카이버",

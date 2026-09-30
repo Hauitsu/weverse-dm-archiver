@@ -55,6 +55,7 @@
   "html.voiceMissing": "voice note - not downloaded yet",
   "html.original": "original",
   "html.gift": "[gift] ",
+  "html.giftOpen": "gift - tap to open",
   "html.bookmarkTitle": "Weverse bookmark #{n}",
   "html.deleted": "(deleted message)",
   "gui.title": "Weverse DM archiver",

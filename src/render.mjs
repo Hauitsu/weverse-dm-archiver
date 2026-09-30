@@ -132,6 +132,21 @@ if (fontSiap || extApple) {
   }
 }
 
+// ---- gift cover: a gift bubble is drawn as the real Weverse cover (box + ribbon + bow) ----
+// The art lives in media/gift/: <variant>.png is the ribbon, <variant>-bow.png is the bow.
+// Without those files the page falls back to the plain "[gift] CODE" caption.
+const GIFT_DIR = path.join(MEDIA_ABS, 'gift');
+const GIFT_VARIANT = { NORMAL: 'normal', CHRISTMAS: 'christmas', VALENTINE: 'valentine', CHILDRENSDAY: 'children' };
+const GIFT_WARNA = { normal: ['#fc54af', '#ff7fc4'], christmas: ['#006d52', '#008e6b'], valentine: ['#d70645', '#fb3570'], children: ['#1dda6e', '#3aea86'] };
+const bacaB64 = (f) => { try { return fs.readFileSync(path.join(GIFT_DIR, f)).toString('base64'); } catch (e) { return null; } };
+const giftAset = {};
+for (const kode of Object.keys(GIFT_VARIANT)) {
+  const v = GIFT_VARIANT[kode];
+  const pita = bacaB64(v + '.png'), bow = bacaB64(v + '-bow.png');
+  if (pita && bow) giftAset[kode] = { pita: pita, bow: bow, warna: GIFT_WARNA[v] || GIFT_WARNA.normal };
+}
+const giftAda = Object.keys(giftAset).length > 0;
+
 const stamp = (ms, offMin) => new Date(ms + offMin * 60000).toISOString().replace('T', ' ').slice(0, 19);
 const wib = (ms) => stamp(ms, TZ_MIN(ms));  // local time according to DM_TZ / DM_TZ_OFFSET
 const utc = (ms) => stamp(ms, 0);
@@ -357,6 +372,28 @@ h.push('.lb button{position:absolute;background:rgba(255,255,255,.08);border:0;c
 h.push('.lb .x{top:16px;right:16px}.lb .pv{left:16px;top:48%}.lb .nx{right:16px;top:48%}');
 h.push('.lb .ct{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);color:#98a2b3;font-size:12px}');
 h.push('.gf{color:#e0b341;font-size:12px;margin-top:3px}');
+if (giftAda) {
+  const dasar = giftAset.NORMAL || Object.values(giftAset)[0];
+  const giftPakai = new Set();
+  for (const x of norm) for (const g of (x.gift || [])) giftPakai.add(String(g).toUpperCase());
+  h.push('.bub.gift{position:relative}');
+  h.push('.bub.gift.txt-only{min-width:150px;min-height:76px}');
+  h.push('.m .bub.gift{background:#fc54af;border-color:#ff7fc4}');
+  h.push('.bub.gift .gf{color:#fff;opacity:.92}');
+  h.push('.gfc{position:absolute;inset:0;z-index:5;margin:0;padding:0;border:0;cursor:pointer;border-radius:inherit;background-color:#fc54af;box-shadow:inset 0 0 0 4px #ff7fc4;transition:opacity .35s ease,visibility 0s linear 0s}');
+  h.push('.gfc::before{content:"";position:absolute;top:50%;left:4px;right:4px;height:14px;margin-top:-7px;background-repeat:no-repeat;background-size:100% 100%;background-image:url(data:image/png;base64,' + dasar.pita + ')}');
+  h.push('.gfc::after{content:"";position:absolute;top:50%;left:50%;width:60px;height:52px;transform:translate(-50%,-50%);background-repeat:no-repeat;background-size:contain;background-image:url(data:image/png;base64,' + dasar.bow + ')}');
+  h.push('.gfc:hover{filter:brightness(1.07)}');
+  h.push('.gfc:focus-visible{outline:2px solid #fff;outline-offset:-6px}');
+  h.push('.bub.gift.open .gfc{opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s linear .35s}');
+  for (const kode of giftPakai) {
+    const a = giftAset[kode] || dasar;
+    h.push('.bub.gift[data-gift="' + kode + '"]{background:' + a.warna[0] + ';border-color:' + a.warna[1] + '}');
+    h.push('.bub.gift[data-gift="' + kode + '"] .gfc{background-color:' + a.warna[0] + ';box-shadow:inset 0 0 0 4px ' + a.warna[1] + '}');
+    h.push('.bub.gift[data-gift="' + kode + '"] .gfc::before{background-image:url(data:image/png;base64,' + a.pita + ')}');
+    h.push('.bub.gift[data-gift="' + kode + '"] .gfc::after{background-image:url(data:image/png;base64,' + a.bow + ')}');
+  }
+}
 h.push('.m.bm{scroll-margin-top:44px}');
 h.push('.m.bm .bub{border-color:#6a5722}');
 h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
@@ -392,7 +429,8 @@ for (const x of norm) {
   h.push(av && !cont ? '<img class="av" src="' + esc(av) + '" alt="">' : '<div class="av" style="background:transparent"></div>');
   h.push('<div class="col">');
   if (!cont) h.push('<div class="who">' + esc(me ? (x.nickname || t("html.whoMe")) : ARTIST_NAME) + '</div>');
-  h.push('<div class="bub">');
+  const gKode = (giftAda && x.gift && x.gift.length) ? String(x.gift[0]).toUpperCase() : '';
+  h.push('<div class="bub' + (gKode ? ' gift' + (x.media.length ? '' : ' txt-only') : '') + '"' + (gKode ? ' data-gift="' + esc(gKode) + '"' : '') + '>');
   if (x.deleted) h.push('<span class="del tx">' + esc(x.text || t("html.deleted")) + '</span>');
   else if (x.text) h.push('<span class="tx">' + esc(x.text) + '</span>');
   if (x.textEn) h.push('<div class="en">' + esc(x.textEn) + '</div>');
@@ -420,6 +458,7 @@ for (const x of norm) {
     }
   }
   if (x.gift) h.push('<div class="gf">' + t("html.gift") + esc(x.gift.join(', ')) + '</div>');
+  if (gKode) h.push('<button class="gfc" type="button" aria-label="' + esc(t("html.giftOpen")) + '" title="' + esc(t("html.gift") + x.gift.join(', ')) + '"></button>');
   h.push('</div></div>');
   h.push('<div class="tm">' + (bm ? '<span class="bmk" title="' + t("html.bookmarkTitle", { n: bm.bookmarkNo }) + '">&#9733;</span> ' : '') + esc(x.isoWib.slice(11, 16)) + '</div>');
   h.push('</div>');
@@ -439,6 +478,7 @@ h.push('document.getElementById("lbp").onclick=function(e){e.stopPropagation();s
 h.push('document.getElementById("lbn").onclick=function(e){e.stopPropagation();show(i+1);};');
 h.push('lb.addEventListener("click",function(e){if(e.target===lb)tutup();});');
 h.push('document.addEventListener("keydown",function(e){if(!lb.classList.contains("on"))return;if(e.key==="Escape")tutup();if(e.key==="ArrowLeft")show(i-1);if(e.key==="ArrowRight")show(i+1);});');
+if (giftAda) h.push('var gfc=[].slice.call(document.querySelectorAll(".bub.gift .gfc"));gfc.forEach(function(c){c.addEventListener("click",function(){c.parentNode.classList.add("open");c.setAttribute("aria-expanded","true");});});if(location.hash==="#gift-open")gfc.forEach(function(c){c.parentNode.classList.add("open");});');
 h.push('</script>');
 h.push('</div></body></html>');
 fs.writeFileSync(path.join(OUT, BASE + '.html'), h.join(NL), 'utf8');

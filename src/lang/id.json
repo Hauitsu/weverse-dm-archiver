@@ -55,6 +55,7 @@
   "html.voiceMissing": "voice note - belum ada lokal",
   "html.original": "asli",
   "html.gift": "[gift] ",
+  "html.giftOpen": "gift - ketuk untuk membuka",
   "html.bookmarkTitle": "Bookmark Weverse #{n}",
   "html.deleted": "(pesan dihapus)",
   "gui.title": "Pengarsip DM Weverse",
