@@ -381,7 +381,8 @@ const APP_DIR = path.join(process.env.LOCALAPPDATA || process.env.HOME || ".", "
 const GUI_FILE = path.join(APP_DIR, "gui.json");
 function liveGui() {
   try {
-    const j = JSON.parse(fs.readFileSync(GUI_FILE, "utf8"));
+    // A BOM in there (anything written by PowerShell, say) would kill JSON.parse for no good reason.
+    const j = JSON.parse(String(fs.readFileSync(GUI_FILE, "utf8")).replace(/^\uFEFF/, ""));
     if (!j || !j.pid || !j.url) return null;
     process.kill(Number(j.pid), 0);   // throws when that pid is gone
     return j;
