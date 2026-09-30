@@ -129,7 +129,7 @@ function page() {
     "<section id=\"loginNote\" style=\"display:none\">" + noteHtml + "</section>",
     "<section><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + "};",
     "function el(s){return document.querySelector(s);}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var GIB=1073741824;",
@@ -140,6 +140,8 @@ function page() {
     "  var t=MSG.total.replace(\"{n}\",\"<strong>\"+n+\"</strong>\").replace(\"{v}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
     "  if(saved>0)t+=MSG.savedNote.replace(\"{s}\",\"<strong>\"+(saved/GIB).toFixed(1)+\" GB</strong>\");",
     "  if(el(\"#share\").checked)t+=MSG.zipNote.replace(\"{z}\",\"<strong>\"+(full/GIB).toFixed(1)+\" GB</strong>\");",
+    // What actually ends up on disk when the zip is wanted: the conversation plus the zip beside it.
+    "  if(el(\"#share\").checked)t+=MSG.allNote.replace(\"{t}\",\"<strong>\"+((full*2)/GIB).toFixed(1)+\" GB</strong>\");",
     "  el(\"#total\").innerHTML=t;",
     "}",
     "function hideModal(){el(\"#modal\").style.display=\"none\";}",

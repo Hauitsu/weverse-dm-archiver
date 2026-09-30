@@ -68,6 +68,7 @@
   "gui.totalNone": "nothing selected yet",
   "gui.totalSaved": " - {s} already on disk",
   "gui.totalZip": " - the share zip adds up to {z}",
+  "gui.totalAll": " - conversation + share zip up to {t}",
   "gui.estHint": "The estimate is a ceiling, not a promise: if you subscribed to the artist since these group's conversation starts at April 2025, a room that has never been saved is quoted as up to {v} GB, and a saved room is projected from its own measured rate.",
   "gui.sizeGuess": "up to {v} GB",
   "gui.browserHint": "Starting opens a separate browser window that uses its own profile. Log in to Weverse there once; the browser you normally use is never touched.",
