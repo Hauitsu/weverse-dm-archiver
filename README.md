@@ -28,9 +28,11 @@ login tokens, and never touches the tab you are logged in on.
   per browser - dark stays the default
 - two round icon buttons in the top-right corner open one panel from the right: the date jump first,
   your bookmarks second (the ★ carries the count as a small badge, both carry a tooltip). The panel
-  closes on its own button, on ✕, on Esc, and on any click outside it. The month chips are a list of links there instead of a row under the title, the
-  bookmark tab carries the JSON export and import, and a wide window steps the reading column aside
-  rather than hiding it behind the panel
+  closes on its own button, on ✕, on Esc, and on any click outside it. The month chips are a list of
+  links there instead of a row under the title, the bookmark tab carries the JSON export and import, and
+  on a wide window the page box narrows by the width of the panel so the reading column recentres to the
+  left of it instead of sitting behind it (the column keeps its auto margins - a fixed width would only
+  push it right and leave the gap on the left)
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
   scrolls, parking just under the day header so the two read as one HUD. The number is **live** -
   every day you open the archive it says one more - and behind it sit the app's ten bubble colours:

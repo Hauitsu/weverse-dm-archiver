@@ -674,8 +674,9 @@ h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#
 h.push('html[data-tema="light"] .ico{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
 h.push('html[data-tema="light"] .ico[aria-expanded="true"]{background:#eef3fb;border-color:#2f9bff}');
 h.push('html[data-tema="light"] .ico .n{background:#fff;border-color:#dde3ea;color:#9a6b00}');
-// The same panel in daylight, and the one place the page itself moves: a wide window shifts the
-// message column aside instead of letting the panel cover it.
+// The same panel in daylight, and the one place the page itself moves: a wide window narrows the page
+// box by the width of the panel, so the reading column recentres to the left of it. Fixing the width of
+// the column itself would only push it off to the right - auto margins are what centre it.
 h.push('html[data-tema="light"] .pnl{background:#fff;border-right-color:#dde3ea;box-shadow:0 0 34px rgba(15,20,30,.18)}');
 h.push('html[data-tema="light"] .tabs button{color:#6b7280}');
 h.push('html[data-tema="light"] .tabs button:hover{color:#17181c}');
@@ -686,7 +687,7 @@ h.push('html[data-tema="light"] .pane a{color:#1f6feb}');
 h.push('html[data-tema="light"] .pane a.bd{color:#6b7280}');
 h.push('html[data-tema="light"] .pane a:hover{background:#e9eef6}');
 h.push('html[data-tema="light"] .pane .bn{color:#6b7280}');
-h.push('@media (min-width:1180px){body.pnel .wrap{margin-right:min(320px,86vw)}}');
+h.push('@media (min-width:1180px){body.pnel{margin-right:min(320px,86vw)}}');
 h.push('body.pnel .tt{right:calc(min(320px,86vw) + 14px)}');
 h.push('body.pnel .pico{right:calc(min(320px,86vw) + 12px)}');
 h.push('@media (max-width:700px){body.pnel .tt,body.pnel .pico{opacity:0;pointer-events:none}}');
