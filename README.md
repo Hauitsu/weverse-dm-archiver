@@ -20,6 +20,9 @@ login tokens, and never touches the tab you are logged in on.
   and your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
 - day headings read the way the app writes them - `Sat, Sep 26, 2026`, in the page and in the
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
+- a message that is nothing but a photo or a video gets no bubble at all - the rounded media is
+  the message, like in the app. A voice note keeps its bubble (the player needs a body), and so do
+  gifts and anything with a caption
 - gift bubbles stay covered exactly like in the app - the pink box with the ribbon and bow -
   and a single tap opens them to reveal the photo, video or voice note inside. No `[gift] NORMAL`
   caption sits on the cover: it stays in the page for screen readers and find-on-page only, and the

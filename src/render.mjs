@@ -364,6 +364,11 @@ h.push('.media{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;justify-conten
 h.push('.m.me .media{justify-content:flex-end}');
 h.push('a.ph{display:block;line-height:0}');
 h.push('.media img{display:block;border-radius:14px;background:#232833;max-width:min(272px,64vw);max-height:360px;width:auto;height:auto;cursor:zoom-in}');
+// Media without a bubble behind it, the way the app shows a photo or a video. The four-class
+// selector is deliberate: it has to outrank .m.artist .bub and .m.cont.artist .bub, which set
+// their own background and corner.
+h.push('.m .col .bub.bare{background:none;border:0;padding:0;border-radius:0}');
+h.push('.bub.bare .media:first-child{margin-top:0}');
 h.push('.media.two img{max-width:min(178px,42vw)}');
 h.push('.media video{display:block;border-radius:14px;background:#000;max-width:min(272px,64vw);max-height:360px;width:auto;height:auto}');
 h.push('.vwrap{position:relative;display:inline-block;line-height:0}');
@@ -445,7 +450,11 @@ for (const x of norm) {
   h.push('<div class="col">');
   if (!cont) h.push('<div class="who">' + esc(me ? (x.nickname || t("html.whoMe")) : ARTIST_NAME) + '</div>');
   const gKode = (giftAda && x.gift && x.gift.length) ? String(x.gift[0]).toUpperCase() : '';
-  h.push('<div class="bub' + (gKode ? ' gift' + (x.media.length ? '' : ' txt-only') : '') + '"' + (gKode ? ' data-gift="' + esc(gKode) + '"' : '') + '>');
+  // A photo or a video is the message itself, so the bubble would only be an empty frame around
+  // it: those get no chrome at all and the rounded media is the whole thing. Voice notes keep
+  // their bubble (the player needs a body) and so do gifts (the cover is the bubble).
+  const bare = !gKode && !x.text && !x.textEn && !x.deleted && x.media.length > 0 && x.media.every((im) => im.kind !== 'audio');
+  h.push('<div class="bub' + (gKode ? ' gift' + (x.media.length ? '' : ' txt-only') : '') + (bare ? ' bare' : '') + '"' + (gKode ? ' data-gift="' + esc(gKode) + '"' : '') + '>');
   if (x.deleted) h.push('<span class="del tx">' + esc(x.text || t("html.deleted")) + '</span>');
   else if (x.text) h.push('<span class="tx">' + esc(x.text) + '</span>');
   if (x.textEn) h.push('<div class="en">' + esc(x.textEn) + '</div>');
