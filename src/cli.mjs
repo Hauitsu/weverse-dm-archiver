@@ -18,6 +18,7 @@ import { findFfmpeg } from "./quality.mjs";
 import { findBrowser } from "./browser.mjs";
 import { readArchive } from "./harvest.mjs";
 import { artistLabel, loadRooms, saveRooms } from "./rooms.mjs";
+import { readPanel, savePanel } from "./panel.mjs";
 import { DM_URL, LABEL_PROBE, captureLabels, gotoDm, mergeLabels, readRows, saveAvatars } from "./labels.mjs";
 
 const argv = process.argv.slice(2);
@@ -114,6 +115,26 @@ const commands = {
       const res = await runRoom({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r), tz: tzFor(cfg, r), lang: lang, rename: publicRenameFor(cfg, r.slug), cdp: s.cdp, onLog: log, shouldStop: stopSignal() });
       log(JSON.stringify(res.phases.harvest, null, 1));
     });
+  },
+  bookmarks: async () => {
+    const r = pick();
+    const port = Number(flag("port", 7000));
+    // The panel only exists in the window the reader already has open, so this reads that page and
+    // never opens a session of its own: nothing is clicked and nothing is sent.
+    log("looking for the bookmark panel in the browser on port " + port);
+    let res = null;
+    try { res = await readPanel(port, { onLog: log }); }
+    catch (e) { log("could not read the panel: " + String(e.message || e)); process.exit(1); }
+    if (!res.items.length) {
+      log("the panel is not open: in that browser, open the room's DM, press the bookmark list and run this again");
+      process.exit(1);
+    }
+    const dir = srcFor(r.slug);
+    const file = savePanel(dir, { room: r.slug, roomId: r.roomId, items: res.items, page: res.page });
+    log(res.items.length + " bookmark(s) read from the panel -> " + file);
+    log("newest: " + String(res.items[0].tanggalTampil || "") + " - " + String(res.items[0].preview || "").slice(0, 50));
+    log("oldest: " + String(res.items[res.items.length - 1].tanggalTampil || "") + " - " + String(res.items[res.items.length - 1].preview || "").slice(0, 50));
+    log("next: node src/cli.mjs render --room " + r.slug + "   (the private export picks the panel up on its own)");
   },
   render: async () => {
     const r = pick();

@@ -161,3 +161,24 @@ reports are welcome - see `docs/ROADMAP.md`.
 ## License
 
 MIT - see `LICENSE`.
+
+## Bookmarks
+
+Both halves are read-only and neither one logs in on its own:
+
+* **the panel you already see**: open the room DM, open its bookmark list, then
+  `node src/cli.mjs bookmarks --room <slug>` reads that list out of the open browser
+  (`--port 7000` by default). Nothing is clicked and nothing is sent; the page is only asked for the
+  rows it has already drawn. The result lands in `downloads/<slug>/bookmarks-panel.json`.
+* **the render**: `node src/cli.mjs render --room <slug>` picks that file up by itself, for the
+  **private** export only. The public export never carries a bookmark, and neither the panel nor the
+  render ever touches your nickname.
+
+The panel hands out a truncated preview and a date, never a message id, so the message a bookmark
+points at is found again among the harvested messages: same day first, then up to three days around
+it when a prefix of the text proves it. The render prints how many were matched, and a bookmark that
+cannot be pinned down stays in the list unlinked instead of being guessed.
+
+In the list each row has two jumps on purpose: the text goes to the message bubble, the date goes to
+that day divider. The bubble jump carries a 44px scroll margin so the sticky day header never covers
+the message you asked for.

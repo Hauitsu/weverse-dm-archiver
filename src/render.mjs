@@ -261,11 +261,68 @@ const byMonth = new Map();
 for (const x of norm) { const mo = x.isoWib.slice(0, 7); byMonth.set(mo, (byMonth.get(mo) || 0) + 1); }
 const months = [...byMonth.keys()].sort();
 
+// The panel hands out a truncated preview and a date, never a message id, so the message it points at
+// has to be found again among the harvested messages: same day first (the date alone is evidence
+// enough for a short message like "ah"), then up to three days around it with a prefix to go on.
+// Anything ambiguous stays unlinked instead of being guessed.
+function geserHari(iso, delta) {
+  const t = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) + delta * 86400000;
+  return new Date(t).toISOString().slice(0, 10);
+}
+function skorCocok(teks, preview) {
+  const a = String(teks || '').replace(/\s+/g, ' ').trim();
+  const b = String(preview || '').replace(/\s+/g, ' ').trim();
+  if (!a || !b) return 0;
+  if (a === b) return 100000 + a.length;
+  if (a.indexOf(b) === 0 || b.indexOf(a) === 0) return Math.min(a.length, b.length);
+  let i = 0;
+  while (i < a.length && i < b.length && a.charCodeAt(i) === b.charCodeAt(i)) i++;
+  return i >= 8 ? i : 0;   // a truncated preview still shares its opening words
+}
+function resolvePanel(items, msgs) {
+  const perHari = new Map();
+  for (const x of msgs) { const d = x.isoWib.slice(0, 10); if (!perHari.has(d)) perHari.set(d, []); perHari.get(d).push(x); }
+  const pakai = new Set();
+  return items.map((t) => {
+    const kosong = { bookmarkNo: t.bookmarkNo || 0, preview: t.preview || '', tanggalTampil: t.tanggalTampil || '', messageId: null, mode: 'panel' };
+    const angka = String(kosong.tanggalTampil).replace(/[^0-9]/g, '');
+    if (!kosong.preview || angka.length !== 8) return kosong;
+    const dasar = angka.slice(0, 4) + '-' + angka.slice(4, 6) + '-' + angka.slice(6, 8);
+    for (let j = 0; j <= 3; j++) {
+      for (const tanda of (j === 0 ? [0] : [j, -j])) {
+        let juara = null, skor = 0, seri = 0;
+        for (const x of (perHari.get(geserHari(dasar, tanda)) || [])) {
+          if (pakai.has(x.messageId)) continue;
+          const s = skorCocok(x.text, kosong.preview);
+          if (s > skor) { skor = s; juara = x; seri = 1; } else if (s && s === skor) seri++;
+        }
+        const cukup = tanda === 0 ? skor > 0 : skor >= 8;
+        if (juara && cukup && seri === 1) {
+          pakai.add(juara.messageId);
+          return Object.assign({}, kosong, { messageId: juara.messageId, isoWib: juara.isoWib, media: juara.media.length, gift: juara.gift ? juara.gift.length : 0, deltaHari: Math.abs(tanda), mode: skor >= 100000 ? 'tepat' : 'awalan' });
+        }
+      }
+    }
+    return kosong;
+  });
+}
+
 // ---- Weverse bookmarks (optional; harvested read-only into export/bookmarks.json) ----
 const BOOKMARK_JSON = process.env.DM_BOOKMARKS || path.join(OUT, 'bookmarks.json');
 const BM_OFF = String(process.env.DM_BOOKMARKS || '').toLowerCase() === 'off'; // DM_BOOKMARKS=off -> no bookmark markers at all
-let bmList = [], bmQuota = '';
-try { if (!BM_OFF) { const bj = JSON.parse(fs.readFileSync(BOOKMARK_JSON, 'utf8')); bmList = (bj.item || []).filter((t) => t && t.messageId); bmQuota = bj.quota || bj.kuota || ''; } } catch (e) { bmList = []; }
+let bmList = [], bmQuota = '', bmDariPanel = 0, bmNggak = 0;
+try {
+  if (!BM_OFF) {
+    const bj = JSON.parse(fs.readFileSync(BOOKMARK_JSON, 'utf8'));
+    bmQuota = bj.quota || bj.kuota || '';
+    const kasar = (bj.item || []).filter((t) => t && (t.messageId || t.preview));
+    bmDariPanel = kasar.filter((t) => !t.messageId).length;
+    bmList = bmDariPanel ? resolvePanel(kasar, norm) : kasar.filter((t) => t.messageId);
+    bmNggak = bmList.filter((t) => !t.messageId).length;
+    if (bmDariPanel) console.log("bookmarks: " + bmDariPanel + " dari panel, " + (bmDariPanel - bmNggak) + " ketemu, " + bmNggak + " tidak");
+  }
+} catch (e) { bmList = []; }
+
 if (RENAME.length) bmList = bmList.map((t) => Object.assign({}, t, { preview: fix(t.preview) }));
 const bmAda = new Map(bmList.map((t) => [t.messageId, t]));
 
@@ -422,8 +479,12 @@ h.push('.m.bm .bub{border-color:#6a5722}');
 h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
 h.push('.bml{margin:0 0 16px;font-size:12px;border:1px solid #232833;border-radius:8px;background:#141922;padding:6px 10px}');
 h.push('.bml summary{cursor:pointer;color:#e0b341;font-weight:600;outline:none}');
-h.push('.bml a{display:block;color:#9ecbff;text-decoration:none;padding:3px 0;border-top:1px solid #1b212b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
+h.push('.bml .br{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid #1b212b}');
+h.push('.bml a{flex:1 1 auto;min-width:0;color:#9ecbff;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
 h.push('.bml a:hover{background:#1a212c}');
+h.push('.bml a.bd{flex:0 0 auto;color:#8b93a1;font-size:11px}');
+h.push('.bml a.bd:hover{text-decoration:underline}');
+h.push('.bml .bx{flex:1 1 auto;min-width:0;color:#8b93a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
 h.push('.bml .bn{color:#8b93a1}');
 h.push('.del{color:#8b93a1;font-style:italic}');
 h.push('/* Light theme. Nothing above is touched: dark stays exactly as it was, light overrides it.');
@@ -456,7 +517,9 @@ h.push('html[data-tema="light"] .m.bm .bub:not(.gift){border-color:#e0c063}');
 h.push('html[data-tema="light"] .bmk{color:#9a6b00}');
 h.push('html[data-tema="light"] .bml{background:#f1f3f6;border-color:#e2e6eb}');
 h.push('html[data-tema="light"] .bml summary{color:#9a6b00}');
-h.push('html[data-tema="light"] .bml a{color:#1f6feb;border-top-color:#e6e9ee}');
+h.push('html[data-tema="light"] .bml .br{border-top-color:#e6e9ee}');
+h.push('html[data-tema="light"] .bml a{color:#1f6feb}');
+h.push('html[data-tema="light"] .bml a.bd{color:#6b7280}');
 h.push('html[data-tema="light"] .bml a:hover{background:#e9eef6}');
 h.push('html[data-tema="light"] .bml .bn{color:#6b7280}');
 h.push('html[data-tema="light"] .del{color:#8b93a1}');
@@ -475,7 +538,21 @@ h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', '))
 h.push('<div class="nav">' + (bmList.length ? '<a href="#bmk-1" title="' + t("html.navBookmarkTitle") + '">' + t("html.navBookmark", { n: bmList.length }) + '</a>' : '') + months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('') + '</div>');
 if (bmList.length) {
   h.push('<details class="bml"><summary>' + t("html.bookmarkSummary", { n: bmList.length }) + '</summary>');
-  for (const bk of bmList) h.push('<a href="#bmk-' + bk.bookmarkNo + '"><span class="bn">#' + bk.bookmarkNo + '</span> ' + esc(String(bk.isoWib || '').slice(0, 16)) + ' &middot; ' + esc(String(bk.preview || '')) + '</a>');
+  // Two jumps on purpose: the text goes to the message, the date goes to that day's divider. A link is
+  // only drawn when its target is really in this file - a filtered export has fewer messages than the
+  // archive, and a link to nowhere is worse than no link.
+  const hariAda = new Set(norm.map((x) => x.isoWib.slice(0, 10)));
+  const idAda = new Set(norm.map((x) => x.messageId));
+  for (const bk of bmList) {
+    const hari = String(bk.isoWib || '').slice(0, 10);
+    const bolehPesan = bk.messageId && idAda.has(bk.messageId);
+    h.push('<div class="br"><span class="bn">#' + bk.bookmarkNo + '</span>' +
+      (bolehPesan
+        ? '<a href="#bmk-' + bk.bookmarkNo + '" title="' + esc(t("html.bookmarkBubbleTitle")) + '">' + esc(String(bk.preview || '')) + '</a>'
+        : '<span class="bx" title="' + esc(bolehPesan ? "" : t("html.bookmarkNoLink")) + '">' + esc(String(bk.preview || '')) + '</span>') +
+      (hariAda.has(hari) ? '<a class="bd" href="#d-' + hari + '" title="' + esc(t("html.bookmarkDateTitle")) + '">' + esc(String(bk.isoWib || '').slice(0, 16)) + '</a>' : '') +
+      '</div>');
+  }
   h.push('</details>');
 }
 lastDay = '';
@@ -486,7 +563,7 @@ for (const x of norm) {
   const mo = x.isoWib.slice(0, 7);
   if (mo !== lastMonth) { h.push('<div id="mo-' + mo + '"></div>'); lastMonth = mo; }
   // The day divider carries the date only: the zone is stated once, in the header at the top.
-  if (day !== lastDay) { h.push('<div class="day"><span class="sr">' + day + '</span>' + esc(labelHari(day)) + '</div>'); lastDay = day; prevType = null; }
+  if (day !== lastDay) { h.push('<div class="day" id="d-' + day + '"><span class="sr">' + day + '</span>' + esc(labelHari(day)) + '</div>'); lastDay = day; prevType = null; }
   const me = x.userType !== 'ARTIST';
   const cont = prevType === x.userType;
   prevType = x.userType;
