@@ -103,13 +103,14 @@ function secrets() {
   return data;
 }
 
-// {name} -> the matching secret, or the id zoner() found. A placeholder that neither can fill makes
-// the whole template unusable, so the button disappears instead of opening a broken link.
+// {name} -> the id zoner() found, or the matching value in the secret file as a fallback. A
+// placeholder that neither can fill makes the whole template unusable, so the button disappears
+// instead of opening a broken link.
 function fill(text) {
   const all = secrets();
   let missing = false;
   const out = String(text == null ? "" : text).replace(/\{([A-Za-z0-9_.-]+)\}/g, function (whole, name) {
-    const value = idOnly(all[name]) || quant;
+    const value = quant || idOnly(all[name]);
     if (!value) { missing = true; return ""; }
     return value;
   });
