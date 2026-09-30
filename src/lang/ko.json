@@ -116,6 +116,7 @@
   "gui.toL6": "읽어주셔서 감사합니다, 정말 감사해요!",
   "gui.toL7": "Happily Everafter",
   "gui.toDrive": "공유 Google Drive 열기",
+  "gui.toNoZip": "아직 이 방을 zip으로 만들지 않았어요 - 이 창에서 Generate zip을 먼저 누르고 다시 이 메시지를 열어주세요. Low quality가 훨씬 가볍습니다.",
   "gui.collectOffer": "{name}님께 공유할 만한 전체 백업: {v}",
   "gui.shareHas": "이미 zip이 있습니다: {v}",
   "gui.shareNone": "이 방의 zip은 아직 없습니다.",

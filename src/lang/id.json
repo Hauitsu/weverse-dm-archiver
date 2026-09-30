@@ -116,6 +116,7 @@
   "gui.toL6": "Terima kasih sudah membaca, aku sangat menghargainya!",
   "gui.toL7": "Happily Everafter",
   "gui.toDrive": "Buka Google Drive Bersama",
+  "gui.toNoZip": "Room ini belum kamu bungkus jadi zip - tekan Generate zip di jendela ini dulu, lalu buka lagi pesan ini. Versi Low quality jauh lebih ringan untuk dikirim.",
   "gui.collectOffer": "backup lengkap, layak dibagikan ke {name}: {v}",
   "gui.shareHas": "Zip sudah ada: {v}",
   "gui.shareNone": "Belum ada zip untuk room ini.",

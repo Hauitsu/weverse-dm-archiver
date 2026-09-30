@@ -80,7 +80,8 @@ Options:
   buttons update within a second, and a room added to `rooms.unis.json` appears on its own.
   A room backed up from the very start of the group's history (April 2025, and still reaching this
   month) also gets **Share to <name>** in that popup: pressing it shows the collector's short message
-  and a button that opens the shared drive folder to drop the zip into. Send the Low quality one,
+  and a button that opens the shared drive folder to drop the zip into; a room that has no zip yet
+  says so in that same message, pointing back at **Generate zip** in the window behind it. Send the Low quality one,
   350 MB against 2.5 GB. The same message comes up on its own once per install, right after the first
   run that leaves you holding such a room; rooms the collector already has (`collectOwned`) are never
   asked for.

@@ -116,6 +116,7 @@
   "gui.toL6": "Thank you for reading its really appreciated!",
   "gui.toL7": "Happily Everafter",
   "gui.toDrive": "Open Shared Google Drive",
+  "gui.toNoZip": "You have not packed this room yet - press Generate zip in this window first, then come back to this message. The Low quality zip is far smaller to send.",
   "gui.collectOffer": "a complete room, worth offering to {name}: {v}",
   "gui.shareHas": "Zip already exists: {v}",
   "gui.shareNone": "No zip for this room yet.",
