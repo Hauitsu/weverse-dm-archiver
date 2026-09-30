@@ -49,12 +49,17 @@
   document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") tutup(); });
   // Anything else on the page - a message, a photo, the theme switch - puts the panel away again. The
   // two icons are left alone: they carry their own toggle, so clicking them must not close twice.
-  var bar = document.getElementById("pico");
+  var bar = document.getElementById("icons");
   document.addEventListener("click", function (ev) {
     if (!p.classList.contains("buka")) return;
     var el = ev.target;
     if (!el || p.contains(el)) return;
     if (bar && bar.contains(el)) return;
+    // Belt and braces: whatever the lookup above returns, a click on one of the two icons must never
+    // close the panel that same click just opened.
+    if (el === bj || el === bb) return;
+    if (bj && bj.contains(el)) return;
+    if (bb && bb.contains(el)) return;
     tutup();
   });
   // A month chip or a bookmark link is meant to be followed: get the panel out of the way first.

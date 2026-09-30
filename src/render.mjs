@@ -573,7 +573,7 @@ h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
    buttons in the bottom-left corner asks for it. Fixed and full height, so the page behind it does
    not move; the message column only shifts aside when the window is really wide. bm.js keeps
    #bmlist and #bmnota up to date, this file only shows and hides them. */
-h.push('.pico{position:fixed;top:10px;right:12px;z-index:41;display:flex;gap:6px}');
+h.push('.icons{position:fixed;top:10px;right:12px;z-index:41;display:flex;gap:6px}');
 h.push('.ico{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-family:inherit;font-size:15px;line-height:1;border-radius:11px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
 h.push('.ico:hover{filter:brightness(1.08)}');
 h.push('.ico:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
@@ -689,15 +689,15 @@ h.push('html[data-tema="light"] .pane a:hover{background:#e9eef6}');
 h.push('html[data-tema="light"] .pane .bn{color:#6b7280}');
 h.push('@media (min-width:1180px){body.pnel{margin-right:min(320px,86vw)}}');
 h.push('body.pnel .tt{right:calc(min(320px,86vw) + 14px)}');
-h.push('body.pnel .pico{right:calc(min(320px,86vw) + 12px)}');
-h.push('@media (max-width:700px){body.pnel .tt,body.pnel .pico{opacity:0;pointer-events:none}}');
+h.push('body.pnel .icons{right:calc(min(320px,86vw) + 12px)}');
+h.push('@media (max-width:700px){body.pnel .tt,body.pnel .icons{opacity:0;pointer-events:none}}');
 /* The days-together chip and its swatch row: pinned to the top-right of the conversation like the
    day header is pinned to the top-left, so the two read as one HUD while the page scrolls. Built by
    src/ui.js so the export stays lean; the colours themselves are inline styles. The row is
    transparent to the mouse - only the pill itself takes clicks - so it never blocks a message. */
 h.push('.chip{position:sticky;top:var(--chip-atas,34px);z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
 // The two icons float over the top-right corner, so the sticky pill parks below them.
-h.push('body.pico .chip{top:calc(var(--chip-atas,34px) + 12px)}');
+h.push('body.has-icons .chip{top:calc(var(--chip-atas,34px) + 12px)}');
 h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
 // The heart button wears the colour that is picked, so the bar shows the live choice even while the
 // palette is closed; the icon flips with it (white on the deep set and on the grey, near-black on a
@@ -724,11 +724,11 @@ h.push('html[data-tema="light"] .chip input.hari{color:#17181c;background:#fff;b
 h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-shadow:0 14px 32px rgba(15,20,30,.22)}');
 h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
 h.push('html{color-scheme:dark}');
-h.push('</style></head><body' + (BM_ON ? ' class="pico"' : '') + '><div class="wrap">');
+h.push('</style></head><body' + (BM_ON ? ' class="has-icons"' : '') + '><div class="wrap">');
 // Two icon buttons in the top-right corner open the panel (src/panel.js); the theme switch keeps its
 // own pill in the bottom-right. The public export has no panel, so it gets no icons either.
 if (BM_ON) {
-  h.push('<div class="pico">');
+  h.push('<div class="icons" id="icons">');
   h.push('<button class="ico" id="pj" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelJump")) + '" aria-label="' + esc(t("html.panelJump")) + '">&#128197;</button>');
   h.push('<button class="ico" id="pb" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelBm")) + '" aria-label="' + esc(t("html.panelBm")) + '">&#9733;<span class="n" data-bmn-n>0</span></button>');
   h.push('</div>');
