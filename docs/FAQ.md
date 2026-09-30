@@ -125,6 +125,14 @@ fetched from a CDN. The avatar circles are optional: put your own `media/avatars
 `media/avatars/me.png` there before rendering and the page shows them next to the messages. Without
 those two files the page is rendered without avatars - no broken image, just no avatar.
 
+If you would rather see Apple's emoji, run `node tools/get-apple-emoji.mjs`. It fetches a release
+of [samuelngs/apple-emoji-ttf](https://github.com/samuelngs/apple-emoji-ttf), keeps only the emoji
+that appear in your archives and writes `media/fonts/apple-emoji.woff2`; the renderer prefers that
+file over Noto from then on and `--remove` deletes it. The file is deliberately kept out of the
+repo and out of the published files (Apple does not license redistribution, Noto is OFL), so a
+clone elsewhere still renders with Noto, and any emoji newer than the shipped cut simply falls
+back to the reader's own emoji font.
+
 ## Can I reuse an archive I made earlier?
 
 Yes. Put the old part files in their own folder under `downloads/`, named after the room:

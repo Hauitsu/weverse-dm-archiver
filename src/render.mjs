@@ -99,18 +99,28 @@ const FONT_REL = process.env.DM_FONT_REL || 'fonts';
 const FONT_CSS_NAMA = 'noto-emoji-curated.css';
 const cssFontPath = path.join(FONT_ABS, FONT_CSS_NAMA);
 const cssFont = fs.existsSync(cssFontPath) ? fs.readFileSync(cssFontPath, 'utf8') : '';
-// curated unicode-range list (reused when a local Apple font is present, so digits and punctuation keep the text font)
-const rangeKurasi = [...new Set(((cssFont.match(/unicode-range:[^;}]+/g) || []).map((x) => x.slice(14)).join(',').split(',')).map((s) => s.trim()))].filter(Boolean).join(',');
 const berkasFont = [...new Set((cssFont.match(new RegExp(FONT_REL + '/[A-Za-z0-9._-]+', 'g')) || []))].map((x) => path.basename(x));
 const fontSiap = !!cssFont && berkasFont.length > 0 && berkasFont.every((f) => fs.existsSync(path.join(FONT_ABS, f)));
+// The Apple font we ship is cut to the emoji shapes this archive uses, so it is offered for the
+// emoji blocks only: digits and punctuation stay in the text font.
+const rangeApple = "U+200D,U+20E3,U+FE0F,U+2190-21FF,U+2300-23FF,U+2460-24FF,U+25A0-27BF,U+2900-297F,U+2B00-2BFF,U+1F000-1FAFF";
 const extApple = ['woff2', 'ttf', 'otf'].find((e) => fs.existsSync(path.join(FONT_ABS, 'apple-emoji.' + e))) || null;
-if (fontSiap || extApple) fs.mkdirSync(path.join(OUT, FONT_REL), { recursive: true });
-if (fontSiap && !extApple) {
-  for (const f of berkasFont) fs.copyFileSync(path.join(FONT_ABS, f), path.join(OUT, FONT_REL, f));
+const fontDir = path.join(OUT, FONT_REL);
+if (fontSiap || extApple) {
+  fs.mkdirSync(fontDir, { recursive: true });
+  // This step only copies, so a build made with the other emoji font would leave its files behind
+  // and every export would carry both (~5 MB). Keep only what this build really uses.
   const lis = path.join(FONT_ABS, 'LICENSE-NotoColorEmoji.txt');
-  if (fs.existsSync(lis)) fs.copyFileSync(lis, path.join(OUT, FONT_REL, 'LICENSE-NotoColorEmoji.txt'));
+  const pakai = extApple ? ['apple-emoji.' + extApple] : berkasFont.slice();
+  if (!extApple && fs.existsSync(lis)) pakai.push('LICENSE-NotoColorEmoji.txt');
+  for (const f of fs.readdirSync(fontDir)) if (pakai.indexOf(f) < 0) { try { fs.rmSync(path.join(fontDir, f)); } catch (e) {} }
+  if (!extApple) {
+    for (const f of berkasFont) fs.copyFileSync(path.join(FONT_ABS, f), path.join(fontDir, f));
+    if (fs.existsSync(lis)) fs.copyFileSync(lis, path.join(fontDir, 'LICENSE-NotoColorEmoji.txt'));
+  } else {
+    fs.copyFileSync(path.join(FONT_ABS, 'apple-emoji.' + extApple), path.join(fontDir, 'apple-emoji.' + extApple));
+  }
 }
-if (extApple) fs.copyFileSync(path.join(FONT_ABS, 'apple-emoji.' + extApple), path.join(OUT, FONT_REL, 'apple-emoji.' + extApple));
 
 const stamp = (ms, offMin) => new Date(ms + offMin * 60000).toISOString().replace('T', ' ').slice(0, 19);
 const wib = (ms) => stamp(ms, TZ_MIN(ms));  // local time according to DM_TZ / DM_TZ_OFFSET
@@ -284,7 +294,7 @@ const h = [];
 h.push('<!doctype html><html lang="' + t.lang + '"><head><meta charset="utf-8">');
 h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title><style>');
-if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + (rangeKurasi ? ';unicode-range:' + rangeKurasi : '') + '}');
+if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
 h.push('body{font-family:NotoEmojiWeb,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
 h.push('.wrap{max-width:860px;margin:0 auto}h1{font-size:20px;margin-bottom:6px}');

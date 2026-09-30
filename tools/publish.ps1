@@ -53,7 +53,7 @@ if (Test-Path $privateList) {
 # 3. what is never copied (work output / large / local)
 # 3. what is never copied (work output / large / local)
 $skipDir = @(".git", "node_modules", "profile", "media", "downloads", "rooms", "dist", "share", ".vscode", "verify", "rooms-public")
-$skipPattern = @("^export", "\.log$", "\.zip$", "^config\.json$", "^\.env")
+$skipPattern = @("^export", "\.log$", "\.zip$", "^config\.json$", "^\.env", "^media/fonts/apple-emoji\.")
 # media/ is work output and can be gigabytes, but media/fonts/ is a shipped asset (the emoji font the
 # page links to). It is the only exempt path: everything else under media/ stays local.
 $keepRel     = @("media/fonts/")

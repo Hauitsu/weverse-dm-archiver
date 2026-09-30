@@ -4,6 +4,8 @@
 # directory ships with the repo (~2 MB).
 media/*
 !media/fonts/
+# the Apple emoji font stays on this machine only: Apple does not license redistribution, Noto does
+media/fonts/apple-emoji.*
 downloads/
 rooms/
 dist/
