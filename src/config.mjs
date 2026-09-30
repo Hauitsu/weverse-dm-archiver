@@ -16,12 +16,10 @@ export const DEFAULTS = {
   tz: "auto",
   roomsFile: "rooms.unis.json",
   output: "rooms",
-  // What the public export shows instead of the fan nickname. The name itself is found in the archive
-  // (the messages the fan sent carry it), so nothing has to be typed; a nickname that changes over
-  // time means every one of them is hidden.
-  publicAlias: "EverAfter",
-  // Optional extra find=replace pairs for the public export: name=Someone|other=Other. Deliberately
-  // never set as an environment variable, so the private export keeps the real text.
+  // Extra find=replace pairs for the public export: name=Someone|other=Other. The fan nickname itself
+  // needs no entry - it is read from the archive and always becomes EverAfter - so this is only for
+  // other strings. Deliberately never set as an environment variable: the private export keeps the
+  // harvested text untouched.
   publicRename: "",
   pacing: { minMs: 1500, maxMs: 3000 },
   textOnly: false,

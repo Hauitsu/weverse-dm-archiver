@@ -94,8 +94,6 @@ function page() {
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <input type=\"text\" id=\"tz\" list=\"tzs\" size=\"22\" value=\"" + esc(cfg.tz || "auto") + "\"></label>",
     "<datalist id=\"tzs\">" + opts + "</datalist>",
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div></details>",
-    "<div class=\"grid\" style=\"margin-top:10px\"><label>" + esc(tr("gui.rename")) + " <input type=\"text\" id=\"rename\" size=\"24\" value=\"" + esc(cfg.publicAlias || "EverAfter") + "\"></label>",
-    "<span class=\"muted\">" + esc(tr("gui.renameHint")) + "</span></div>",
     "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
     "<span id=\"phase\" class=\"muted\"></span></div>",
@@ -127,7 +125,7 @@ function page() {
     "  var ids=[];",
     "  document.querySelectorAll(\"#rooms input[data-slug]:checked\").forEach(function(c){ids.push(c.dataset.slug);});",
     "  if(!ids.length){alert(MSG.pick);return;}",
-    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value,alias:el(\"#rename\").value})});",
+    "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").checked,tz:el(\"#tz\").value})});",
     "  tick();",
     "}",
     "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
@@ -193,8 +191,7 @@ async function startJob(body) {
   if (!list.length) return;
   const share = body.share === true;
   if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
-    if (body.alias !== undefined && String(body.alias) !== String(cfg.publicAlias || "")) { try { cfg = saveConfig({ publicAlias: String(body.alias) }); } catch (e) {} }
-  running(true);
+      running(true);
   state.result = null; state.error = ""; state.log = []; state.percent = 0; state.progress = null; state.startedAt = Date.now();
   const tr = t();
   const results = [];

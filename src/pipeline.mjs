@@ -36,14 +36,15 @@ export function dirs(cfg) {
 
 export const srcFor = (slug) => path.join(REPO, "downloads", slug);
 
-// The public export is the one that leaves the house, so it never shows the fan nickname. The name
-// is already in the archive - the messages the fan sent carry it - so the alias is applied without
-// anyone typing the old name, and a nickname that changed over time hides every version of it.
-// publicRename stays available for extra find=replace pairs.
+// The public export is the one that leaves the house, so it never shows the fan nickname: that name
+// is already in the archive - every message the fan sent carries it - so nothing has to be typed or
+// configured, and a nickname that changed over time hides every version of it. The private export is
+// left alone and keeps the harvested name. publicRename stays available for extra find=replace pairs.
+export const PUBLIC_ALIAS = "EverAfter";
+
 export function publicRenameFor(cfg, slug) {
   const c = cfg || {};
-  const want = c.publicAlias == null || c.publicAlias === "" ? "EverAfter" : c.publicAlias;
-  const alias = String(want).trim().replace(/[|=]/g, "").trim() || "EverAfter";
+  const alias = PUBLIC_ALIAS;
   const extra = String(c.publicRename || "").split("|").map((s) => s.trim()).filter((s) => s.indexOf("=") > 0);
   const pairs = extra.slice();
   const done = new Set(extra.map((p) => p.slice(0, p.indexOf("=")).trim()));

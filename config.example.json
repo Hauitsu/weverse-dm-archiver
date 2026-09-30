@@ -4,7 +4,6 @@
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
   "output": "rooms",
-  "publicAlias": "EverAfter",
   "publicRename": "",
   "pacing": {
     "minMs": 1500,

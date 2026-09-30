@@ -80,8 +80,6 @@
   "gui.language": "Language",
   "gui.start": "Start",
   "gui.stop": "Stop",
-  "gui.rename": "Alias in the public export",
-  "gui.renameHint": "Your own Weverse nickname is read from the archive and swapped for this alias in the public export; your private copy keeps the real text, and nicknames you used in the past are hidden too.",
   "gui.result": "Result",
   "gui.openChat": "Open chat",
   "gui.openFolder": "Open folder",

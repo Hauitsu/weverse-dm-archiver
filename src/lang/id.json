@@ -80,8 +80,6 @@
   "gui.language": "Bahasa",
   "gui.start": "Mulai",
   "gui.stop": "Stop",
-  "gui.rename": "Alias di ekspor publik",
-  "gui.renameHint": "Nickname Weverse-mu dibaca dari arsip lalu diganti alias ini di ekspor publik; salinan privat tetap memakai teks asli, dan nickname lama yang pernah kamu pakai ikut disembunyikan.",
   "gui.result": "Hasil",
   "gui.openChat": "Buka obrolan",
   "gui.openFolder": "Buka folder",
