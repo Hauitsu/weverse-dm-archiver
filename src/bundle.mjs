@@ -202,8 +202,9 @@ export async function bundle(opts) {
   const zipPath = path.join(shareDir, zipName);
 
   // A manifest travels inside the zip too, so whoever receives it can see what it is without
-  // unpacking anything. The checksum cannot be in there (it is taken of the finished file), so it
-  // lives in the .sha256 and .manifest.json alongside the zip.
+  // unpacking anything. The checksum cannot be in there (it is taken of the finished file), so the
+  // .sha256 and .manifest.json are written to a verify/ subfolder: the folder you hand out then
+  // holds nothing but zips, which is the only thing a non-technical recipient should have to see.
   const inside = {
     archive: rootName, slug: slug, roomId: o.roomId || "", roomName: o.roomName || "", artist: o.artist || "",
     generatedAt: generatedAt, chatFiles: chatFiles, mediaFiles: mediaFiles, mediaBytes: mediaBytes,
