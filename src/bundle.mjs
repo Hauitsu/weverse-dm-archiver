@@ -119,6 +119,64 @@ function mediaRefs(roomDir, slug) {
   return out;
 }
 
+// How big the package will be, worked out from the very list bundle() packs instead of building one.
+// Photos and video are stored rather than deflated, so the finished zip lands within a fraction of a
+// percent of this number; the rest is the bookkeeping a zip adds per entry, counted here as well.
+// opts mirrors bundle(): slug, roomId, roomName, artist, roomDir, mediaDir, credit, lowQuality.
+export function estimateBundle(opts) {
+  const o = opts || {};
+  const slug = String(o.slug || "");
+  const rootName = "weverse-dm-" + slug;
+  const size = (p) => { try { return fs.statSync(p).size; } catch (e) { return 0; } };
+  const files = new Map();
+  // chat/ carries the same four names bundle() picks, and the per-room summary wins the same way.
+  for (const name of [slug + ".html", slug + ".md", slug + ".jsonl", "summary.json"]) {
+    const own = name === "summary.json" && fs.existsSync(path.join(o.roomDir, slug + ".summary.json")) ? slug + ".summary.json" : name;
+    const abs = path.join(o.roomDir, own);
+    if (fs.existsSync(abs)) files.set(rootName + "/chat/" + name, size(abs));
+  }
+  const chatFiles = files.size;
+  const fontsDir = path.join(o.roomDir, "fonts");
+  if (fs.existsSync(fontsDir)) for (const e of collect(fontsDir, "")) if (!e.dir) files.set(rootName + "/chat/fonts/" + e.name, size(e.abs));
+  // Only the media the packaged page points at travels, exactly as bundle() does it.
+  let mediaFiles = 0;
+  let mediaBytes = 0;
+  let missing = 0;
+  for (const rel of mediaRefs(o.roomDir, slug)) {
+    const abs = path.join(o.mediaDir, rel);
+    if (!fs.existsSync(abs)) { missing++; continue; }
+    const bytes = size(abs);
+    mediaFiles++;
+    mediaBytes += bytes;
+    files.set(rootName + "/media/" + rel.split(path.sep).join("/"), bytes);
+  }
+  // bundle() writes README.txt, index.html and manifest.json itself. The first two are pure text, so
+  // their size is exact; the manifest is pretty JSON around these same numbers, so it is close.
+  const stamp = "1970-01-01 00:00:00";
+  const text = readme({ slug: slug, roomName: o.roomName || slug, credit: o.credit || "", low: !!o.lowQuality }, stamp) +
+    indexHtml({ slug: slug, roomName: o.roomName || slug });
+  const manifest = {
+    archive: rootName, slug: slug, roomId: o.roomId || "", roomName: o.roomName || "", artist: o.artist || "",
+    generatedAt: stamp, chatFiles: chatFiles, mediaFiles: mediaFiles, mediaBytes: mediaBytes,
+    mediaBytesOriginal: mediaBytes, quality: o.lowQuality ? "low" : "full", recompressed: 0, keptOriginal: 0,
+    checksum: "see " + rootName + ".zip.sha256 in the verify/ folder next to share/",
+  };
+  let fileBytes = Buffer.byteLength(text, "utf8") + Buffer.byteLength(JSON.stringify(manifest, null, 2) + NL, "utf8");
+  for (const bytes of files.values()) fileBytes += bytes;
+  // Each entry pays for its name twice, once in the local header and once in the central directory,
+  // on top of the fixed headers; the archive then ends with one more fixed record.
+  const names = [rootName + "/README.txt", rootName + "/index.html", rootName + "/manifest.json", rootName + "/"];
+  const seenDir = new Set();
+  for (const name of files.keys()) {
+    names.push(name);
+    const dir = name.slice(0, name.lastIndexOf("/"));
+    if (dir && !seenDir.has(dir)) { seenDir.add(dir); names.push(dir + "/"); }
+  }
+  let overhead = 22;
+  for (const name of names) overhead += 76 + 2 * Buffer.byteLength(name, "utf8");
+  return { bytes: fileBytes + overhead, entries: names.length, chatFiles: chatFiles, mediaFiles: mediaFiles, mediaBytes: mediaBytes, missing: missing };
+}
+
 // Pack one room. Returns the paths it wrote, or throws with a readable reason.
 export async function bundle(opts) {
   const o = opts || {};

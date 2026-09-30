@@ -76,8 +76,9 @@ login tokens, and never touches the tab you are logged in on.
 
 Every room row carries its own **Share** button next to **Open**: it packs that single room into
 `share/` on the spot - full quality or re-compressed - and once a zip exists the same popup opens
-the folder that holds it. A room that was never run says so instead, because a zip is built from
-the public export and nothing else.
+the folder that holds it. The popup also says what that zip is expected to weigh, counted from the
+files that would go in, and the number follows the quality choice. A room that was never run says so
+instead, because a zip is built from the public export and nothing else.
 
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,

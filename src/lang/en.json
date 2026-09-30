@@ -109,6 +109,8 @@
   "gui.shareGenerate": "Generate zip",
   "gui.shareHas": "Zip already exists: {v}",
   "gui.shareNone": "No zip for this room yet.",
+  "gui.shareEst": "estimated zip: about {v}",
+  "gui.shareEstLow": "estimated zip: about {v} - low quality re-compresses the photos, so it lands smaller",
   "gui.shareNeedPub": "This room was never run, so there is no public export to pack yet. Run it once with Start first.",
   "gui.shareDone": "Done: {v}",
   "gui.shareFail": "Failed: {v}",

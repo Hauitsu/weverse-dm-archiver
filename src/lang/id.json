@@ -109,6 +109,8 @@
   "gui.shareGenerate": "Buat zip",
   "gui.shareHas": "Zip sudah ada: {v}",
   "gui.shareNone": "Belum ada zip untuk room ini.",
+  "gui.shareEst": "perkiraan zip: sekitar {v}",
+  "gui.shareEstLow": "perkiraan zip: sekitar {v} - kualitas rendah mengompres ulang fotonya, jadi lebih kecil",
   "gui.shareNeedPub": "Room ini belum pernah dijalankan, jadi belum ada public export untuk dikemas. Jalankan dulu lewat Start.",
   "gui.shareDone": "Selesai: {v}",
   "gui.shareFail": "Gagal: {v}",
