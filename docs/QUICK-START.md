@@ -163,3 +163,13 @@ under `media/` is downloaded output. The avatar circles come from `media/avatars
 (what `wdm labels` saves) or a shared `artist.png` / `me.png`. The emoji font the page links to
 already ships in `media/fonts/` (Apple); `node tools/get-apple-emoji.mjs` re-cuts it from upstream
 and `--remove` falls back to the bundled Noto font (see the FAQ).
+
+## Bookmarks (optional)
+
+Open the room DM together with its bookmark list in your own browser, then:
+
+    node src/cli.mjs bookmarks --room <slug>      # reads that panel, read-only, nothing is clicked
+    node src/cli.mjs render --room <slug>         # the private export picks the panel up on its own
+
+The public export never carries a bookmark. See the README, section Bookmarks, for how a preview is
+matched back to its message.
