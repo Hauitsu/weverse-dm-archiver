@@ -26,7 +26,7 @@ const OWNED = "yunha";
 // together, and tools/publish.ps1 checks the two against each other before publishing, so they cannot
 // drift apart. 0 means this copy carries no carrier at all. The walk-through for making one is the
 // author own notes, kept outside this repository.
-export const BLOB_SIZE = 0;
+export const BLOB_SIZE = 1024;
 const BLOB_DEPTH = 3;
 const BLOB_SKIP = [".git", "node_modules", "media", "rooms", "rooms-public", "downloads", "dist", "share", "verify", "profile", "export", "recon"];
 
