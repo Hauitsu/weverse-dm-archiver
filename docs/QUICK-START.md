@@ -91,7 +91,8 @@ Options:
   from its own measured rate, and the shareable zip adds roughly the same again at **Yes** - a
   re-compressed one adds far less, and **No** adds nothing.
 - **Advanced settings** - collapsed, so you can ignore it. Two settings live in `config.json`
-  rather than here: `ffmpegPath`, for when `ffmpeg` is not on your `PATH`, and `estimateGb`. The time
+  rather than here: `ffmpegPath`, for when `ffmpeg` is not on your `PATH`, and `estimateGb`. The file
+  is read again whenever it changes, so an edit takes effect on the next poll - no restart needed. The time
   zone lives there in the picker: `auto`
   follows the machine, or pick a zone from the list (`Asia/Jakarta`) to pin one. The timestamps in the
   archive are the only thing it changes.

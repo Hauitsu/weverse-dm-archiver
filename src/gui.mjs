@@ -28,6 +28,18 @@ function flag(name, fallback) {
 }
 
 let cfg = loadConfig();
+// config.json can be edited while the page is open - the collector link, the debug switch. Rather than
+// holding a stale copy until the next restart, notice the change on the next request and re-read it. A
+// file that stopped parsing is left alone, so a stray comma cannot take the page down.
+let cfgSig = "";
+function cfgWatch() {
+  try {
+    const st = fs.statSync(CONFIG_FILE);
+    const sig = st.mtimeMs + " " + st.size;
+    if (sig !== cfgSig) { cfgSig = sig; cfg = loadConfig(CONFIG_FILE); }
+  } catch (e) {}
+  return cfg;
+}
 const state = {
   phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false,
   log: [], result: null, error: "", startedAt: 0,
@@ -261,8 +273,8 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "<div id=\"toTitle\" style=\"font-size:16px;font-weight:600;margin-bottom:12px\"></div>",
 "<div id=\"toChat\" style=\"display:flex;flex-direction:column;gap:8px;align-items:flex-start\"></div>",
 "<div id=\"toHint\" class=\"muted\" style=\"display:none;margin-top:12px\"></div>",
-"<div class=\"grid\" style=\"margin-top:16px\"><button id=\"toGo\" class=\"primary\">" + esc(tr("gui.toDrive")) + "</button>",
-"<button id=\"toClose\">" + esc(tr("gui.cancel")) + "</button></div></div></div>",
+"<div class=\"grid\" style=\"margin-top:16px\"><button id=\"toGo\" class=\"primary\">" + esc(tr("gui.toDrive", { name: cfg.collectName })) + "</button>",
+"<button id=\"toClose\">" + esc(tr("gui.toClose")) + "</button></div></div></div>",
     "<div id=\"under\" style=\"display:none\">",
     "<section>",
     "<div class=\"grid\" style=\"margin-top:8px;position:relative\"><span id=\"total\" class=\"muted\"></span>",
@@ -303,6 +315,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     // this popup is about, so the same message covers the surprise that lists several at once.
     "MSG.toTitle=" + JSON.stringify(tr("gui.toTitle")) + ";",
     "MSG.toNoZip=" + JSON.stringify(tr("gui.toNoZip")) + ";",
+    "MSG.toNoLink=" + JSON.stringify(tr("gui.toNoLink")) + ";",
     "var TO=[" + [tr("gui.toL1"), tr("gui.toL2"), tr("gui.toL3"), tr("gui.toL4"), tr("gui.toL5"), tr("gui.toL6"), tr("gui.toL7")].map(function(s){return JSON.stringify(s);}).join(",") + "];",
     "function em(s){return esc(String(s)).replace(/\\*\\*([^*]+)\\*\\*|\\*([^*]+)\\*/g,function(m,b,i){return b!==undefined?\"<strong>\"+b+\"</strong>\":\"<em>\"+i+\"</em>\";});}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
@@ -504,7 +517,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#shClose\").addEventListener(\"click\",hideShare);",
     "el(\"#shFolder\").addEventListener(\"click\",function(){if(shSlug)openItSlug(\"shareFolder\",shSlug);});",
     "el(\"#shTo\").addEventListener(\"click\",function(){var h=roomInfo(shSlug)||{};showCollect([h.name||h.label||shSlug],!h.zip);});",
-    "el(\"#toGo\").addEventListener(\"click\",function(){openIt(\"collect\");});",
+    "el(\"#toGo\").addEventListener(\"click\",function(){fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"collect\"})}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok)alert(MSG.toNoLink);}).catch(function(){alert(MSG.toNoLink);});});",
     "el(\"#toClose\").addEventListener(\"click\",hideCollect);",
     "el(\"#toModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#toModal\"))hideCollect();});",
     "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))hideShare();});",
@@ -656,6 +669,7 @@ async function startJob(body) {
 }
 
 async function handle(req, res) {
+  cfgWatch();
   const url = String(req.url || "/").split("?")[0];
   const q = new URL(String(req.url || "/"), "http://127.0.0.1").searchParams;
   const json = (code, obj) => { res.writeHead(code, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
