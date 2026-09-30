@@ -62,7 +62,7 @@
   "gui.rooms": "Rooms",
   "gui.selectAll": "Select all",
   "gui.selectNone": "Clear",
-  "gui.sizeHint": "the size is a rough guess until a room has been saved once",
+  "gui.sizeHint": "if multiple rooms are selected it will all be processed at once",
   "gui.sizeSaved": "{v} GB saved",
   "gui.totalSel": "selected {n} room(s) - whole conversation up to {v}",
   "gui.totalNone": "nothing selected yet",

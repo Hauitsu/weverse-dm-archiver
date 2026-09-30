@@ -62,7 +62,7 @@
   "gui.rooms": "Daftar ruang",
   "gui.selectAll": "Pilih semua",
   "gui.selectNone": "Kosongkan",
-  "gui.sizeHint": "perkiraan ukuran masih kasar sampai ruang itu pernah disimpan",
+  "gui.sizeHint": "kalau beberapa ruang dipilih, semuanya diproses sekaligus",
   "gui.sizeSaved": "{v} GB tersimpan",
   "gui.totalSel": "{n} ruang dipilih - seluruh percakapan maksimal {v}",
   "gui.totalNone": "belum ada ruang yang dipilih",
