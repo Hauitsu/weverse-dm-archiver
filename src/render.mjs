@@ -450,7 +450,7 @@ h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document
 h.push('<style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
-h.push('body{font-family:-apple-system,Segoe UI,Roboto,sans-serif,NotoEmojiWeb;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
+h.push('body{font-family:-apple-system,Segoe UI,Roboto,sans-serif,NotoEmojiWeb;background:#000;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
 h.push('.wrap{max-width:860px;margin:0 auto}h1{font-size:20px;margin-bottom:6px}');
 // The header names the backup, not the room: the room moves down under the bookmark box as a
 // profile picture with its name (see .kepala). "by Hauitsu" rides along in grey.
@@ -466,7 +466,9 @@ h.push('.kepala .rid{color:#8b93a1;font-size:12px;margin-top:2px}');
 h.push('.nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}');
 h.push('.nav a{color:#9ecbff;background:#161b24;border:1px solid #232833;border-radius:6px;padding:3px 8px;font-size:12px;text-decoration:none}');
 h.push('.nav a:hover{background:#1d2531}');
-h.push('.day{position:sticky;top:0;z-index:30;background:#0f1115;padding:10px 0 6px;font-size:13px;color:#8b93a1;border-bottom:1px solid #232833;margin-top:6px}');
+// The day band is sticky, so it has to wear the page colour exactly - otherwise the message
+// scrolling underneath shows through as a grey seam under the date.
+h.push('.day{position:sticky;top:0;z-index:30;background:#000;padding:10px 0 6px;font-size:13px;color:#8b93a1;border-bottom:1px solid #232833;margin-top:6px}');
   // In the page but out of sight: the ISO date stays reachable for find-on-page and screen readers.
   h.push('.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}');
 h.push('.m{display:flex;gap:8px;align-items:flex-start;margin-top:8px}');

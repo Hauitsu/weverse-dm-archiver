@@ -22,8 +22,10 @@ login tokens, and never touches the tab you are logged in on.
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
 - a light theme for the page itself, switched from the round button in the bottom-right corner: there your own
   bubble is near-white (`#f2f3f7`) and the artist's starts on the pastel cyan (`#bbf3f6`), while the dark
-  theme shows that same pick deep (`#016268` with white letters, beside your `#1f1f1f`); one nickname grey
-  (`#666666`) on both sides in both themes, and the choice is remembered per browser - dark stays the default
+  theme shows that same pick deep (`#016268` with white letters, beside your `#1f1f1f`), and it paints the
+  page behind them pure black (`#000`) - the sticky day band wears the same black, so nothing shows through
+  under the date; one nickname grey (`#666666`) on both sides in both themes, and the choice is remembered
+  per browser - dark stays the default
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
   scrolls, parking just under the day header so the two read as one HUD. The number is **live** -
   every day you open the archive it says one more - and behind it sit the app's ten bubble colours:
