@@ -46,6 +46,9 @@ Options:
 - **Language (top of the page)** - English, Korean or Indonesian. It switches the whole tool at
   once: the page, the log lines and the exported chat all follow it. `auto` in `config.json`
   follows the Windows language instead.
+- **If the login finished but the tool does not notice** - press **I'm logged in - continue** during the
+  login step. It only asks for the next check right away (2.5 s becomes 0.25 s); it cannot skip the
+  token check, so a wrong press simply keeps waiting.
 - **Also make a shareable zip** - ticked by default. After the room is done it writes
   `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three languages. Only
   artist messages and media are inside; your own messages are left out.

@@ -9,7 +9,7 @@ import path from "node:path";
 import http from "node:http";
 import { loadConfig, saveConfig, CONFIG_FILE } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, GIB } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, canHurry, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
 
 const NL = String.fromCharCode(10);
@@ -23,7 +23,7 @@ function flag(name, fallback) {
 
 let cfg = loadConfig();
 const state = {
-  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false,
+  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0,
   log: [], result: null, error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -101,7 +101,7 @@ function page() {
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
-    "<button id=\"bAuthed\" style=\"display:none\">" + esc(tr("gui.authed")) + "</button>",
+    "<span id=\"authedWrap\" style=\"display:none\"><span class=\"muted\">" + esc(tr("gui.authedHint")) + "</span> <button id=\"bAuthed\">" + esc(tr("gui.authed")) + "</button></span>",
     "<span id=\"phase\" class=\"muted\"></span></div>",
     "<div id=\"bar\"><i id=\"fill\"></i></div></section>",
     // The same sentence that sits under the buttons, repeated as a confirmation: starting really does
@@ -159,7 +159,8 @@ function page() {
     "  el(\"#fill\").style.width=(s.percent||0)+\"%\";",
     "  var box=el(\"#log\"); box.textContent=s.log.join(String.fromCharCode(10)); box.scrollTop=box.scrollHeight;",
     "  el(\"#start\").disabled=s.running; el(\"#stop\").disabled=!s.running;",
-    "  el(\"#bAuthed\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
+    "  el(\"#authedWrap\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
+    "  el(\"#bAuthed\").disabled=!s.canHurry;",
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "}",
@@ -190,13 +191,15 @@ function stateJson() {
   const key = "gui.phase." + state.phase;
   let text = tr(key);
   if (text === key) text = state.phase;
+  // While the login wait runs, say what is actually being waited for instead of "Starting the browser".
+  if (state.phase === "browser" && state.loginWait) text = tr("gui.loginHint");
   if (state.error) text = tr("gui.phase.error") + ": " + state.error;
   if (state.slug && (state.phase === "harvest" || state.phase === "media" || state.phase === "render")) {
     text += " - " + state.roomName + (state.progress ? " (" + state.progress.line + ")" : "");
   }
   if (state.phase === "idle") state.percent = 0;
   return {
-    phase: state.phase, phaseText: text, running: state.running, percent: state.percent,
+    phase: state.phase, phaseText: text, running: state.running, percent: state.percent, canHurry: canHurry(state),
     log: state.log, result: state.result, error: state.error,
   };
 }
@@ -227,12 +230,13 @@ async function startJob(body) {
     setPhase("browser");
     push(tr("gui.loginHint"));
     // The login wait is automatic; the button only shortens the pause before the next check.
-    state.hurry = false;
+    state.hurry = false; state.loginWait = true; state.loginAt = Date.now();
     const session = await openSession({
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
       hurryLog: tr("gui.checkNow"),
     });
+    state.loginWait = false;
     if (session.error) {
       state.error = session.error === "no-browser" ? tr("gui.noBrowser") : session.error;
       setPhase("error");

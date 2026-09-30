@@ -199,6 +199,14 @@ export async function renderRoom(o) {
   });
 }
 
+// The login wait gets a full minute before the page offers the "I'm logged in" button: a click a few
+// seconds in is almost always impatience, and the button only asks for the next check anyway.
+export const HURRY_AFTER_MS = 60000;
+export function canHurry(st, now) {
+  if (!st || !st.loginWait || st.phase !== "browser") return false;
+  return Number(now || Date.now()) - Number(st.loginAt || 0) >= HURRY_AFTER_MS;
+}
+
 // The public export is the shareable twin of the private one, and lives next to it so the relative
 // "../media" links keep working from both.
 export const publicDirFor = (cfg) => path.join(dirs(cfg).rooms, "public");
