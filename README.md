@@ -51,7 +51,7 @@ including what each message means, is in `docs/QUICK-START.md`.
 | command | what it does |
 | --- | --- |
 | `wdm rooms` | list the rooms in `rooms.unis.json` and what is already archived |
-| `wdm labels` | read the room names off the DM list into `rooms.unis.json` (emoji and all) |
+| `wdm labels` | read the room names off the DM list into `rooms.unis.json` (emoji and all), and saves each room's profile picture |
 | `wdm harvest --room yunha` | walk the history backwards (starts the private browser) |
 | `wdm render --room yunha` | build both exports (private + public) from what is on disk |
 | `wdm media --room yunha` | download the photos and video the export points at |
@@ -81,11 +81,12 @@ Rooms never share a folder under `downloads/`, so one room history can never lea
 room export. The export always points at the original media, so there is no quality knob: one
 room is roughly 2.5 GB, almost all of it photos and video.
 
-`media/fonts/` is the one exception to "media is downloaded output": the emoji font ships with the
-repo (Noto Color Emoji, OFL-1.1), so a fresh clone renders the page the same way on every machine
-and never loads a font from the internet. The avatar circles are optional - drop your own
-`media/avatars/artist.png` and `media/avatars/me.png` there before rendering and the page shows
-them next to the messages; without those two files the page is simply rendered without avatars.
+`media/fonts/` is the one exception to "media is downloaded output": the emoji fonts ship with the
+repo (Apple Color Emoji, with Noto Color Emoji as the OFL-1.1 fallback), so a fresh clone renders the
+page the same way on every machine and never loads a font from the internet. The avatar circles are
+optional: `wdm labels` saves one picture per room as `media/avatars/<room>-artist.<ext>`, and a shared
+`media/avatars/artist.png` / `me.png` still works as the fallback. With none of those files the page is
+simply rendered without avatars.
 
 Apple's emoji are what the page uses: `media/fonts/apple-emoji.woff2` ships with the repo, cut
 down to the emoji your archives actually use (about 3 MB), so a fresh clone renders with Apple

@@ -97,7 +97,8 @@ warning with a count when it does not.
 From `rowLabel` in `rooms.unis.json`: the text the DM list shows for that room, emoji included. It
 is what the page calls the room - the `<h1>`, the meta line, and the name above the artist's
 bubbles. The DM API does not carry the artist's own name (every message, on both sides, is labelled
-with *your* nickname), so the list page is the only place to read it. `wdm labels` reads the names
+with *your* nickname), so the list page is the only place to read it. `wdm labels` also saves the profile pictures the rows point at as `media/avatars/<room>-artist`,
+which is what puts a face next to the messages. `wdm labels` reads the names
 off `https://dm.weverse.io/` in the tool's own browser window; `wdm labels --snippet` prints that
 probe if you would rather paste it into DevTools yourself, and `wdm labels --from names.json`
 imports the result. Re-render afterwards (`wdm render --room <slug>`), and rebuild any zip that
@@ -132,9 +133,10 @@ Everything is offline: the page reads the files next to it and never touches the
 
 The emoji font ships with the repo in `media/fonts/` (Noto Color Emoji, OFL-1.1), so the page looks
 the same on every machine instead of depending on what the visitor has installed, and nothing is
-fetched from a CDN. The avatar circles are optional: put your own `media/avatars/artist.png` and
-`media/avatars/me.png` there before rendering and the page shows them next to the messages. Without
-those two files the page is rendered without avatars - no broken image, just no avatar.
+fetched from a CDN. The avatar circles are optional: `wdm labels` saves the picture each room shows
+as `media/avatars/<room>-artist.<ext>`, and you can also drop a shared `media/avatars/artist.png`
+(plus `me.png` for your own side) there before rendering. Without any of those files the page is
+rendered without avatars - no broken image, just no avatar.
 
 The page prefers Apple's emoji: `media/fonts/apple-emoji.woff2` ships with the repo, cut down to
 the emoji that appear in your archives (~3 MB). `node tools/get-apple-emoji.mjs` rebuilds it from
