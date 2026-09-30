@@ -202,9 +202,15 @@ export async function renderRoom(o) {
 // The login wait gets a full minute before the page offers the "I'm logged in" button: a click a few
 // seconds in is almost always impatience, and the button only asks for the next check anyway.
 export const HURRY_AFTER_MS = 60000;
-export function canHurry(st, now) {
-  if (!st || !st.loginWait || st.phase !== "browser") return false;
-  return Number(now || Date.now()) - Number(st.loginAt || 0) >= HURRY_AFTER_MS;
+// A minute after that first claim the very same button turns into a plain Retry. Nothing retries on
+// its own: the wait is still automatic, the button only says that the last claim did not land yet.
+export const HURRY_RETRY_AFTER_MS = 60000;
+// "" hide it, "ready" -> "I'm logged in", "retry" -> "Retry".
+export function hurryMode(st, now) {
+  if (!st || !st.loginWait || st.phase !== "browser") return "";
+  const t = Number(now || Date.now());
+  if (!st.hurryFirstAt) return t - Number(st.loginAt || 0) >= HURRY_AFTER_MS ? "ready" : "";
+  return t - Number(st.hurryFirstAt) >= HURRY_RETRY_AFTER_MS ? "retry" : "ready";
 }
 
 // The public export is the shareable twin of the private one, and lives next to it so the relative

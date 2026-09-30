@@ -89,6 +89,7 @@
   "gui.cancel": "Cancel",
   "gui.authedHint": "login success but not detected? click this button:",
   "gui.authed": "I'm logged in - continue",
+  "gui.retry": "Retry",
   "gui.checkNow": "Looking at the browser window again now...",
   "gui.result": "Result",
   "gui.openChat": "Open chat",

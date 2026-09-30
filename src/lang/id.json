@@ -89,6 +89,7 @@
   "gui.cancel": "Batal",
   "gui.authedHint": "sudah login tapi tidak terdeteksi? klik tombol ini:",
   "gui.authed": "Saya sudah login - lanjut",
+  "gui.retry": "Coba lagi",
   "gui.checkNow": "Melihat lagi jendela browser sekarang...",
   "gui.result": "Hasil",
   "gui.openChat": "Buka obrolan",

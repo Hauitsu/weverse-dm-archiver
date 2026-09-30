@@ -53,7 +53,8 @@ Options:
 - **If the login finished but the tool does not notice** - after a minute of waiting, the line reads
   "login success but not detected?" and the **I'm logged in - continue** button appears. It only asks
   for the next check right away (2.5 s becomes 0.25 s); it cannot skip the token check, so a wrong
-  press simply keeps waiting.
+  press simply keeps waiting. A minute after that press the button turns into **Retry** - nothing
+  retries on its own, you decide when it is worth another look.
 - **Also make a shareable zip** - three choices, remembered in `config.json`. **Yes** (the default)
   writes `dist/weverse-dm-<room>.zip` with the public chat, its media and a README in three
   languages; only artist messages and media are inside, your own messages are left out. **Yes but Low

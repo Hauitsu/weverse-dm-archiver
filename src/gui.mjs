@@ -9,7 +9,7 @@ import path from "node:path";
 import http from "node:http";
 import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, canHurry, GIB } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, hurryMode, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
 
 const NL = String.fromCharCode(10);
@@ -23,7 +23,7 @@ function flag(name, fallback) {
 
 let cfg = loadConfig();
 const state = {
-  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0,
+  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0,
   log: [], result: null, error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -146,7 +146,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<section id=\"logBox\" style=\"display:none\"><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "</div>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + "};",
     "function el(s){return document.querySelector(s);}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
     "var GIB=1073741824;",
@@ -202,7 +202,8 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#fill\").style.width=(s.percent||0)+\"%\";",
     "  var box=el(\"#log\"); box.textContent=s.log.join(String.fromCharCode(10)); box.scrollTop=box.scrollHeight;",
     "  el(\"#start\").disabled=s.running; el(\"#stop\").disabled=!s.running;",
-    "  el(\"#authedWrap\").style.display=s.canHurry?\"\":\"none\";",
+    "  el(\"#authedWrap\").style.display=s.hurryMode?\"\":\"none\";",
+    "  el(\"#bAuthed\").textContent=(s.hurryMode===\"retry\")?MSG.retry:MSG.authed;",
     "  el(\"#loginNote\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
     "  under(!!s.running||!!s.result);",
@@ -243,7 +244,7 @@ function stateJson() {
   }
   if (state.phase === "idle") state.percent = 0;
   return {
-    phase: state.phase, phaseText: text, running: state.running, percent: state.percent, canHurry: canHurry(state),
+    phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
     log: state.log, result: state.result, error: state.error,
   };
 }
@@ -280,7 +281,7 @@ async function startJob(body) {
     setPhase("browser");
     push(tr("gui.loginHint"));
     // The login wait is automatic; the button only shortens the pause before the next check.
-    state.hurry = false; state.loginWait = true; state.loginAt = Date.now();
+    state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0;
     const session = await openSession({
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
@@ -346,7 +347,7 @@ async function handle(req, res) {
   if (req.method === "GET" && url === "/api/state") { json(200, stateJson()); return; }
   if (req.method === "POST" && url === "/api/start") { const b = await readBody(req); startJob(b); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/stop") { stopFlag = true; push("stop requested, finishing the current step"); json(200, { ok: true }); return; }
-  if (req.method === "POST" && url === "/api/hurry") { state.hurry = true; json(200, { ok: true }); return; }
+  if (req.method === "POST" && url === "/api/hurry") { state.hurry = true; if (!state.hurryFirstAt) state.hurryFirstAt = Date.now(); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/config") {
     const b = await readBody(req);
     if (b.language) { try { cfg = saveConfig({ language: String(b.language) }); } catch (e) {} }
