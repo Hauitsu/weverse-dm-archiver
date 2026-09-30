@@ -18,6 +18,13 @@ import { makeT } from './i18n.mjs';
 loadConfig();
 const t = makeT();
 
+// Day headings read the way the app writes them: "Sat, Sep 26, 2026". The locale that owns the
+// dictionary decides the wording, so Korean gets "2026년 9월 26일 (토)" and Indonesian "Sab, 26 Sep 2026".
+// The date is built at noon UTC so the weekday never depends on the machine time zone.
+const LOCALE_HARI = { en: "en-US", ko: "ko-KR", id: "id-ID" }[t.lang] || t.lang;
+const fmtHari = new Intl.DateTimeFormat(LOCALE_HARI, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const labelHari = (day) => { try { return fmtHari.format(new Date(day + "T12:00:00Z")); } catch (e) { return day; } };
+
 const ROOT = process.cwd();
 const SRC_DIR = process.env.DM_SRC || path.join(ROOT, 'downloads');
 const OUT = process.env.DM_EXPORT || path.join(ROOT, 'export');
@@ -278,7 +285,7 @@ md.push('---');
 let lastDay = '';
 for (const x of norm) {
   const day = x.isoWib.slice(0, 10);
-  if (day !== lastDay) { md.push(''); md.push('## ' + day); md.push(''); lastDay = day; }
+  if (day !== lastDay) { md.push(''); md.push('## ' + labelHari(day)); md.push(''); lastDay = day; }
   const who = x.userType === 'ARTIST' ? '**' + ARTIST_NAME + '**' : (x.nickname || t("md.fan"));
   const bm = bmAda.get(x.messageId) || null;
   let body = x.text.split(NL).join('  ' + NL);
@@ -330,6 +337,8 @@ h.push('.nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}');
 h.push('.nav a{color:#9ecbff;background:#161b24;border:1px solid #232833;border-radius:6px;padding:3px 8px;font-size:12px;text-decoration:none}');
 h.push('.nav a:hover{background:#1d2531}');
 h.push('.day{position:sticky;top:0;z-index:30;background:#0f1115;padding:10px 0 6px;font-size:13px;color:#8b93a1;border-bottom:1px solid #232833;margin-top:6px}');
+  // In the page but out of sight: the ISO date stays reachable for find-on-page and screen readers.
+  h.push('.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}');
 h.push('.m{display:flex;gap:8px;align-items:flex-start;margin-top:8px}');
 h.push('.m.cont{align-items:flex-start}');
 h.push('.m.me{flex-direction:row-reverse}');
@@ -425,7 +434,7 @@ for (const x of norm) {
   const mo = x.isoWib.slice(0, 7);
   if (mo !== lastMonth) { h.push('<div id="mo-' + mo + '"></div>'); lastMonth = mo; }
   // The day divider carries the date only: the zone is stated once, in the header at the top.
-  if (day !== lastDay) { h.push('<div class="day">' + day + '</div>'); lastDay = day; prevType = null; }
+  if (day !== lastDay) { h.push('<div class="day"><span class="sr">' + day + '</span>' + esc(labelHari(day)) + '</div>'); lastDay = day; prevType = null; }
   const me = x.userType !== 'ARTIST';
   const cont = prevType === x.userType;
   prevType = x.userType;
