@@ -9,7 +9,7 @@ import path from "node:path";
 import http from "node:http";
 import { loadConfig, saveConfig, CONFIG_FILE } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, GIB } from "./pipeline.mjs";
 import { openExternal } from "./browser.mjs";
 
 const NL = String.fromCharCode(10);
@@ -48,9 +48,10 @@ function page() {
   const machine = "auto (" + (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") + ")";
   const rows = list.map((r) => {
     const e = estimateFor(cfg, r);
-    const size = e.known ? tr("gui.sizeMeasured") : tr("gui.sizeGuess", { v: (e.bytes / 1073741824).toFixed(1) });
+    const size = e.measured ? tr("gui.sizeSaved", { v: (e.saved / GIB).toFixed(1) }) : tr("gui.sizeGuess", { v: (e.bytes / GIB).toFixed(1) });
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
-    return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\">" +
+    // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
+    return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
       "<span class=\"nm\">" + esc(r.rowLabel || r.slug) + "</span>" +
       "<span class=\"who\">" + esc(a) + "</span><span class=\"id\">" + esc(r.roomId) + "</span>" +
       "<span class=\"sz\">" + esc(size) + "</span></label>";
@@ -81,6 +82,8 @@ function page() {
     "<button id=\"bNone\">" + esc(tr("gui.selectNone")) + "</button>",
     "<span class=\"muted\">" + esc(tr("gui.sizeHint")) + "</span></div>",
     "<div id=\"rooms\">" + rows + "</div>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><span id=\"total\" class=\"muted\"></span></div>",
+    "<p class=\"muted\">" + esc(tr("gui.estHint", { v: Number(cfg.estimateGb || 2.5).toFixed(1) })) + "</p>",
     "<p class=\"muted\">" + esc(tr("gui.browserHint")) + "</p>",
     "<div class=\"grid\"><label><input type=\"checkbox\" id=\"share\"> " + esc(tr("gui.share")) + "</label>",
     "<span class=\"muted\">" + esc(tr("gui.shareHint")) + "</span></div>",
@@ -104,9 +107,19 @@ function page() {
 
     "<section><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + "};",
     "function el(s){return document.querySelector(s);}",
-    "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});}",
+    "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
+    "var GIB=1073741824;",
+    "function total(){",
+    "  var n=0,full=0,saved=0;",
+    "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){if(!c.checked)return;n++;full+=Number(c.dataset.full||0);saved+=Number(c.dataset.saved||0);});",
+    "  if(!n){el(\"#total\").textContent=MSG.none;return;}",
+    "  var t=MSG.total.replace(\"{n}\",n).replace(\"{v}\",(full/GIB).toFixed(1));",
+    "  if(saved>0)t+=MSG.savedNote.replace(\"{s}\",(saved/GIB).toFixed(1));",
+    "  if(el(\"#share\").checked)t+=MSG.zipNote.replace(\"{z}\",(full/GIB).toFixed(1));",
+    "  el(\"#total\").textContent=t;",
+    "}",
     "async function start(){",
     "  var ids=[];",
     "  document.querySelectorAll(\"#rooms input[data-slug]:checked\").forEach(function(c){ids.push(c.dataset.slug);});",
@@ -129,12 +142,15 @@ function page() {
     "}",
     "el(\"#bAll\").addEventListener(\"click\",function(){all(true);});",
     "el(\"#bNone\").addEventListener(\"click\",function(){all(false);});",
+    "el(\"#rooms\").addEventListener(\"change\",total);",
+    "el(\"#share\").addEventListener(\"change\",total);",
     "el(\"#start\").addEventListener(\"click\",start);",
     "el(\"#stop\").addEventListener(\"click\",stop);",
     "el(\"#bChat\").addEventListener(\"click\",function(){openIt(\"chat\");});",
     "el(\"#bFolder\").addEventListener(\"click\",function(){openIt(\"folder\");});",
     "el(\"#bZip\").addEventListener(\"click\",function(){openIt(\"zip\");});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
+    "total();",
     "setInterval(tick,1000); tick();",
     "</script></body></html>",
   ].join(NL);

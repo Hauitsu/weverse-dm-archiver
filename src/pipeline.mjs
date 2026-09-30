@@ -52,16 +52,67 @@ export function keepSummary(slug, outDir) {
   try { fs.copyFileSync(path.join(outDir, "summary.json"), path.join(outDir, slug + ".summary.json")); return true; } catch (e) { return false; }
 }
 
-// How much disk a room will take, for the picker. A measured room reports what it really used.
-export function estimateFor(cfg, room) {
+// The DM history of this group begins in April 2025, so "the whole conversation" has a known window.
+export const DM_START_MONTH = "2025-04";
+export const GIB = 1073741824;
+const monthIndex = (ym) => Number(ym.slice(0, 4)) * 12 + (Number(ym.slice(5, 7)) - 1);
+const monthsBetween = (a, b) => monthIndex(b) - monthIndex(a) + 1;
+const thisMonth = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+
+// What one room has really used: its three chat files plus every media file its own page points at.
+// The shared emoji font is left out on purpose - it is about 2 MB and belongs to no single room.
+function savedBytes(cfg, slug) {
   const d = dirs(cfg);
-  try {
-    const j = JSON.parse(fs.readFileSync(path.join(d.rooms, room.slug + ".summary.json"), "utf8"));
-    if (Number(j.mediaLokal) > 0) return { known: true, bytes: null, messages: Number(j.entriMentah || 0) || null };
-  } catch (e) {}
-  const archived = readArchive(srcFor(room.slug));
-  const gb = Number((cfg && cfg.estimateGb) || 2.5);
-  return { known: false, bytes: Math.round(gb * 1073741824), messages: archived.seen.size || null };
+  let total = 0;
+  for (const f of [slug + ".html", slug + ".md", slug + ".jsonl"]) {
+    try { total += fs.statSync(path.join(d.rooms, f)).size; } catch (e) {}
+  }
+  if (!total) return null;
+  const seen = new Set();
+  for (const dir of [d.rooms, path.join(d.rooms, "public")]) {
+    let html = "";
+    try { html = fs.readFileSync(path.join(dir, slug + ".html"), "utf8"); } catch (e) { continue; }
+    for (const hit of html.match(/\.\.\/media\/[^"'\s)\\<>]+/g) || []) {
+      if (seen.has(hit)) continue;
+      seen.add(hit);
+      try { total += fs.statSync(path.join(d.media, hit.slice("../media/".length))).size; } catch (e) {}
+    }
+  }
+  return total;
+}
+
+// How much disk a room takes, for the picker: what is on disk right now (`saved`) and what the whole
+// conversation is expected to cost (`full`). A saved room projects the average size of the months it
+// already covers onto the months still missing, so a half-finished walk shows what finishing costs;
+// a room with nothing on disk falls back to the reference room measured at cfg.estimateGb.
+export function estimateFor(cfg, room) {
+  const c = cfg || loadConfig();
+  const guess = Math.round(Number(c.estimateGb || 2.5) * GIB);
+  let months = null;
+  let firstMonth = null;
+  // rooms/summary.json belongs to whichever room was rendered last, so it only counts when it really
+  // describes this room; the per-room copy is the reliable one.
+  for (const n of [room.slug + ".summary.json", "summary.json"]) {
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(dirs(c).rooms, n), "utf8"));
+      const from = String(j.sumber || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop();
+      const ids = Array.isArray(j.roomIds) ? j.roomIds : [j.roomIds];
+      if (n === "summary.json" && from !== room.slug && ids.indexOf(room.roomId) < 0) continue;
+      if (Array.isArray(j.perBulan) && j.perBulan.length) { months = j.perBulan.length; firstMonth = String((j.perBulan[0] || {}).bulan || "") || null; }
+      else if (Number(j.bulan) > 0) months = Number(j.bulan);
+      break;
+    } catch (e) {}
+  }
+  const saved = savedBytes(c, room.slug);
+  if (!saved) {
+    const archived = readArchive(srcFor(room.slug));
+    return { known: false, measured: false, saved: null, months: months, full: guess, bytes: guess, messages: archived.seen.size || null };
+  }
+  // April 2025 is the floor of the window; a room whose history starts later projects from there.
+  const start = firstMonth && monthIndex(firstMonth) > monthIndex(DM_START_MONTH) ? firstMonth : DM_START_MONTH;
+  const totalMonths = Math.max(monthsBetween(start, thisMonth()), months || 1);
+  const full = Math.max(Math.round(saved * (totalMonths / Math.max(months || 1, 1))), saved);
+  return { known: true, measured: true, saved: saved, months: months, firstMonth: firstMonth, totalMonths: totalMonths, full: full, bytes: full, messages: null };
 }
 
 export function rooms(cfg) {

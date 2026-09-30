@@ -45,6 +45,10 @@ Options:
   containing the public chat, its media and a README in three languages.
 - **Hide this name in the public export** - optional, format `old=new`. Only the public export
   changes; your private copy keeps the real text.
+- **Estimated size** - the line under the list adds up every room you tick. The estimate covers the
+  whole conversation, which starts April 2025: a room that has never been saved counts as the
+  reference size, a saved room is projected from its own measured rate, and ticking the shareable
+  zip adds roughly the same amount again.
 - **Time zone** - `auto` follows the machine. Type an IANA name (`Asia/Jakarta`) to pin one; the
   timestamps in the archive are the only thing this changes.
 - **Language** - English, Korean or Indonesian for the page you are looking at.
