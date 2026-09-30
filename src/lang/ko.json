@@ -79,6 +79,7 @@
   "html.bookmarkTitle": "Weverse 북마크 #{n}",
   "html.deleted": "(삭제된 메시지)",
   "gui.title": "위버스 DM 아카이버",
+  "gui.titleBy": "by Hauitsu",
   "gui.tagline": "위버스 DM 방 하나를 통째로 이 컴퓨터에 저장합니다. 모든 메시지와 사진, 영상까지.",
   "gui.rooms": "방 목록",
   "gui.selectAll": "전체 선택",

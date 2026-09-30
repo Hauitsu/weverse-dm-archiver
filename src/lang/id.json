@@ -79,6 +79,7 @@
   "html.bookmarkTitle": "Bookmark Weverse #{n}",
   "html.deleted": "(pesan dihapus)",
   "gui.title": "Pengarsip DM Weverse",
+  "gui.titleBy": "by Hauitsu",
   "gui.tagline": "Menyimpan satu ruang DM Weverse ke komputer ini: semua pesan, foto, dan video.",
   "gui.rooms": "Daftar ruang",
   "gui.selectAll": "Pilih semua",

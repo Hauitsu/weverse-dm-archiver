@@ -182,7 +182,7 @@ function page() {
     "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
     "<title>" + esc(tr("gui.title")) + "</title><style>",
     ":root{color-scheme:light dark}body{font-family:system-ui,Segoe UI,Malgun Gothic,sans-serif;margin:0;padding:24px;max-width:900px;line-height:1.5}",
-    "h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}",
+    "h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}.oleh{font-weight:400;opacity:.7}",
     "section{border:1px solid #8884;border-radius:10px;padding:14px 16px;margin:0 0 14px}",
     "label.row{display:grid;grid-template-columns:24px minmax(120px,1fr) 150px 76px 92px 74px 72px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
     ".nm{font-weight:600}.who,.id,.sz{opacity:.75;font-size:13px}",
@@ -203,7 +203,7 @@ function page() {
     "input[type=text],select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #8886;background:transparent}",
     "details.adv summary{cursor:pointer;font-size:13px;opacity:.75}details.adv[open] summary{margin-bottom:2px}",
     "</style></head><body>",
-    "<h1>" + esc(tr("gui.title")) + "</h1><p class=\"sub\">" + esc(tr("gui.tagline")) + "</p>",
+    "<h1>" + esc(tr("gui.title")) + " <span class=\"oleh\">" + esc(tr("gui.titleBy")) + "</span></h1><p class=\"sub\">" + esc(tr("gui.tagline")) + "</p>",
     "<div class=\"grid\" style=\"margin:-6px 0 16px\"><label>" + esc(tr("gui.language")) + " <select id=\"lang\">" + langs + "</select></label>",
     "<span class=\"muted\">" + esc(tr("gui.langHint")) + "</span></div>",
 

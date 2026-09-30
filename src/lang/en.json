@@ -79,6 +79,7 @@
   "html.bookmarkTitle": "Weverse bookmark #{n}",
   "html.deleted": "(deleted message)",
   "gui.title": "Weverse DM archiver",
+  "gui.titleBy": "by Hauitsu",
   "gui.tagline": "Saves a whole Weverse DM room to this computer: every message, photo and video.",
   "gui.rooms": "Rooms",
   "gui.selectAll": "Select all",
