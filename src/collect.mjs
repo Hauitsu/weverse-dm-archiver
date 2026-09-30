@@ -57,6 +57,9 @@ export function isComplete(est) {
 }
 
 export function canOffer(cfg, est, slug) {
+  // collectDebug is the owner switch for looking at the popup: every room offers the button, complete
+  // archive or not, own room or not. It is never on unless config.json asks for it.
+  if (cfg && cfg.collectDebug) return true;
   return collectReady(cfg) && isComplete(est) && ownedSlugs(cfg).indexOf(String(slug)) < 0;
 }
 

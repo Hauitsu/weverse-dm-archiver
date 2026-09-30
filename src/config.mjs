@@ -35,10 +35,13 @@ export const DEFAULTS = {
   // ships one, hidden from a search box but not from a reader (see src/collect.mjs); setting this
   // replaces it. Only this one value is ever opened (never anything the page itself sends).
   // collectOwned lists rooms the author already has, so they are never asked for; collectSeen
-  // remembers that the once-per-install popup has been shown.
+  // remembers that the once-per-install popup has been shown. collectDebug is for looking at that
+  // popup: it offers every room, whatever its archive looks like, and shows the message after every
+  // finished run without using up the once-per-install moment.
   collectName: "Hauitsu",
   collectOwned: "yunha",
   collectSeen: false,
+  collectDebug: false,
   collectUrl: "",
 };
 
@@ -63,6 +66,7 @@ export function readConfig(file) {
   if (typeof cfg.collectOwned !== "string") cfg.collectOwned = DEFAULTS.collectOwned;
   cfg.collectOwned = cfg.collectOwned.trim();
   cfg.collectSeen = !!cfg.collectSeen;
+  cfg.collectDebug = !!cfg.collectDebug;
   if (typeof cfg.collectName !== "string" || !cfg.collectName.trim()) cfg.collectName = DEFAULTS.collectName;
   cfg.collectName = cfg.collectName.trim();
   return cfg;

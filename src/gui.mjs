@@ -155,13 +155,16 @@ function page() {
     const e = rowNumbers(cfg, r, tr);
     const size = e.text;
     const canOpen = !!roomPage(r.slug);
+    // collectDebug is the owner switch for looking at the share popup: it hands out the button even for
+    // a room with nothing saved yet, so the popup can be read without running a whole harvest first.
+    const canShare = canOpen || !!cfg.collectDebug;
     const openBtn = "<span class=\"op\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-slug=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(tr("gui.openHint")) + "\">" + esc(tr("gui.open")) + "</button></span>";
     // Share stands right of Open and only where Open stands: a room with nothing saved yet has no
     // page to pack, so the button stays hidden until there is one. Its tooltip names the zip that is
     // already there.
     const si = shareInfo(r.slug);
     const shTip = tr("gui.shareHint") + " " + (si.zip ? tr("gui.shareHas", { v: si.zip.name + " (" + fmtSize(si.zip.bytes) + ")" }) : tr("gui.shareNone"));
-    const shareBtn = "<span class=\"sh\"" + (canOpen ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-share=\"" + esc(r.slug) + "\"" + (canOpen ? "" : " disabled") + " title=\"" + esc(shTip) + "\">" + esc(tr("gui.shareBtn")) + "</button></span>";
+    const shareBtn = "<span class=\"sh\"" + (canShare ? "" : " style=\"visibility:hidden\"") + "><button type=\"button\" class=\"mini\" data-share=\"" + esc(r.slug) + "\"" + (canShare ? "" : " disabled") + " title=\"" + esc(shTip) + "\">" + esc(tr("gui.shareBtn")) + "</button></span>";
     const a = r.nameEn && r.nameEn !== r.nameKo ? r.nameEn + " (" + r.nameKo + ")" : (r.nameKo || r.slug);
     // Every row carries its own numbers, so the page can re-add them whenever a box is ticked.
     return "<label class=\"row\"><input type=\"checkbox\" data-slug=\"" + esc(r.slug) + "\" data-full=\"" + e.full + "\" data-saved=\"" + (e.saved || 0) + "\">" +
@@ -349,7 +352,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 // added to rooms.unis.json while the window was open - only a fresh page can show that row.
 "var ROWSIG=" + JSON.stringify(listSignature(list)) + ";",
 "var lastReload=0;",
-"var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,toSurprise=false;",
+"var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,toSurprise=false,DBG=false;",
     "function roomInfo(slug){for(var i=0;i<lastRooms.length;i++){if(lastRooms[i].slug===slug)return lastRooms[i];}return null;}",
     "function hideShare(){el(\"#shModal\").style.display=\"none\";}",
     "function paintShare(info,sh){",
@@ -458,10 +461,10 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  under(!!s.running||!!s.result);",
     "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open;b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
-    "  lastRooms=s.rooms||[];lastShare=s.share||null;",
+    "  lastRooms=s.rooms||[];lastShare=s.share||null;DBG=!!s.debug;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
     "  el(\"#start\").disabled=sbusy;",
-    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
+    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=DBG||!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
 // The rows own numbers are the one thing the page cannot work out for itself: they need the room
 // page and every media file it points at. The server hands them over, and this writes them back
 // only when they really moved, so a page sitting idle does no work at all.
@@ -533,6 +536,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
     // The once-per-install popup: a finished run that left them holding a complete room puts the
     // author own message on screen without a click. Empty means there is nothing to show.
     surprise: state.surprise || null,
+    debug: !!cfg.collectDebug,
     log: state.log, result: state.result, error: state.error,
     // Only what the rows need to keep their Open button honest while a run goes on.
     // The room set itself: the page patches numbers when they move, but a row it never had needs a
@@ -632,13 +636,15 @@ async function startJob(body) {
       if (zip) push("zip: " + zip);
     }
     // The surprise: the first finished run that leaves them holding a room worth offering shows the
-    // author own message without being asked. The flag is written down, so it happens once.
-    if (!cfg.collectSeen && collectReady(cfg)) {
+    // author own message without being asked. The flag is written down, so it happens once - except
+    // under collectDebug, where every finished run shows it and nothing is written down, so the real
+    // once-per-install moment still comes later.
+    if (cfg.collectDebug || (!cfg.collectSeen && collectReady(cfg))) {
       const names = eligibleRooms(cfg, rooms(cfg), tr).map((r) => memberName(r, pickLang(cfg.language)));
       if (names.length) {
         state.surprise = names;
         push(tr("gui.collectOffer", { name: cfg.collectName, v: names.join(", ") }));
-        try { cfg = saveConfig({ collectSeen: true }); } catch (e) {}
+        if (!cfg.collectDebug) { try { cfg = saveConfig({ collectSeen: true }); } catch (e) {} }
       }
     }
     setPhase(stopFlag ? "stopped" : "done");
@@ -780,6 +786,7 @@ server.listen(ladder[0], "127.0.0.1", () => {
   console.log("gui: " + url);
   console.log("gui: config " + CONFIG_FILE);
   console.log("gui: repo " + REPO);
+  if (cfg.collectDebug) console.log("gui: collectDebug is on - every room offers the Share to button");
   if (!argv.includes("--no-open")) openExternal(url);
   // Remember where this one listens, so the next double-click opens this page instead of a new server.
   try { fs.mkdirSync(APP_DIR, { recursive: true }); fs.writeFileSync(GUI_FILE, JSON.stringify({ pid: process.pid, port: port, url: url, at: Date.now() })); } catch (e) {}

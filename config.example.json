@@ -1,5 +1,5 @@
 {
-  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is not on PATH. collectOwned lists the rooms the collector already has (never asked for); collectUrl replaces the built-in collector link with one of your own; collectSeen remembers that the once-per-install popup was shown.",
+  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is not on PATH. collectOwned lists the rooms the collector already has (never asked for); collectUrl replaces the built-in collector link with one of your own; collectSeen remembers that the once-per-install popup was shown; collectDebug is for looking at that popup, offering every room whatever its archive looks like.",
   "language": "auto",
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
@@ -17,6 +17,7 @@
   "collectName": "Hauitsu",
   "collectOwned": "yunha",
   "collectSeen": false,
+  "collectDebug": false,
   "collectUrl": "",
   "ffmpegPath": "",
   "credit": ""

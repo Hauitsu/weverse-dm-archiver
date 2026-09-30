@@ -90,7 +90,8 @@ room the collector already has (`collectOwned`) is never asked for. The link its
 in this repository: it is stitched together when the button is pressed, which keeps it out of a search
 box, though not away from anyone who reads the source. `collectUrl` in `config.json` replaces it.
 After the first run that leaves you holding such a room, that message also comes up on its own - once
-per install.
+per install. While working on the popup itself, `collectDebug: true` in `config.json` offers the
+button on every room, complete archive or not, and shows the message after every finished run.
 
 Press **Stop** at any moment, or close everything. Every page is written to disk as it arrives,
 so running it again continues where it stopped instead of starting over. The full walkthrough,
