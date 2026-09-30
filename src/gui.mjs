@@ -129,7 +129,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
     "<span id=\"authedWrap\" style=\"display:none\"><span class=\"muted\">" + esc(tr("gui.authedHint")) + "</span> <button id=\"bAuthed\">" + esc(tr("gui.authed")) + "</button></span>",
     "<span id=\"phase\" class=\"muted\"></span></div>",
-    "<div id=\"bar\"><i id=\"fill\"></i></div></section>",
+    "<div id=\"bar\" style=\"display:none\"><i id=\"fill\"></i></div></section>",
 
 
     "<section id=\"result\" style=\"display:none\"><strong>" + esc(tr("gui.result")) + "</strong>",
@@ -186,12 +186,13 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
     // The lower half of the page only makes sense once something is picked, so it stays out of the
     // way until a room is ticked (or a run is going on, so its own result never disappears).
+    // The progress bar is not an option, it is a report: it appears only once a run has started.
     "var busy=false;",
     "function under(flag){",
     "  if(flag!==undefined)busy=!!flag;",
     "  var n=0;",
     "  document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){if(c.checked)n++;});",
-    "  el(\"#under\").style.display=(n>0||busy)?\"\":\"none\";",
+    "  el(\"#bar\").style.display=busy?\"\":\"none\"; el(\"#under\").style.display=(n>0||busy)?\"\":\"none\";",
     "}",
     "async function tick(){",
     "  var s=null;",
