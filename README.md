@@ -34,8 +34,9 @@ login tokens, and never touches the tab you are logged in on.
   browser - see [Bubble colour and the days chip](#bubble-colour-and-the-days-chip)
 - a header that names the backup instead of the room: `Weverse DM backup` with a grey `by Hauitsu`, and the
   room moved down under the bookmarks box - the artist's own picture, round and 96px wide (`--pf`, one line of
-  CSS, and the file itself is 256x256 if you want it 1:1) with the room name and its id beside it. The tab
-  title is the room name followed by `DM`, so a row of open archives reads as the rooms themselves
+  CSS, and the file itself is 256x256 if you want it 1:1) with the room name beside it. The room id rides in
+  the grey line under the title, at the front. The tab title is the room name followed by `DM`, so a row of
+  open archives reads as the rooms themselves
 - a message that is nothing but a photo or a video gets no bubble at all - the rounded media is
   the message, like in the app. A voice note keeps its bubble (the player needs a body), and so do
   gifts and anything with a caption

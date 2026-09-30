@@ -476,7 +476,7 @@ h.push('.kepala{display:flex;align-items:center;gap:14px;margin:0 0 18px}');
 h.push('.pf{display:block;flex:0 0 auto;width:var(--pf);height:var(--pf);border-radius:50%;object-fit:cover;background:#232833}');
 h.push('.pf.pfi{display:flex;align-items:center;justify-content:center;font-size:calc(var(--pf) / 2.6);font-weight:600}');
 h.push('.kepala .rn{font-size:17px;font-weight:600;line-height:1.25}');
-h.push('.kepala .rid{color:#8b93a1;font-size:12px;margin-top:2px}');
+// (the room id rides in the .meta line under the title, so nothing sits beside the picture)
 h.push('.nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}');
 h.push('.nav a{color:#9ecbff;background:#161b24;border:1px solid #232833;border-radius:6px;padding:3px 8px;font-size:12px;text-decoration:none}');
 h.push('.nav a:hover{background:#1d2531}');
@@ -605,7 +605,6 @@ h.push('html[data-tema="light"] .meta{color:#6b7280}');
 h.push('html[data-tema="light"] .oleh{color:#6b7280}');
 h.push('html[data-tema="light"] .pf{background:#dfe3e8}');
 h.push('html[data-tema="light"] .pf.pfi{color:#17181c}');
-h.push('html[data-tema="light"] .kepala .rid{color:#6b7280}');
 h.push('html[data-tema="light"] .nav a{color:#1f6feb;background:#fff;border-color:#dde3ea}');
 h.push('html[data-tema="light"] .nav a:hover{background:#eef3fb}');
 h.push('html[data-tema="light"] .day{background:#f7f8fa;color:#6b7280;border-bottom-color:#e3e7ec}');
@@ -707,8 +706,7 @@ if (BM_ON) {
   h.push('<div class="kepala">' + (pfRoom
     ? '<img class="pf" src="' + esc(pfRoom) + '" alt="' + esc(ROOM_NAME) + '">'
     : '<div class="pf pfi"><span>' + esc(awal) + '</span></div>')
-    + '<div class="kt"><div class="rn">' + esc(ROOM_NAME) + '</div>'
-    + '<div class="rid">' + t("html.roomIds", { ids: esc([...roomIds].join(', ')) }) + '</div></div></div>');
++ '<div class="rn">' + esc(ROOM_NAME) + '</div></div>');
 }
 lastDay = '';
 let lastMonth = '';

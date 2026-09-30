@@ -43,7 +43,7 @@
   "html.title": "Weverse DM backup",
   "html.metaWhoAll": "{artist} {a}",
   "html.metaWhoMe": " &middot; me {n}",
-  "html.meta": "{who} &middot; {n} unique messages &middot; {a} to {b} {tz} &middot; from {pages} pages ({files} parts) &middot; local media {lok}/{tot}",
+  "html.meta": "room {ids} &middot; {who} &middot; {n} unique messages &middot; {a} to {b} {tz} &middot; from {pages} pages ({files} parts) &middot; local media {lok}/{tot}",
   "html.bookmarkSummary": "★ my bookmarks ({n}) - click to open",
   "html.bmMore": "Message options",
   "html.bmAdd": "Bookmark this message",
