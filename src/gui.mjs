@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
+import { spawn } from "node:child_process";
 import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, estimateFor, openSession, tzFor, publicRenameFor, hurryMode, GIB } from "./pipeline.mjs";
@@ -375,8 +376,13 @@ async function handle(req, res) {
 
 // Double-clicking START.bat twice used to leave two servers and two tabs behind, and a click on the
 // stale tab then went nowhere - the run in the other tab never heard about it. So: one GUI per
-// machine. It writes down where it listens, and a second start finds the first one and just opens
-// its page. An explicit --port (what the tests use) skips this entirely.
+// machine. It writes down where it listens, and a second start finds the first one.
+//
+// What it does with that first one depends on what it is doing. A run in progress is never
+// interrupted - not even by a double-click - that window is simply opened. Anything else (idle,
+// finished, or wedged and not answering) is closed first, because it is holding the page and the
+// old code in memory, and starting again only means something if the new code is what runs.
+// An explicit --port (what the tests use) skips this entirely.
 const APP_DIR = path.join(process.env.LOCALAPPDATA || process.env.HOME || ".", "weverse-dm-archiver");
 const GUI_FILE = path.join(APP_DIR, "gui.json");
 function liveGui() {
@@ -388,12 +394,30 @@ function liveGui() {
     return j;
   } catch (e) { return null; }
 }
+// Ask the previous window what it is doing, on its own port. No answer at all counts as dead weight.
+async function twinState(url) {
+  try {
+    const res = await fetch(String(url).replace(/\/?$/, "/") + "api/state", { signal: AbortSignal.timeout(1500) });
+    return res.ok ? await res.json() : null;
+  } catch (e) { return null; }
+}
+function killTree(pid) {
+  try { if (process.platform === "win32") { spawn("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" }); return; } } catch (e) {}
+  try { process.kill(Number(pid)); } catch (e) {}
+}
 if (!argv.includes("--port")) {
-  const twin = liveGui();
-  if (twin) {
-    console.log("gui: already running at " + twin.url);
-    if (!argv.includes("--no-open")) openExternal(twin.url);
-    process.exit(0);
+  const prev = liveGui();
+  if (prev && Number(prev.pid) !== process.pid) {
+    const st = await twinState(prev.url);
+    if (st && st.running) {
+      console.log("gui: a run is in progress at " + prev.url + " - opening that window instead");
+      if (!argv.includes("--no-open")) openExternal(prev.url);
+      process.exit(0);
+    }
+    console.log("gui: closing the previous window at " + prev.url + " (" + (st ? "idle" : "not answering") + ")");
+    killTree(prev.pid);
+    try { fs.rmSync(GUI_FILE, { force: true }); } catch (e) {}
+    await new Promise((r) => setTimeout(r, 1200));   // let the port go before we claim it
   }
 }
 const wantPort = Number(flag("port", cfg.guiPort || 8787)) || 8787;

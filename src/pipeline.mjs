@@ -11,17 +11,18 @@
 // so keeping rooms apart is what stops one room history from leaking into another.
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { spawn } from "node:child_process";
 import { loadConfig } from "./config.mjs";
 import { harvest, readArchive } from "./harvest.mjs";
 import { downloadMedia } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser, launch, launchPlain, killBrowser, waitExit, profileDir } from "./browser.mjs";
+import { waitPage, attach, ensureAuth } from "./cdp.mjs";
+import { loadRooms } from "./rooms.mjs";
 
 // Small pause helper - used by the login wait and the browser hand-over.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-import { waitPage, attach, ensureAuth } from "./cdp.mjs";
-import { loadRooms } from "./rooms.mjs";
 
 const NL = String.fromCharCode(10);
 export const REPO = path.resolve(import.meta.dirname, "..");
@@ -263,6 +264,30 @@ function auditPublic(o, dir, log) {
 // by design, so only the person typing in it knows when the typing is done. They say so with the
 // page button (the GUI), by closing the window, or by pressing Enter where the tool runs in a
 // terminal. Returns why the wait ended so the caller can tell a stop from a timeout.
+// A browser left behind by an earlier run still holds the profile, and a launch on a locked
+// profile just hands its arguments to that old instance: no fresh port opens, no page appears, and
+// the run dies with "no-page". Clear the way before the first launch of a session.
+export async function clearLeftovers(profile, onLog) {
+  const log = onLog || (() => {});
+  const needle = String(profile || "");
+  if (!needle) return 0;
+  const outFile = path.join(os.tmpdir(), "wdm-leftovers.txt");
+  const win = process.platform === "win32";
+  const script = win
+    ? "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('chrome.exe','msedge.exe','brave.exe','vivaldi.exe') -and $_.CommandLine -like '*" + needle.replace(/'/g, "''") + "*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; \"gone\" } | Out-File -Encoding utf8 '" + outFile.replace(/'/g, "''") + "'"
+    : null;
+  try {
+    if (win) {
+      await new Promise((done) => { const c = spawn("powershell", ["-NoProfile", "-Command", script], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
+    } else {
+      await new Promise((done) => { const c = spawn("pkill", ["-f", needle], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
+    }
+  } catch (e) {}
+  let n = 0;
+  try { n = fs.readFileSync(outFile, "utf8").split("\n").filter((x) => x.indexOf("gone") >= 0).length; fs.rmSync(outFile, { force: true }); } catch (e) {}
+  if (n) { log("browser: closed " + n + " browser process(es) left over from an earlier run"); await sleep(600); }
+  return n;
+}
 async function waitForGo(proc, opts, log) {
   const o = opts || {};
   const stop = o.shouldStop || (() => false);
@@ -309,6 +334,7 @@ export async function openSession(o) {
   // The session already in the profile is what every run after the first lives on, so look for it
   // first: this is the window that can read the page, and opening a second one for nothing would be
   // a pointless extra step.
+  await clearLeftovers(prof, log);
   const started = await open();
   const probe = await use(started, opts.probeMs || 15000);
   if (probe.error) return probe;
