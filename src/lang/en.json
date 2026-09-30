@@ -80,6 +80,7 @@
   "gui.language": "Language",
   "gui.start": "Start",
   "gui.stop": "Stop",
+  "gui.cancel": "Cancel",
   "gui.result": "Result",
   "gui.openChat": "Open chat",
   "gui.openFolder": "Open folder",

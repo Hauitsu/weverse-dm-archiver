@@ -80,6 +80,7 @@
   "gui.language": "Bahasa",
   "gui.start": "Mulai",
   "gui.stop": "Stop",
+  "gui.cancel": "Batal",
   "gui.result": "Hasil",
   "gui.openChat": "Buka obrolan",
   "gui.openFolder": "Buka folder",

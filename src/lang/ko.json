@@ -80,6 +80,7 @@
   "gui.language": "언어",
   "gui.start": "시작",
   "gui.stop": "중지",
+  "gui.cancel": "취소",
   "gui.result": "결과",
   "gui.openChat": "채팅 열기",
   "gui.openFolder": "폴더 열기",

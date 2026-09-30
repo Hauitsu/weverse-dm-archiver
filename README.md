@@ -35,7 +35,8 @@ login tokens, and never touches the tab you are logged in on.
    the local page (usually `http://127.0.0.1:8787`; if that port is taken by the system, the tool
    picks another one and the console prints the address it used).
 3. Log in to Weverse once in that browser window.
-4. Tick a room, press **Start**. Progress streams page by page.
+4. Tick a room, press **Start** - a short note about the separate browser window pops up first -
+   then confirm. Progress streams page by page.
 5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `dist/` - it is made
    by default.
 
