@@ -306,7 +306,7 @@ h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 h.push('<title>' + esc(t("html.title", { room: ROOM_NAME })) + ' (' + esc([...roomIds].join(', ')) + ')</title><style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
-h.push('body{font-family:NotoEmojiWeb,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
+h.push('body{font-family:-apple-system,Segoe UI,Roboto,sans-serif,NotoEmojiWeb;background:#0f1115;color:#e6e6e6;margin:0;padding:24px;line-height:1.55}');
 h.push('.wrap{max-width:860px;margin:0 auto}h1{font-size:20px;margin-bottom:6px}');
 h.push('.meta{color:#8b93a1;font-size:13px;margin-bottom:14px}');
 h.push('.nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}');
@@ -323,13 +323,14 @@ h.push('.m.me .col{align-items:flex-end}');
 h.push('.who{font-weight:600;font-size:11px;line-height:1.3;color:#9aa4b2;margin:0 4px 2px;word-break:break-word}');
 h.push('.m.artist .who{color:#4da3ff}');
 h.push('.m.me .who{color:#8fb8e0}');
-h.push('.bub{background:#171c25;border:1px solid #232833;border-radius:14px;padding:8px 12px;white-space:pre-wrap;word-break:break-word}');
+h.push('.bub{background:#171c25;border:1px solid #232833;border-radius:14px;padding:6px 12px;word-break:break-word}');
+h.push('.tx{white-space:pre-wrap}');
 h.push('.m.artist .bub{background:#141b2b;border-color:#26374f;border-bottom-left-radius:4px}');
 h.push('.m.me .bub{background:#1c3b5e;border-color:#2b5480;border-bottom-right-radius:4px}');
 h.push('.m.cont .bub{border-radius:14px}');
 h.push('.m.cont.artist .bub{border-top-left-radius:4px}');
 h.push('.m.cont.me .bub{border-top-right-radius:4px}');
-h.push('.tm{font-size:11px;color:#5f6875;flex:0 0 auto;padding-bottom:2px}');
+h.push('.tm{font-size:11px;color:#5f6875;flex:0 0 auto;padding-bottom:2px;align-self:flex-end}');
 h.push('.en{color:#cfe0f2;opacity:.72;font-size:13px;font-style:italic;margin-top:4px}');
 h.push('.im{margin-top:5px;font-size:12px}.im a{color:#9ecbff}');
 h.push('.av{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#232833}');
@@ -392,8 +393,8 @@ for (const x of norm) {
   h.push('<div class="col">');
   if (!cont) h.push('<div class="who">' + esc(me ? (x.nickname || t("html.whoMe")) : ARTIST_NAME) + '</div>');
   h.push('<div class="bub">');
-  if (x.deleted) h.push('<span class="del">' + esc(x.text || t("html.deleted")) + '</span>');
-  else if (x.text) h.push(esc(x.text));
+  if (x.deleted) h.push('<span class="del tx">' + esc(x.text || t("html.deleted")) + '</span>');
+  else if (x.text) h.push('<span class="tx">' + esc(x.text) + '</span>');
   if (x.textEn) h.push('<div class="en">' + esc(x.textEn) + '</div>');
   if (x.media.length) {
     const ph = [], vd = [], au = [];
