@@ -35,7 +35,7 @@ login tokens, and never touches the tab you are logged in on.
 - a header that names the backup instead of the room: `Weverse DM backup` with a grey `by Hauitsu`, and the
   room moved down under the bookmarks box - the artist's own picture, round and 96px wide (`--pf`, one line of
   CSS, and the file itself is 256x256 if you want it 1:1) with the room name and its id beside it. The tab
-  title is simply the room name, so a row of open archives reads as the rooms themselves
+  title is the room name followed by `DM`, so a row of open archives reads as the rooms themselves
 - a message that is nothing but a photo or a video gets no bubble at all - the rounded media is
   the message, like in the app. A voice note keeps its bubble (the player needs a body), and so do
   gifts and anything with a caption
