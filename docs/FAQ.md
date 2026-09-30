@@ -131,7 +131,9 @@ a release of [samuelngs/apple-emoji-ttf](https://github.com/samuelngs/apple-emoj
 `--remove` deletes it so the page falls back to the Noto Color Emoji that also ships here. Emoji
 newer than the shipped cut fall back to the reader's own emoji font instead of an empty box.
 Apple's designs belong to Apple (the upstream repository states educational use only), so keep
-the archive for personal use.
+the archive for personal use. Carrying the font here is a deliberate choice: if this repository is
+ever made public, Apple can ask for its removal. To drop that risk instead, run
+`node tools/get-apple-emoji.mjs --remove` and the bundled Noto font takes over.
 
 ## Can I reuse an archive I made earlier?
 
