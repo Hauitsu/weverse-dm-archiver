@@ -38,6 +38,10 @@ away from your normal browser.
 
 ![Four steps: double-click START.bat, pick a room, press Start, log in, open the DM](assets/02-how-it-works.svg)
 
+0. **Download the tool and unzip it.** One click - the Releases page is not needed:
+   **[weverse-dm-archiver.zip](https://github.com/Hauitsu/weverse-dm-archiver/releases/latest/download/weverse-dm-archiver.zip)**.
+   Unzip it into a folder of your own (not `Program Files`): the tool writes its archive next to
+   itself, so it needs a folder Windows lets it write to.
 1. **Install Node.js 20 or newer** if you do not have it. `START.bat` opens the download page
    when it cannot find Node.
 2. **Double-click `START.bat`.** The tool's own page opens in your browser - usually
