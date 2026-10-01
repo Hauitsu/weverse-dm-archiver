@@ -152,6 +152,7 @@
   "gui.openZip": "Buka folder share",
   "gui.open": "Buka",
   "gui.openHint": "buka halaman chat ruangan ini yang sudah tersimpan",
+  "gui.wait": "tunggu {s}s",
   "gui.log": "Progres",
   "gui.pickRoom": "Pilih minimal satu ruang dulu.",
   "gui.loginHint": "Menunggu login Weverse di jendela browser yang baru terbuka.",

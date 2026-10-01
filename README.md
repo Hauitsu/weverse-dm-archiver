@@ -43,6 +43,15 @@ Everything lands in the folder the tool lives in - `rooms/`, `rooms-public/`, `m
 The tool's own browser profile (the window you log in in) is kept separately under `%LOCALAPPDATA%`,
 away from your normal browser.
 
+## Archived DM Preview
+
+One finished room looks like this - a single HTML file you open from your own disk, with no internet
+and no Weverse account:
+
+![The archive page in the light theme](assets/preview-light.png)
+
+![The same archive page in the dark theme](assets/preview-dark.png)
+
 ## Quick start
 
 ![Four steps: double-click START.bat, pick rooms, press Start, log in, open the DM](assets/02-how-it-works.svg)

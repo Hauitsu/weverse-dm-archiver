@@ -38,6 +38,15 @@ Semuanya mendarat di folder tempat alat ini berada - `rooms/`, `rooms-public/`, 
 Profil browser milik alat ini (jendela tempat kamu login) disimpan terpisah di `%LOCALAPPDATA%`, jauh
 dari browser normalmu.
 
+## Pratinjau DM yang Diarsipkan
+
+Satu room yang sudah selesai terlihat seperti ini - satu berkas HTML yang kamu buka dari diskmu
+sendiri, tanpa internet dan tanpa akun Weverse:
+
+![Halaman arsip dengan tema terang](assets/preview-light.png)
+
+![Halaman arsip yang sama dengan tema gelap](assets/preview-dark.png)
+
 ## Mulai cepat
 
 ![Empat langkah: klik dua kali START.bat, pilih room, tekan Start, login, buka DM](assets/02-how-it-works.svg)
