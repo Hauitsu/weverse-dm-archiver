@@ -418,11 +418,13 @@ export async function runRoom(o) {
     if (photo) out.phases.artistPhoto = photo;
   } catch (e) { log("artist photo skipped: " + String(e.message || e)); }
 
+  progress({ phase: "render", slug: o.slug, data: { pass: 1 } });
   const r1 = await renderBoth({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, rename: o.rename, bookmarks: o.bookmarks, onLog: log });
   out.phases.render = r1.private;
   out.phases.renderPublic = r1.public;
   if (r1.private !== 0) return Object.assign(out, { error: "render" });
 
+  progress({ phase: "media", slug: o.slug, data: { done: 0, total: 0 } });
   const m = await downloadMedia({
     jsonl: path.join(d.rooms, o.slug + ".jsonl"), mediaDir: d.media, roomId: o.roomId, cdp: o.cdp,
     kind: o.kind, conc: o.conc, onLog: log, onProgress: (p) => progress({ phase: "media", slug: o.slug, data: p }), shouldStop: stop,
@@ -431,12 +433,14 @@ export async function runRoom(o) {
   if (stop()) return Object.assign(out, { stopped: true });
 
   // The second pass is what makes the gallery show the files we now have locally.
+  progress({ phase: "render", slug: o.slug, data: { pass: 2 } });
   const r2 = await renderBoth({ slug: o.slug, srcDir: srcFor(o.slug), roomName: roomName, artist: artist, tz: o.tz, lang: o.lang, only: o.only, rename: o.rename, bookmarks: o.bookmarks, onLog: log });
   out.phases.render2 = r2.private;
   out.phases.render2Public = r2.public;
 
   if (o.share) {
     // Always pack the public export: the private one holds the other side of the conversation.
+    progress({ phase: "bundle", slug: o.slug, data: {} });
     const b = await bundle({ slug: o.slug, roomId: o.roomId, roomName: roomName, artist: artist, roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.share, verifyDir: d.verify, credit: o.credit, lowQuality: !!o.shareLow, onLog: log });
     out.phases.bundle = { zip: b.zip, sha256: b.sha256, bytes: b.bytes, entries: b.entries, quality: b.quality, mediaBytes: b.mediaBytes, mediaOriginal: b.mediaOriginal, recompressed: b.recompressed };
   }

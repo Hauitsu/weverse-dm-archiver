@@ -41,7 +41,7 @@ function cfgWatch() {
   return cfg;
 }
 const state = {
-  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false, settleUntil: 0,
+  phase: "idle", running: false, slug: "", roomName: "", percent: 0, floor: 0, maxPages: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false, settleUntil: 0,
   log: [], result: null, error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -135,6 +135,33 @@ async function startShare(body) {
       // is exactly the artist-only copy a zip is allowed to carry.
       if (!roomPage(r.slug)) throw new Error(tr("gui.shareNeedPub"));
       sharePush(tr("gui.shareBuildPub"));
+// One room is four measured steps and a small prologue. The weights are roughly how long each step
+// takes, so the bar keeps telling the truth about where a run stands: the walk through the history and
+// the downloads carry most of it, the render and the zip share the rest. The order below is the order
+// the pipeline runs them in, because a step starts out credited with every step before it.
+const WEIGHT = { browser: 5, harvest: 40, render: 10, media: 35, bundle: 10 };
+const WEIGHT_TOTAL = Object.keys(WEIGHT).reduce((a, k) => a + WEIGHT[k], 0);
+// The walk backwards ends when the room runs out, so its total is not known in advance. While it runs,
+// the bar uses a curve that moves quickly at first and slows down as the walk gets long; when the run
+// was given an explicit page cap, that cap is the exact total and it wins.
+const HARVEST_KNEE = 120;
+
+// How far into the bar a step stands: every step before it counts as done, plus its own reported
+// fraction. A null fraction means the step has nothing to count (the render, the zip), and the bar
+// holds the ground the step before it reached rather than inventing a number.
+function phaseSpan(phase, frac) {
+  if (!(phase in WEIGHT)) return state.floor || 0;
+  let done = 0;
+  for (const k of Object.keys(WEIGHT)) {
+    if (k === phase) break;
+    done += WEIGHT[k];
+  }
+  const f = frac == null ? null : Math.max(0, Math.min(1, frac));
+  const own = f == null ? 0 : WEIGHT[phase] * f;
+  return 100 * ((done + own) / WEIGHT_TOTAL);
+}
+// The bar never walks backwards and never claims a run is finished before it is.
+function pct(v) { state.floor = Math.min(99, Math.max(state.floor || 0, Math.round(v))); return state.floor; }
       const built = await renderRoom({
         slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: artistLabel(r),
         tz: tzFor(cfg, r), lang: pickLang(cfg.language), only: "artist", rename: publicRenameFor(cfg, r.slug),
@@ -647,7 +674,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   if (state.slug && (state.phase === "harvest" || state.phase === "media" || state.phase === "render")) {
     text += " - " + state.roomName + (state.progress ? " (" + state.progress.line + ")" : "");
   }
-  if (state.phase === "idle") state.percent = 0;
+  if (state.phase === "idle") { state.percent = 0; state.floor = 0; }
   const list = rooms(cfg);
   return {
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
@@ -692,7 +719,7 @@ async function startJob(body) {
   if (shareMode !== cfg.shareMode) { try { cfg = saveConfig({ shareMode: shareMode }); } catch (e) {} }
   if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
       running(true);
-  state.result = null; state.error = ""; state.log = []; state.percent = 0; state.progress = null; state.startedAt = Date.now();
+  state.result = null; state.error = ""; state.log = []; state.percent = 0; state.floor = 0; state.maxPages = 0; state.progress = null; state.startedAt = Date.now();
   const tr = t();
   const results = [];
   try {
@@ -734,13 +761,27 @@ async function startJob(body) {
         slug: r.slug, roomId: r.roomId, roomName: roomName, artist: artistLabel(r),
         tz: tzFor(cfg, r), lang: pickLang(cfg.language), rename: publicRenameFor(cfg, r.slug), share: share, shareLow: shareLow,
         credit: cfg.credit || "", cdp: session.cdp, onLog: push, shouldStop: () => stopFlag,
+        // Every phase of a run reports here, so the bar can move from the first press instead of only
+        // while files are downloading. Two phases can count their own work - the walk knows how many
+        // pages it has taken and the download knows how many files it has - and the rest simply hand
+        // the bar over at their own weight.
         onProgress: (p) => {
           setPhaseSilent(p.phase);
           const d = p.data || {};
-          state.progress = { line: p.phase === "harvest"
-            ? String(d.pages || 0) + " page(s), " + String(d.uniq || 0) + " message(s)"
-            : String(d.done || 0) + "/" + String(d.total || 0) + " file(s)" };
-          if (p.phase === "media" && d.total) state.percent = Math.round((d.done / d.total) * 100);
+          if (p.phase === "harvest") {
+            if (d.maxPages) state.maxPages = d.maxPages;
+            const pages = Number(d.pages) || 0;
+            const frac = state.maxPages ? pages / state.maxPages : pages / (pages + HARVEST_KNEE);
+            state.progress = { line: pages + " page(s), " + (Number(d.uniq) || 0) + " message(s)" };
+            state.percent = pct(phaseSpan("harvest", frac));
+          } else if (p.phase === "media") {
+            state.progress = { line: (Number(d.done) || 0) + "/" + (Number(d.total) || 0) + " file(s)" };
+            state.percent = pct(phaseSpan("media", d.total ? d.done / d.total : null));
+          } else {
+            // The render and the zip have no count of their own to show.
+            state.progress = null;
+            state.percent = pct(phaseSpan(p.phase));
+          }
         },
       });
       results.push({ slug: r.slug, roomName: roomName, res: res, roomId: r.roomId });
@@ -773,6 +814,7 @@ async function startJob(body) {
       }
     }
     setPhase(stopFlag ? "stopped" : "done");
+    state.percent = stopFlag ? state.percent : 100;
   } catch (e) {
     state.error = String((e && e.message) || e);
     push("error: " + state.error);

@@ -103,6 +103,7 @@ export async function harvest(opts) {
   const progress = o.onProgress || (() => {});
   const stop = o.shouldStop || (() => false);
   const maxPages = o.maxPages || 5000;
+  const maxPagesGiven = o.maxPages != null;
   const pagesPerPart = o.pagesPerPart || PACING.pagesPerPart;
   const budgetMs = o.budgetMs || 9 * 3600 * 1000;
   fs.mkdirSync(dir, { recursive: true });
@@ -119,6 +120,7 @@ export async function harvest(opts) {
   log("archive: " + before.files.length + " part file(s), " + before.seen.size + " message id(s), oldest " + (before.deepest == null ? "none" : new Date(before.deepest).toISOString()));
   if (before.pages > 0) log("resuming from cursor " + cursor + " (part " + partIdx + ")");
 
+  progress({ maxPages: maxPagesGiven ? maxPages : null, pages: 0, uniq: before.seen.size });
   while (pages < maxPages && (Date.now() - t0) < budgetMs) {
     if (stop()) { log("stopped by request"); break; }
     const req = requestFor("prev", roomId, cursor, Date.now());
@@ -186,7 +188,7 @@ export async function harvest(opts) {
     for (const id of freshIds) before.seen.add(id);
     pages++; partPages++;
     prevOldest = page.oldest;
-    progress({ pages: pages, part: partIdx, cursor: cursor, got: page.data.length, newIds: newIds, uniq: before.seen.size, oldest: page.oldest, newest: page.newest, bytes: before.bytes });
+    progress({ pages: pages, maxPages: maxPagesGiven ? maxPages : null, part: partIdx, cursor: cursor, got: page.data.length, newIds: newIds, uniq: before.seen.size, oldest: page.oldest, newest: page.newest, bytes: before.bytes });
     if (partPages >= pagesPerPart) { partIdx++; partPages = 0; }
 
     const next = nextCursor(page, cursor);
