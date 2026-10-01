@@ -59,15 +59,22 @@ export function pendingItems(o) {
   return items.filter((x) => !onDiskAt(opts.mediaDir, x));
 }
 
+// A timeout keeps one slow CDN answer from parking a worker forever; 206 is accepted because a
+// range-capable CDN may answer a plain GET with it.
+const FETCH_TIMEOUT_MS = 180000;
+
 async function withRetry(url, headers, tries) {
   let wait = 1500;
   for (let a = 0; a < (tries || 4); a++) {
     let r = null;
-    try { r = await fetch(url, { headers: headers || {} }); } catch (e) { r = null; }
-    if (r && r.status === 200) return r;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, FETCH_TIMEOUT_MS);
+    try { r = await fetch(url, { headers: headers || {}, signal: ctl.signal }); } catch (e) { r = null; } finally { clearTimeout(timer); }
+    if (r && (r.status === 200 || r.status === 206)) return r;
     const s = r ? r.status : 0;
     if (s === 0 || s === 429 || s === 403 || s >= 500) { await sleep(wait); wait *= 2; continue; }
-    return r;
+    // 404 and friends are a dead link: handing the body back would save an error page as a photo.
+    return null;
   }
   return null;
 }
@@ -142,7 +149,11 @@ export async function downloadMedia(opts) {
     if (!r) { stats.failed++; streak++; manifest[key] = { status: "http-error" }; return; }
     const buf = Buffer.from(await r.arrayBuffer());
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, buf);
+    // Written beside the target and renamed into place, so an interrupted run never leaves a half
+    // file that the "already on disk" check would then trust forever.
+    const part = dest + ".part";
+    fs.writeFileSync(part, buf);
+    fs.renameSync(part, dest);
     stats.ok++; stats.bytes += buf.length; streak = 0;
     manifest[key] = { file: rel, bytes: buf.length, kind: x.kind, status: "ok" };
   }

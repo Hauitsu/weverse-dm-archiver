@@ -114,7 +114,7 @@ export async function harvest(opts) {
   let cursor = before.deepest != null ? String(before.deepest) : SENTINEL;
   let partIdx = before.maxPart + 1;
   let partPages = 0;
-  let pages = 0, written = 0, fails = 0, badStatus = 0, endReached = false, prevOldest = null;
+  let pages = 0, written = 0, fails = 0, badStatus = 0, hardFails = 0, writeFails = 0, endReached = false, prevOldest = null;
   const t0 = Date.now();
   log("archive: " + before.files.length + " part file(s), " + before.seen.size + " message id(s), oldest " + (before.deepest == null ? "none" : new Date(before.deepest).toISOString()));
   if (before.pages > 0) log("resuming from cursor " + cursor + " (part " + partIdx + ")");
@@ -125,8 +125,11 @@ export async function harvest(opts) {
     let res = null;
     try { res = JSON.parse(await cdp.evaluate(fetchExpr(req.url), 60000)); } catch (e) { res = { err: String(e.message || e) }; }
     if (!res || res.err) {
-      fails++;
+      fails++; hardFails++;
       log("page failed (" + fails + "/" + PACING.maxConsecutiveFailures + "): " + String((res && res.err) || "no answer").slice(0, 140));
+      // Re-authing clears the short counter above, so a second one that never clears keeps a broken
+      // session from spending the whole time budget on requests that cannot answer.
+      if (hardFails >= PACING.maxConsecutiveFailures * 4) { log("stopping: " + hardFails + " page requests in a row got no usable answer"); break; }
       if (fails >= PACING.maxConsecutiveFailures) { fails = 0; await ensureAuth(cdp, { onLog: log, shouldStop: stop, timeoutMs: 60000 }); }
       await sleep(5000);
       continue;
@@ -141,9 +144,15 @@ export async function harvest(opts) {
       if (badStatus > PACING.maxBadStatus) { log("stopping: too many failed responses"); break; }
       continue;
     }
-    fails = 0; badStatus = 0;
+    fails = 0; badStatus = 0; hardFails = 0;
     let page = null;
-    try { page = parsePage(res.text); } catch (e) { log("could not parse the page: " + String(e.message || e).slice(0, 120)); await sleep(4000); continue; }
+    try { page = parsePage(res.text); } catch (e) {
+      hardFails++;
+      log("could not parse the page (" + hardFails + "/" + (PACING.maxConsecutiveFailures * 4) + "): " + String(e.message || e).slice(0, 120));
+      if (hardFails >= PACING.maxConsecutiveFailures * 4) { log("stopping: pages kept failing to parse"); break; }
+      await sleep(4000);
+      continue;
+    }
 
     // A stale or bogus cursor makes the server quietly answer with the newest page instead of an
     // error. Going backwards is the whole point, so if the page is not older than the last one we
@@ -155,13 +164,26 @@ export async function harvest(opts) {
     }
 
     let newIds = 0;
-    for (const id of page.messageIds) if (!before.seen.has(id)) { before.seen.add(id); newIds++; }
+    const freshIds = [];
+    for (const id of page.messageIds) if (!before.seen.has(id)) { freshIds.push(id); newIds++; }
     const rec = {
       roomId: roomId, dir: "prev", cursor: cursor, capturedAt: Date.now(),
       msgCount: page.data.length, oldest: page.oldest, newest: page.newest, newIds: newIds,
       url: req.url, body: res.text,
     };
-    try { fs.appendFileSync(path.join(dir, partName(tag, partIdx)), JSON.stringify(rec) + NL); written++; } catch (e) { log("write failed: " + String(e.message || e)); }
+    // The page only counts once it is on disk: a failed write leaves the cursor where it is, so the
+    // same page is asked for again instead of being skipped for good.
+    try {
+      fs.appendFileSync(path.join(dir, partName(tag, partIdx)), JSON.stringify(rec) + NL);
+      written++; writeFails = 0;
+    } catch (e) {
+      writeFails++;
+      log("write failed (" + writeFails + "/" + PACING.maxConsecutiveFailures + "): " + String(e.message || e));
+      if (writeFails >= PACING.maxConsecutiveFailures) { log("stopping: the archive folder cannot be written to"); break; }
+      await sleep(5000);
+      continue;
+    }
+    for (const id of freshIds) before.seen.add(id);
     pages++; partPages++;
     prevOldest = page.oldest;
     progress({ pages: pages, part: partIdx, cursor: cursor, got: page.data.length, newIds: newIds, uniq: before.seen.size, oldest: page.oldest, newest: page.newest, bytes: before.bytes });

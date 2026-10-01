@@ -184,10 +184,14 @@ export function statusAction(status) {
   return "retry";
 }
 
-// Jittered pause between pages. Pass a random function to keep tests deterministic.
+// Jittered pause between pages. Pass a random function to keep tests deterministic. config.json may
+// only ever slow this walk down: the floor stays at the value the tool was tested with, so a
+// hand-edited "pacing" cannot turn the harvest into a hammer.
 export function gap(random) {
   const r = (random || Math.random)();
-  return Math.round(PACING.gapMinMs + r * (PACING.gapMaxMs - PACING.gapMinMs));
+  const min = Math.max(PACING.gapMinMs, Number(process.env.DM_GAP_MIN) || 0);
+  const max = Math.max(PACING.gapMaxMs, Number(process.env.DM_GAP_MAX) || 0, min);
+  return Math.round(min + r * (max - min));
 }
 
 // --- self test -------------------------------------------------------------

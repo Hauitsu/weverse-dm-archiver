@@ -3,6 +3,7 @@
   "warn.tzNoMachine": "PERINGATAN: zona mesin tidak terdeteksi; pakai offset tetap {v} menit.",
   "err.noRoom": "room belum ditentukan: setel DM_ROOM_NAME dan DM_ARTIST (atau pilih room di launcher)",
   "err.noParts": "tidak ada part di {dir}",
+  "err.nothing": "tidak ada pesan tersisa untuk diekspor setelah penyaringan (DM_ONLY={only})",
   "log.unique": "pesan unik    : {n} (entri mentah {raw}, duplikat {dup})",
   "log.artistFan": "artist/fan    : {a} / {f}",
   "log.withMedia": "bermedia      : {n}  jenis: {kinds}",

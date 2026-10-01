@@ -39,25 +39,52 @@ away from your normal browser.
 
 ![Four steps: double-click START.bat, pick a room, press Start, log in, open the DM](assets/02-how-it-works.svg)
 
-0. **Download the tool and unzip it.** One click - the Releases page is not needed:
-   **[weverse-dm-archiver.zip](https://github.com/Hauitsu/weverse-dm-archiver/releases/latest/download/weverse-dm-archiver.zip)**.
-   It is the portable build: **Node.js and ffmpeg travel inside it**, so there is nothing to install.
-   Unzip it into a folder of your own (not `Program Files`): the tool writes its archive next to
-   itself, so it needs a folder Windows lets it write to. **Nothing else to install** - only a
-   source copy needs a Node.js of its own (see *What you need* below).
-1. **Double-click `START.bat`.** The tool's own page opens in your browser - usually
-   `http://127.0.0.1:8787`; if that port is taken it picks another one and the small console window
-   prints the address it used.
-2. **Tick a room and press Start.** A popup repeats these steps first, then a separate browser
-   window opens on a fresh Weverse page. **Log in there**, stay on the Home page and **do not close
-   it**, then come back and press **I'm logged in - continue**. It asks for that press on every run,
-   even when the profile already holds a session.
-3. **Wait.** The progress walks backwards through the history, page by page. When it says done,
-   press **Open chat** to read the archive, **Open folder** to see the files, or take the zip from
-   the **Share** button on that room's row.
+Five short steps, and nothing to install: **Node.js and ffmpeg are already inside the download**.
 
-Press **Stop** at any moment, or close everything: every page of history is written to disk as it
-arrives, so running it again continues where it stopped instead of starting over.
+### 1. Download and unzip
+
+[Download the zip](https://github.com/Hauitsu/weverse-dm-archiver/releases/latest/download/weverse-dm-archiver.zip)
+and unzip it into a folder of your own, for example `D:\weverse-archive`.
+
+Keep it somewhere you own. The archive is written inside that same folder, so a place like
+`Program Files` will refuse it - Desktop, Documents, another drive or a USB stick are all fine.
+
+Nothing else to install. Only a copy run from the source needs Node.js (see *What you need* below).
+
+### 2. Double-click `START.bat`
+
+The tool opens its own page in your browser, usually `http://127.0.0.1:8787`. A small console
+window opens as well - you can ignore it.
+
+If that address is already busy, the tool picks another one and the console window prints the
+address it used.
+
+### 3. Tick a room and press Start
+
+A short popup repeats what comes next. Read it, confirm it, and the next window opens.
+
+### 4. Log in there
+
+A separate browser window opens on a fresh Weverse page. Log in, the way you usually do, and leave
+that window open.
+
+Then come back to the tool's page and press **I'm logged in - continue**. It asks for that press on
+every run, even when you are still signed in from last time - a saved login can go stale, and only
+you can see whether that window really is signed in.
+
+### 5. Wait for it to finish
+
+The history is read backwards, page by page, starting from your newest messages. A whole room takes
+a while, so this is a good moment to do something else.
+
+When it says done, you have three buttons:
+
+- **Open chat** - read the archive in your browser, no internet needed,
+- **Open folder** - see the files that were written,
+- **Share** on that room's row - build a zip to send to someone.
+
+Changed your mind halfway? Press **Stop**, or just close everything. Every page is saved as it
+arrives, so the next run picks up where it stopped instead of starting over.
 
 ## Is it safe? What does it do to my account?
 

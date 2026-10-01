@@ -3,6 +3,7 @@
   "warn.tzNoMachine": "WARNING: machine time zone not detected; using a fixed offset of {v} minutes.",
   "err.noRoom": "no room given: set DM_ROOM_NAME and DM_ARTIST (or pick a room in the launcher)",
   "err.noParts": "no parts found in {dir}",
+  "err.nothing": "no messages left to export after filtering (DM_ONLY={only})",
   "log.unique": "unique msgs   : {n} (raw entries {raw}, duplicates {dup})",
   "log.artistFan": "artist/fan    : {a} / {f}",
   "log.withMedia": "with media    : {n}  kinds: {kinds}",

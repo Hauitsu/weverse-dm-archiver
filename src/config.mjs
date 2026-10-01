@@ -24,8 +24,8 @@ export const DEFAULTS = {
   // other strings. Deliberately never set as an environment variable: the private export keeps the
   // harvested text untouched.
   publicRename: "",
+  // Paced pauses between pages. Raising them is honoured; 1500 ms is the floor (see gap in net.mjs).
   pacing: { minMs: 1500, maxMs: 3000 },
-  textOnly: false,
   // What the picker keeps for the share zip: "yes", "low" or "no". Low re-compresses the copies
   // that go inside the zip; the archive itself always keeps the originals.
   shareMode: "yes",

@@ -1,5 +1,5 @@
 {
-  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is neither the copy that ships in runtime\ffmpeg nor on PATH. collectOwned lists the rooms the collector already has (never asked for); collectUrl: a link of your own that replaces the link the build shipped with; empty means the shipped link.",
+  "_note": "Optional settings. Copy this file to config.json to change anything. Every key has a sane default; config.json is never published. shareMode is yes|low|no (what the picker remembers for the share zip); ffmpegPath is only needed when ffmpeg is neither the copy that ships in runtime\ffmpeg nor on PATH; pacing raises the pause between pages (1500 ms is the floor, so it can only slow the walk down). collectOwned lists the rooms the collector already has (never asked for); collectUrl: a link of your own that replaces the link the build shipped with; empty means the shipped link.",
   "language": "auto",
   "tz": "auto",
   "roomsFile": "rooms.unis.json",
@@ -9,7 +9,6 @@
     "minMs": 1500,
     "maxMs": 3000
   },
-  "textOnly": false,
   "browserPath": "",
   "guiPort": 8787,
   "estimateGb": 3,

@@ -3,6 +3,7 @@
   "warn.tzNoMachine": "경고: 시스템 시간대를 찾을 수 없습니다. 고정 오프셋 {v}분을 사용합니다.",
   "err.noRoom": "방 정보가 없습니다: DM_ROOM_NAME 과 DM_ARTIST 를 설정하세요 (또는 런처에서 방을 고르세요)",
   "err.noParts": "{dir}에 part 파일이 없습니다",
+  "err.nothing": "필터링 후 내보낼 메시지가 없습니다 (DM_ONLY={only})",
   "log.unique": "고유 메시지   : {n} (원본 {raw}, 중복 {dup})",
   "log.artistFan": "아티스트/팬   : {a} / {f}",
   "log.withMedia": "미디어 포함   : {n}  종류: {kinds}",

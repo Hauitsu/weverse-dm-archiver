@@ -241,7 +241,9 @@ const picked = ONLY === 'artist' ? all.filter((m) => (m.userType || '') === 'ART
   : all;
 const norm = picked.map((m) => {
   const f = flat(m);
-  const c = m.createDate || 0;
+  // Number(): one string or null in a record used to reach utc()/wib() and throw RangeError, which
+// took the whole render down with it.
+const c = Number(m.createDate) || 0;
   return {
     messageId: m.messageId, createDate: c, isoUtc: utc(c), isoWib: wib(c),
     userType: m.userType || null, nickname: m.nickname ? fix(m.nickname) : null, profileImageUrl: m.profileImageUrl || null,
@@ -252,6 +254,9 @@ const norm = picked.map((m) => {
 fs.writeFileSync(path.join(OUT, JSONL_NAME), norm.map((x) => JSON.stringify(x)).join(NL) + NL, 'utf8');
 
 const first = norm[0], last = norm[norm.length - 1];
+// A filter (DM_ONLY) can leave nothing behind; without this the header below reads createDate off
+// undefined and the render dies with a stack trace instead of a sentence.
+if (!first || !last) { console.error(t("err.nothing", { only: ONLY || "-" })); process.exit(1); }
 const artist = norm.filter((x) => x.userType === 'ARTIST').length;
 const withMedia = norm.filter((x) => x.media.length).length;
 const deleted = norm.filter((x) => x.deleted).length;
@@ -425,8 +430,17 @@ for (const x of norm) {
   const bm = bmAda.get(x.messageId) || null;
   let body = x.text.split(NL).join('  ' + NL);
   if (!body) body = x.media.length ? t("md.media") : (x.deleted ? t("md.deleted") : '');
-  // Weverse's own English line sits right under the original it belongs to, italic.
-  if (x.textEn) body += (body ? NL + NL : '') + '_' + x.textEn + '_';
+  // Weverse's own English line sits right under the original it belongs to, italic - and inside the
+  // same list item: a blank line would end the bullet there and spill the rest of the message (its
+  // media and gift lines included) out of it. Underscores and stars are escaped so a translation such
+  // as "m(_ _)m" cannot close the emphasis run around it.
+  if (x.textEn) {
+    const en = x.textEn.split(NL).join('  ' + NL).split('_').join('\\_').split('*').join('\\*');
+    // body can end in whitespace: a message that ended with a newline leaves the hard-break marker
+    // behind, and appending after that puts the translation on a blank-separated line - which is
+    // exactly what ends the bullet.
+    body = body.replace(/[\s]+$/, '') + '  ' + NL + '_' + en + '_';
+  }
   md.push('- ' + x.isoWib.slice(11, 16) + (bm ? ' ⭐' : '') + ' ' + who + ': ' + body);
   for (let i = 0; i < x.media.length; i++) {
     const im = x.media[i], f = mediaFile(x, im, i);
@@ -521,7 +535,9 @@ h.push('.m.cont .bub{border-radius:14px}');
 h.push('.m.cont.artist .bub{border-top-left-radius:4px}');
 h.push('.m.cont.me .bub{border-top-right-radius:4px}');
 h.push('.tm{font-size:11px;color:#5f6875;flex:0 0 auto;padding-bottom:2px;align-self:flex-end}');
-h.push('.en{color:#cfe0f2;opacity:.72;font-size:13px;font-style:italic;margin-top:4px}');
+// .en needs the same pre-wrap as .tx: without it a translation with a line break is folded into one
+// long line and the breaks Weverse sent disappear.
+h.push('.en{color:#cfe0f2;opacity:.72;font-size:13px;font-style:italic;margin-top:4px;white-space:pre-wrap}');
 // Reading modes (src/ui.js writes data-tr on <html>): "orig" hides Weverse's own English line,
 // "en" hides the original text. The hasen guard keeps a bubble without an English line - every
 // fan message - from losing its text in "en" mode.
