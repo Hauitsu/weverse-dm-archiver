@@ -15,7 +15,7 @@ finished later: every page is written to disk as it arrives, so stopping costs y
 
 ## Do I need to know how to code, or open DevTools?
 
-No. You double-click `START.bat`, the local page opens, you tick a room and press Start, you log
+No. You double-click `START.bat`, the local page opens, you choose a room and press Start, you log
 in in the window the tool opens and you press **I'm logged in - continue**. Everything else is a
 progress bar. There is a command line too (`wdm ...`) if you happen to like typing.
 

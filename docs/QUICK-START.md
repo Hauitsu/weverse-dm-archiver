@@ -59,13 +59,13 @@ token is read in memory to sign its own GET requests, never written to disk and 
 Each row is one DM room, with its size. A room that already has an archive also gets an **Open**
 button on the right, which jumps straight to its saved chat page. A room that has been archived
 once shows what it really uses; the rest show the ceiling for a whole conversation (up to 3 GB).
-Tick one or more rooms
+Choose one or more rooms
 and press **Start**. A popup explains it again - its own profile, sign in in the window that opens,
 then press **I'm logged in - continue** - before anything starts; confirm it. Rooms are archived one after another, never at the same time, with 1.5-3
 seconds between pages.
 
 The lower half of the page - the size estimate, the zip choice, the Start button - stays hidden
-until at least one room is ticked.
+until at least one room is chosen.
 
 Options:
 
@@ -101,7 +101,7 @@ Options:
   message comes up on its own once per install, right after the first run that leaves you holding
   such a room. Holding any such room in full is what counts, whichever room it is; `collectOwned` in
   `config.json` can leave slugs out.
-- **Estimated size** - the line under the list adds up every room you tick; hover it for the
+- **Estimated size** - the line under the list adds up every room you choose; hover it for the
   reasoning. The estimate is a ceiling, not a promise: this group's conversation starts April 2025, a
   room that has never been saved is quoted as up to `estimateGb` (3 GB), a saved room is projected
   from its own measured rate, and the shareable zip adds roughly the same again at **Yes** - a
@@ -128,7 +128,7 @@ message already on disk.
 
 When it finishes, the Result panel offers:
 
-- **Open chat** - `rooms/<room>.html` in your normal browser. It works offline. That is your own
+- **Open DM** - `rooms/<room>.html` in your normal browser. It works offline. That is your own
   copy (both sides, your harvested nickname); the shareable twin is `rooms-public/<room>.html`,
   where that nickname reads `EverAfter`.
 - **Open folder** - the folder holding the archive.

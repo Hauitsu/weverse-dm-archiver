@@ -1,3 +1,5 @@
+English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
+
 # Weverse DM Archiver (UNIS Exclusive)
 
 ![Weverse DM Archiver - your Weverse DMs, saved as a page that opens offline](assets/01-hero.svg)
@@ -10,7 +12,7 @@ Nothing is uploaded anywhere, and there is no account to make. When a run finish
 plain files on your own disk - keep them, copy them to a drive, or delete them whenever you like.
 
 > **Ready to use.** Unzip it - Node.js and ffmpeg are already inside - then double-click `START.bat`,
-> tick a room, press **Start**, log in in the window that opens and press **I'm logged in - continue**.
+> choose the rooms you want, press **Start**, log in in the window that opens and press **I'm logged in - continue**.
 > A real room has already been through it:
 > 9,574 unique messages across 18 months, 4,119 of them from the artist side, 1,478 media files
 > (1,444 photos, 30 videos, 4 audio), about 2.5 GB.
@@ -37,7 +39,7 @@ away from your normal browser.
 
 ## Quick start
 
-![Four steps: double-click START.bat, pick a room, press Start, log in, open the DM](assets/02-how-it-works.svg)
+![Four steps: double-click START.bat, pick rooms, press Start, log in, open the DM](assets/02-how-it-works.svg)
 
 Five short steps, and nothing to install: **Node.js and ffmpeg are already inside the download**.
 
@@ -61,11 +63,11 @@ window opens as well - you can ignore it.
 If that address is already busy, the tool picks another one and the console window prints the
 address it used.
 
-### 3. Tick a room and press Start
+### 3. Choose room to archive and press Start
 
 A short popup repeats what comes next. Read it, confirm it, and the next window opens.
 
-### 4. Log in there
+### 4. Login there
 
 A separate browser window opens on a fresh Weverse page. Log in, the way you usually do, and leave
 that window open.
@@ -81,7 +83,7 @@ a while, so this is a good moment to do something else.
 
 When it says done, you have three buttons:
 
-- **Open chat** - read the archive in your browser, no internet needed,
+- **Open DM** - read the archive in your browser, no internet needed,
 - **Open folder** - see the files that were written,
 - **Share** on that room's row - build a zip to send to someone.
 
@@ -150,7 +152,7 @@ below. `docs/FAQ.md` has the honest version, including what to do if you are ner
 subscription and nothing to sign up for.
 
 **Do I need to know anything technical?** No. Unzip the download - Node.js and ffmpeg are already
-inside it - double-click `START.bat`, tick a room and press Start. Everything else is buttons.
+inside it - double-click `START.bat`, choose the rooms you want and press Start. Everything else is buttons.
 
 **Do you get my Weverse password?** No. You type it into the browser window the tool opens, the way
 you would in any browser. It is never written to a file, never logged and never sent to us - there

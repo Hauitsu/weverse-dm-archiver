@@ -147,7 +147,7 @@
   "gui.retry": "다시 시도",
   "gui.checkNow": "브라우저 창을 다시 확인하는 중...",
   "gui.result": "결과",
-  "gui.openChat": "채팅 열기",
+  "gui.openChat": "DM 열기",
   "gui.openFolder": "폴더 열기",
   "gui.openZip": "share 폴더 열기",
   "gui.open": "열기",
