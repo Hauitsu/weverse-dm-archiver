@@ -355,8 +355,9 @@ const warnaGeser = (h, d) => '#' + warnaRgb(h).map((v) => Math.max(0, Math.min(2
 const warnaTeks = (bg) => { const L = warnaCahaya(bg); return warnaKontras(L, warnaCahaya('#101418')) >= warnaKontras(L, 1) ? '#101418' : '#ffffff'; };
 // How visible the artist bubble's edge is: the smallest nudge that puts the outline exactly this far
 // from the fill - toward white on a dark bubble, toward black on a pastel. One number to tune, and it
-// lands the same on all ten colours instead of getting lost on the darker pastels.
-const OUTLINE_KONTRAS = 1.25;
+// lands the same on all ten colours instead of getting lost on the darker pastels. 1.01 is the floor:
+// one or two steps in 8-bit sRGB, i.e. the outline is a hair off the fill and reads as no line at all.
+const OUTLINE_KONTRAS = 1.01;
 const pinggir = (bg, naik) => {
   let lo = 0, hi = 1;
   for (let i = 0; i < 16; i++) {
@@ -376,6 +377,9 @@ const WARNA_PALET = WARNA.map(([nama, swatch, gelap, terang]) => {
     lt: [terang, pinggir(terang, false), lT, lT === '#ffffff' ? '#dbe9fb' : '#0b4a8f'],
   };
 });
+// Weverse's own English line is what the reading switch works on, so a room that carries none gets
+// no switch at all: no menu item, no tab, nothing extra written into the page.
+const HAS_TR = norm.some((x) => x.textEn);
 const UISKRIP = fs.readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
 const uiData = {
   room: BASE,
@@ -383,6 +387,7 @@ const uiData = {
   hari: t('html.chipHari'),
   P: WARNA_PALET,
   T: { warna: t('html.bubTitle'), edit: t('html.chipEdit') },
+  TR: HAS_TR ? { t: t("html.trMenu"), both: t("html.trBoth"), orig: t("html.trOrig"), en: t("html.trEn") } : null,
 };
 const bkData = {
   room: BASE, nama: ROOM_NAME, slug: BASE, k0: bmEmbed,
@@ -394,6 +399,7 @@ const bkData = {
     tanggal: t("html.bookmarkDateTitle"),
     photo: t("html.bmPhoto"), video: t("html.bmVideo"), voice: t("html.bmVoice"), gift: t("html.bmGift"),
     ekspor: t("html.bmExported"), impor: t("html.bmImported"), gagal: t("html.bmBad"),
+    tr: HAS_TR ? t("html.trMenu") : "",
   }
 };
 const bmAda = new Map(bmList.map((t) => [t.messageId, t]));
@@ -419,6 +425,8 @@ for (const x of norm) {
   const bm = bmAda.get(x.messageId) || null;
   let body = x.text.split(NL).join('  ' + NL);
   if (!body) body = x.media.length ? t("md.media") : (x.deleted ? t("md.deleted") : '');
+  // Weverse's own English line sits right under the original it belongs to, italic.
+  if (x.textEn) body += (body ? NL + NL : '') + '_' + x.textEn + '_';
   md.push('- ' + x.isoWib.slice(11, 16) + (bm ? ' ⭐' : '') + ' ' + who + ': ' + body);
   for (let i = 0; i < x.media.length; i++) {
     const im = x.media[i], f = mediaFile(x, im, i);
@@ -462,7 +470,7 @@ h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 h.push('<title>' + esc(ROOM_NAME) + ' DM</title>');
 // Runs before the first paint: a remembered theme is on the page before anything is drawn, so
 // nobody sees a dark flash on the way to light.
-h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
+h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);if(WD.TR){var g=localStorage.getItem("wdm-tr");if(g==="both"||g==="orig"||g==="en")d.setAttribute("data-tr",g);}var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
 h.push('<style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
@@ -474,17 +482,20 @@ h.push('.oleh{color:#8b93a1;font-weight:400}');
 h.push('.meta{color:#8b93a1;font-size:13px;margin-bottom:8px}');
 // One knob for how big the room picture is: the file is 256x256, so --pf:256px shows it 1:1.
 h.push(':root{--pf:96px}');
+// One grey for the dark chrome: the same colour the fan bubble uses, so the sidebar, the two corner
+// buttons, the month chips and the days-together pill all sit on the surface of the messages.
+h.push(':root{--abu:#1f1f1f}');
 h.push('.kepala{display:flex;align-items:center;gap:14px;margin:0 0 18px}');
-h.push('.pf{display:block;flex:0 0 auto;width:var(--pf);height:var(--pf);border-radius:50%;object-fit:cover;background:#232833}');
+h.push('.pf{display:block;flex:0 0 auto;width:var(--pf);height:var(--pf);border-radius:50%;object-fit:cover;background:#2a2a2a}');
 h.push('.pf.pfi{display:flex;align-items:center;justify-content:center;font-size:calc(var(--pf) / 2.6);font-weight:600}');
 h.push('.kepala .rn{font-size:17px;font-weight:600;line-height:1.25}');
-// (the room id rides in the .meta line under the title, so nothing sits beside the picture)
+// (the room id and the totals now ride in the panel footer, so nothing sits beside the picture)
 h.push('.nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}');
-h.push('.nav a{color:#9ecbff;background:#161b24;border:1px solid #232833;border-radius:6px;padding:3px 8px;font-size:12px;text-decoration:none}');
-h.push('.nav a:hover{background:#1d2531}');
+h.push('.nav a{color:#9ecbff;background:var(--abu);border:1px solid #3a3a3a;border-radius:6px;padding:3px 8px;font-size:12px;text-decoration:none}');
+h.push('.nav a:hover{background:#2b2b2b}');
 // The day band is sticky, so it has to wear the page colour exactly - otherwise the message
 // scrolling underneath shows through as a grey seam under the date.
-h.push('.day{position:sticky;top:0;z-index:30;background:#000;padding:10px 0 6px;font-size:13px;color:#8b93a1;border-bottom:1px solid #232833;margin-top:6px}');
+h.push('.day{position:sticky;top:0;z-index:30;background:#000;padding:10px 0 6px;font-size:13px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#8b93a1;border-bottom:1px solid #2f2f2f;margin-top:6px}');
   // In the page but out of sight: the ISO date stays reachable for find-on-page and screen readers.
   h.push('.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}');
 h.push('.m{display:flex;gap:8px;align-items:flex-start;margin-top:8px}');
@@ -495,9 +506,9 @@ h.push('.day+.m{margin-top:4px}');
 h.push('.col{display:flex;flex-direction:column;max-width:74%;min-width:0}');
 h.push('.m.me .col{align-items:flex-end}');
 h.push('.who{font-weight:600;font-size:11px;line-height:1.3;color:#666666;margin:0 4px 2px;word-break:break-word}');
-h.push('.bub{background:#171c25;border:1px solid #232833;border-radius:14px;padding:6px 12px;word-break:break-word}');
+h.push('.bub{background:#1f1f1f;border:1px solid #2f2f2f;border-radius:14px;padding:6px 12px;word-break:break-word}');
 h.push('.tx{white-space:pre-wrap}');
-h.push('.m.artist .bub{background:var(--ab,#016268);border-color:var(--abd,#1a7277);border-bottom-left-radius:4px}');
+h.push('.m.artist .bub{background:var(--ab,#016268);border-color:var(--abd,#026368);border-bottom-left-radius:4px}');
 h.push('/* Only when a colour is picked: letters, translation, links and the deleted note follow it. */');
 h.push('html[data-bub] .m.artist .bub:not(.gift):not(.bare){color:var(--at)}');
 h.push('html[data-bub] .m.artist .bub .en{color:var(--at);opacity:.85}');
@@ -505,18 +516,23 @@ h.push('html[data-bub] .m.artist .bub .im a{color:var(--atl)}');
 h.push('html[data-bub] .m.artist .bub .del{color:var(--at);opacity:.9}');
 // No outline on your own bubble: the 1px is kept but drawn transparent, so the box stays the same
 // size as the artist's and nothing shifts when a colour is picked on the other side.
-h.push('.m.me .bub{background:#1f1f1f;border-color:transparent;border-bottom-right-radius:4px}');
+h.push('.m.me .bub{background:var(--abu);border-color:transparent;border-bottom-right-radius:4px}');
 h.push('.m.cont .bub{border-radius:14px}');
 h.push('.m.cont.artist .bub{border-top-left-radius:4px}');
 h.push('.m.cont.me .bub{border-top-right-radius:4px}');
 h.push('.tm{font-size:11px;color:#5f6875;flex:0 0 auto;padding-bottom:2px;align-self:flex-end}');
 h.push('.en{color:#cfe0f2;opacity:.72;font-size:13px;font-style:italic;margin-top:4px}');
+// Reading modes (src/ui.js writes data-tr on <html>): "orig" hides Weverse's own English line,
+// "en" hides the original text. The hasen guard keeps a bubble without an English line - every
+// fan message - from losing its text in "en" mode.
+h.push('html[data-tr="orig"] .en{display:none}');
+h.push('html[data-tr="en"] .bub.hasen .tx{display:none}');
 h.push('.im{margin-top:5px;font-size:12px}.im a{color:#9ecbff}');
-h.push('.av{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#232833}');
+h.push('.av{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#2a2a2a}');
 h.push('.media{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-start;max-width:100%}');
 h.push('.m.me .media{justify-content:flex-end}');
 h.push('a.ph{display:block;line-height:0}');
-h.push('.media img{display:block;border-radius:14px;background:#232833;max-width:min(272px,64vw);max-height:360px;width:auto;height:auto;cursor:zoom-in}');
+h.push('.media img{display:block;border-radius:14px;background:#2a2a2a;max-width:min(272px,64vw);max-height:360px;width:auto;height:auto;cursor:zoom-in}');
 // Media without a bubble behind it, the way the app shows a photo or a video. The four-class
 // selector is deliberate: it has to outrank .m.artist .bub and .m.cont.artist .bub, which set
 // their own background and corner.
@@ -529,8 +545,8 @@ h.push('.vdur{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.62);col
 h.push('.vfull{position:absolute;left:8px;bottom:9px;background:rgba(0,0,0,.62);color:#fff;font-size:11px;padding:1px 7px;border-radius:9px;text-decoration:none}');
 h.push('.vfull:hover{background:rgba(0,0,0,.85)}');
 h.push('.vfull2{color:#8fb7e0;font-size:12px;text-decoration:none;white-space:nowrap;margin-left:2px}');
-h.push('.vwrap video{background:#0b1219}');
-h.push('.aud{display:flex;align-items:center;gap:8px;background:#0e1620;border:1px solid #22303f;border-radius:14px;padding:6px 8px}');
+h.push('.vwrap video{background:#141414}');
+h.push('.aud{display:flex;align-items:center;gap:8px;background:#141414;border:1px solid #333333;border-radius:14px;padding:6px 8px}');
 h.push('.media audio{width:min(240px,58vw);height:36px}');
 h.push('.adur{font-size:11px;color:#8b93a1;white-space:nowrap}');
 h.push('.miss{font-size:12px}');
@@ -574,37 +590,48 @@ h.push('.bmk{color:#e0b341;font-size:12px;line-height:1;font-weight:700}');
    not move; the message column only shifts aside when the window is really wide. bm.js keeps
    #bmlist and #bmnota up to date, this file only shows and hides them. */
 h.push('.icons{position:fixed;top:10px;right:12px;z-index:41;display:flex;gap:6px}');
-h.push('.ico{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-family:inherit;font-size:19px;line-height:1;border-radius:11px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
+h.push('.ico{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-family:inherit;font-size:19px;line-height:1;border-radius:11px;border:1px solid #3a3a3a;background:var(--abu);color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}');
 h.push('.ico:hover{filter:brightness(1.08)}');
 h.push('.ico:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
-h.push('.ico[aria-expanded="true"]{border-color:#4da3ff;background:#1d2531}');
-h.push('.ico .n{position:absolute;top:-6px;right:-6px;min-width:15px;padding:0 3px;border-radius:999px;border:1px solid #29313d;background:#141922;color:#e0b341;font-size:10px;font-weight:700;line-height:14px;text-align:center}');
-h.push('.pnl{position:fixed;top:0;bottom:0;right:0;width:min(320px,86vw);z-index:45;display:none;flex-direction:column;font-size:12px;background:#141922;border-left:1px solid #232833;box-shadow:-8px 0 26px rgba(0,0,0,.5)}');
+h.push('.ico[aria-expanded="true"]{border-color:#4da3ff;background:#2b2b2b}');
+h.push('.ico .n{position:absolute;top:-6px;right:-6px;min-width:15px;padding:0 3px;border-radius:999px;border:1px solid #3a3a3a;background:#2f2f2f;color:#e0b341;font-size:10px;font-weight:700;line-height:14px;text-align:center}');
+h.push('.pnl{position:fixed;top:0;bottom:0;right:0;width:min(320px,86vw);z-index:45;display:none;flex-direction:column;font-size:12px;background:var(--abu);border-left:1px solid #2f2f2f;box-shadow:-8px 0 26px rgba(0,0,0,.5)}');
 h.push('.pnl.buka{display:flex}');
-h.push('.phead{display:flex;align-items:flex-start;gap:4px;padding:8px 8px 0}');
-h.push('.tabs{display:flex;flex:1 1 auto;gap:4px;min-width:0}');
-h.push('.tabs button{flex:1 1 auto;min-width:0;font:inherit;font-size:12px;font-weight:600;color:#8b93a1;background:none;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;padding:7px 9px;cursor:pointer}');
+h.push('.phead{display:flex;align-items:stretch;gap:4px;padding:8px 8px 0}');
+h.push('.tabs{display:flex;flex:1 1 auto;align-items:stretch;gap:4px;min-width:0}');
+h.push('.tabs button{flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;align-content:center;align-items:center;justify-content:center;gap:3px;text-align:center;font:inherit;font-size:11px;font-weight:600;line-height:1.3;color:#8b93a1;background:none;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;padding:7px 5px;cursor:pointer;overflow-wrap:break-word}');
 h.push('.tabs button:hover{color:#cfd6e0}');
-h.push('.tabs button[aria-selected="true"]{color:#e0b341;background:#1b212b;border-color:#29313d}');
-h.push('.pcl{flex:0 0 auto;font:inherit;font-size:15px;line-height:1;color:#8b93a1;background:none;border:0;padding:4px 6px;cursor:pointer}');
+// The panel draws its own focus ring: the browser's default ring is drawn around the clicked tab.
+h.push('.pnl button:focus,.mx button:focus{outline:none}');
+h.push('.pnl button:focus-visible,.mx button:focus-visible{outline:2px solid #4da3ff;outline-offset:-2px}');
+h.push('.tabs button[aria-selected="true"]{color:#e0b341;background:#2b2b2b;border-color:#3a3a3a}');
+h.push('.pcl{align-self:flex-start;flex:0 0 auto;font:inherit;font-size:15px;line-height:1;color:#8b93a1;background:none;border:0;padding:4px 6px;cursor:pointer}');
 h.push('.pcl:hover{color:#ff9c9c}');
 h.push('.pane{flex:1 1 auto;overflow:auto;padding:8px 10px 16px}');
+// The room summary sits under every tab, so it lives outside the panes, pinned to the foot of the
+// panel: src/panel.js only ever hides a .pane, and never has to know this line exists.
+h.push('.pfoot{flex:0 0 auto;border-top:1px solid #2f2f2f;padding:7px 10px 9px;max-height:40vh;overflow:auto}');
+h.push('.pfoot .meta{margin:0;font-size:11px;line-height:1.5;overflow-wrap:anywhere}');
 h.push('.pnl .pane[hidden]{display:none}');
 h.push('.pnl .nav{display:block;margin:0}');
 h.push('.pnl .nav a{display:block;margin:0 0 4px;text-align:left}');
 h.push('.pane .bb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:9px 0 3px}');
-h.push('.pane .bb button{font:inherit;font-size:11px;background:#1b212b;color:#9ecbff;border:1px solid #29313d;border-radius:6px;padding:3px 8px;cursor:pointer}');
-h.push('.pane .bb button:hover{background:#222a36}');
+h.push('.pane .bb button{font:inherit;font-size:11px;background:#2b2b2b;color:#9ecbff;border:1px solid #3a3a3a;border-radius:6px;padding:3px 8px;cursor:pointer}');
+h.push('.pane .bb button:hover{background:#333333}');
 h.push('.pane .bnota{color:#8b93a1;font-size:11px}');
 h.push('.pane .bkosong{color:#8b93a1;padding:4px 0}');
-h.push('.pane .br{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid #1b212b}');
+h.push('.pane .br{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid #2f2f2f}');
 h.push('.pane a{flex:1 1 auto;min-width:0;color:#9ecbff;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
-h.push('.pane a:hover{background:#1a212c}');
+h.push('.pane a:hover{background:#2b2b2b}');
 h.push('.pane a.bd{flex:0 0 auto;color:#8b93a1;font-size:11px}');
 h.push('.pane a.bd:hover{text-decoration:underline}');
 h.push('.pane .bn{color:#8b93a1}');
 h.push('.pane .bx2{flex:0 0 auto;background:none;border:0;color:#8b93a1;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}');
 h.push('.pane .bx2:hover{color:#ff9c9c}');
+h.push('.pane .trb{display:flex;flex-direction:column;gap:6px;padding:6px 0}');
+h.push('.pane .trb button{font:inherit;font-size:12px;text-align:left;background:#2b2b2b;color:#e6e6e6;border:1px solid #3a3a3a;border-radius:6px;padding:6px 9px;cursor:pointer}');
+h.push('.pane .trb button:hover{background:#333333}');
+h.push('.pane .trb button[aria-pressed="true"]{border-color:#2f9bff;color:#fff}');
 if (BM_ON) {
   h.push('.tm .bmk{margin-right:4px}');
   h.push('.dot{border:0;background:none;color:#5f6875;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:5px;opacity:0;transition:opacity .12s}');
@@ -613,29 +640,30 @@ if (BM_ON) {
   // keyboards (focus) and for touch screens, which have no hover to give.
   h.push('.m:hover .dot,.m:focus-within .dot,.dot:focus-visible{opacity:1}');
   h.push('@media (hover:none){.dot{opacity:1}}');
-  h.push('.mx{position:fixed;z-index:30;min-width:170px;background:#1b222d;border:1px solid #2b3441;border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.5)}');
+  h.push('.mx{position:fixed;z-index:30;min-width:170px;background:#2b2b2b;border:1px solid #3a3a3a;border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.5)}');
   h.push('.mx button{display:block;width:100%;text-align:left;font:inherit;font-size:13px;background:none;border:0;color:#e8ecf2;padding:7px 9px;border-radius:7px;cursor:pointer}');
-  h.push('.mx button:hover{background:#262f3d}');
+  h.push('.mx button:hover{background:#3a3a3a}');
 }
 h.push('.del{color:#8b93a1;font-style:italic}');
 h.push('/* Light theme. Nothing above is touched: dark stays exactly as it was, light overrides it.');
 h.push('   The :not(.gift):not(.bare) guards matter - a gift keeps its pink cover and a photo keeps no');
 h.push('   bubble at all, in either theme. */');
-h.push('html[data-tema="light"]{color-scheme:light}');
-h.push('html[data-tema="light"] body{background:#f7f8fa;color:#17181c}');
+h.push('html[data-tema="light"]{color-scheme:light;--abu:#f2f3f7}');
+// Daylight is paper: the page, the rim and the reading column are all the same white.
+h.push('html[data-tema="light"] body{background:#fff;color:#17181c}');
 h.push('html[data-tema="light"] .meta{color:#6b7280}');
 h.push('html[data-tema="light"] .oleh{color:#6b7280}');
 h.push('html[data-tema="light"] .pf{background:#dfe3e8}');
 h.push('html[data-tema="light"] .pf.pfi{color:#17181c}');
 h.push('html[data-tema="light"] .wrap>.nav a{color:#1f6feb;background:#fff;border-color:#dde3ea}');
 h.push('html[data-tema="light"] .wrap>.nav a:hover{background:#eef3fb}');
-h.push('html[data-tema="light"] .pnl .nav a{color:#9ecbff;background:#1b212b;border-color:#29313d}');
-h.push('html[data-tema="light"] .pnl .nav a:hover{background:#262f3d}');
-h.push('html[data-tema="light"] .day{background:#f7f8fa;color:#6b7280;border-bottom-color:#e3e7ec}');
+h.push('html[data-tema="light"] .pnl .nav a{color:#1f6feb;background:#f4f6f9;border-color:#dde3ea}');
+h.push('html[data-tema="light"] .pnl .nav a:hover{background:#e9eef6}');
+h.push('html[data-tema="light"] .day{background:#fff;color:#6b7280;border-bottom-color:#e3e7ec}');
 h.push('html[data-tema="light"] .who{color:#666666}');
 h.push('html[data-tema="light"] .bub:not(.gift):not(.bare){background:#fff;border-color:#e2e6eb}');
-h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:var(--ab,#bbf3f6);border-color:var(--abd,#a8dbdd)}');
-h.push('html[data-tema="light"] .m.me .bub:not(.gift):not(.bare){background:#f2f3f7;border-color:transparent}');
+h.push('html[data-tema="light"] .m.artist .bub:not(.gift):not(.bare){background:var(--ab,#bbf3f6);border-color:var(--abd,#baf1f4)}');
+h.push('html[data-tema="light"] .m.me .bub:not(.gift):not(.bare){background:var(--abu);border-color:transparent}');
 // The bookmark ring has to outrank the bubble colour above, in both themes - before this it lost on
 // specificity in light mode, so bookmarked bubbles showed no ring there at all. Gift covers and bare
 // media keep their own edges.
@@ -651,8 +679,8 @@ h.push('html[data-tema="light"] .vwrap video{background:#e8ebef}');
 h.push('html[data-tema="light"] .vfull2{color:#2f6fb3}');
 h.push('html[data-tema="light"] .aud{background:#fff;border-color:#dde3ea}');
 h.push('html[data-tema="light"] .adur{color:#6b7280}');
-h.push('html[data-tema="light"] .gf{color:#9a6b00}');
-h.push('html[data-tema="light"] .bmk{color:#9a6b00}');
+h.push('html[data-tema="light"] .gf{color:#e0b341}');
+h.push('html[data-tema="light"] .bmk{color:#e0b341}');
 if (BM_ON) {
   h.push('html[data-tema="light"] .pane .bb button{background:#fff;border-color:#dde3ea;color:#1f6feb}');
   h.push('html[data-tema="light"] .pane .bb button:hover{background:#e9eef6}');
@@ -667,38 +695,45 @@ if (BM_ON) {
 h.push('html[data-tema="light"] .del{color:#8b93a1}');
 // The theme switch: its own pill in the bottom-right corner, above the page and below the lightbox. It
 // steps aside when the panel is open so the two never sit on top of each other.
-h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 13px;border-radius:999px;border:1px solid #2b3542;background:#171c25;color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:right .2s ease}');
+h.push('.tt{position:fixed;right:14px;bottom:14px;z-index:40;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 13px;border-radius:999px;border:1px solid #3a3a3a;background:var(--abu);color:#e6e6e6;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:right .2s ease}');
 h.push('.tt:hover{filter:brightness(1.08)}');
 h.push('.tt:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('html[data-tema="light"] .tt{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
 h.push('html[data-tema="light"] .ico{border-color:#d8dee6;background:#fff;color:#17181c;box-shadow:0 4px 14px rgba(15,20,30,.16)}');
 h.push('html[data-tema="light"] .ico[aria-expanded="true"]{background:#eef3fb;border-color:#2f9bff}');
-h.push('html[data-tema="light"] .ico .n{background:#fff;border-color:#dde3ea;color:#9a6b00}');
+h.push('html[data-tema="light"] .ico .n{background:#fff;border-color:#dde3ea;color:#e0b341}');
 // The same panel in daylight, and the one place the page itself moves: a wide window narrows the page
 // box by the width of the panel, so the reading column recentres to the left of it. Fixing the width of
 // the column itself would only push it off to the right - auto margins are what centre it.
-h.push('html[data-tema="light"] .pnl{background:#fff;border-right-color:#dde3ea;box-shadow:0 0 34px rgba(15,20,30,.18)}');
+h.push('html[data-tema="light"] .pnl{background:#fff;border-color:#dde3ea;box-shadow:0 0 34px rgba(15,20,30,.18)}');
+h.push('html[data-tema="light"] .pfoot{border-top-color:#e6e9ee}');
 h.push('html[data-tema="light"] .tabs button{color:#6b7280}');
 h.push('html[data-tema="light"] .tabs button:hover{color:#17181c}');
-h.push('html[data-tema="light"] .tabs button[aria-selected="true"]{color:#9a6b00;background:#fff;border-color:#dde3ea}');
+h.push('html[data-tema="light"] .tabs button[aria-selected="true"]{color:#e0b341;background:#fff;border-color:#dde3ea}');
 h.push('html[data-tema="light"] .pcl{color:#98a1ad}');
 h.push('html[data-tema="light"] .pane .br{border-top-color:#e6e9ee}');
 h.push('html[data-tema="light"] .pane a{color:#1f6feb}');
 h.push('html[data-tema="light"] .pane a.bd{color:#6b7280}');
 h.push('html[data-tema="light"] .pane a:hover{background:#e9eef6}');
 h.push('html[data-tema="light"] .pane .bn{color:#6b7280}');
+h.push('html[data-tema="light"] .pane .trb button{background:#fff;border-color:#dde3ea;color:#3f5568}');
+h.push('html[data-tema="light"] .pane .trb button:hover{background:#e9eef6}');
+h.push('html[data-tema="light"] .pane .trb button[aria-pressed="true"]{border-color:#1f6feb;color:#0b2545}');
 h.push('@media (min-width:1180px){body.pnel{margin-right:min(320px,86vw)}}');
 h.push('body.pnel .tt{right:calc(min(320px,86vw) + 14px)}');
 h.push('body.pnel .icons{right:calc(min(320px,86vw) + 12px)}');
 h.push('@media (max-width:700px){body.pnel .tt,body.pnel .icons{opacity:0;pointer-events:none}}');
-/* The days-together chip and its swatch row: pinned to the top-right of the conversation like the
-   day header is pinned to the top-left, so the two read as one HUD while the page scrolls. Built by
-   src/ui.js so the export stays lean; the colours themselves are inline styles. The row is
-   transparent to the mouse - only the pill itself takes clicks - so it never blocks a message. */
-h.push('.chip{position:sticky;top:var(--chip-atas,34px);z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
+/* The days-together chip and its swatch row: the pill sits on its own line under the profile row and
+   then pins to the top-right of the conversation while the page scrolls, opposite the day header that
+   pins to the top-left, so the two read as one HUD. The pin is the day band's own height to the pixel
+   (.day is 10 + 20 + 6 + 1 = 37, plus 12 below the corner icons), written in by src/ui.js as
+   --chip-atas; without it the pill keeps a safe place under the band. Built by src/ui.js so the
+   export stays lean, and the colours are inline styles. The row is transparent to the mouse - only
+   the pill itself takes clicks - so it never blocks a message. */
+h.push('.chip{position:sticky;top:var(--chip-atas,37px);z-index:31;display:flex;justify-content:flex-end;padding-top:6px;margin:0 0 6px;pointer-events:none}');
 // The two icons float over the top-right corner, so the sticky pill parks below them.
-h.push('body.has-icons .chip{top:calc(var(--chip-atas,34px) + 12px)}');
-h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:#171c25;border:1px solid #2b3542;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
+h.push('body.has-icons .chip{top:calc(var(--chip-atas,37px) + 12px)}');
+h.push('.chip .cp{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:var(--abu);border:1px solid #3a3a3a;border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 2px 10px rgba(0,0,0,.3)}');
 // The heart button wears the colour that is picked, so the bar shows the live choice even while the
 // palette is closed; the icon flips with it (white on the deep set and on the grey, near-black on a
 // pastel), using the same --at the bubbles use.
@@ -710,13 +745,13 @@ h.push('.chip .angka{font-size:13px;font-weight:700;letter-spacing:.2px;color:#e
 h.push('.chip .angka:focus-visible{outline:2px solid #4da3ff;outline-offset:2px}');
 h.push('.chip .hari{font-size:12px;font-weight:600;color:#e6e6e6;cursor:pointer;white-space:nowrap}');
 h.push('.chip .hari:focus-visible{outline:2px solid #4da3ff;outline-offset:2px;border-radius:4px}');
-h.push('.chip input.hari{width:15ch;font:inherit;font-size:12px;font-weight:600;color:#e6e6e6;background:#0f1115;border:1px solid #3a4552;border-radius:7px;padding:2px 5px;outline:none}');
+h.push('.chip input.hari{width:15ch;font:inherit;font-size:12px;font-weight:600;color:#e6e6e6;background:#171717;border:1px solid #3a3a3a;border-radius:7px;padding:2px 5px;outline:none}');
 h.push('.chip input.hari:focus{border-color:#4da3ff}');
-h.push('#wpal{position:absolute;right:0;top:calc(100% + 7px);z-index:36;display:flex;flex-wrap:wrap;align-items:center;gap:7px;max-width:min(92vw,330px);padding:9px 10px;pointer-events:auto;background:#171c25;border:1px solid #2b3542;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.45)}');
+h.push('#wpal{position:absolute;right:0;top:calc(100% + 7px);z-index:36;display:flex;flex-wrap:wrap;align-items:center;gap:7px;max-width:min(92vw,330px);padding:9px 10px;pointer-events:auto;background:var(--abu);border:1px solid #3a3a3a;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.45)}');
 h.push('#wpal[hidden]{display:none}');
 h.push('#wpal button.w{width:22px;height:22px;padding:0;border:0;border-radius:50%;cursor:pointer;transition:transform .08s}');
 h.push('#wpal button.w:hover{transform:scale(1.1)}');
-h.push('#wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #171c25,0 0 0 4px #4da3ff}');
+h.push('#wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px var(--abu),0 0 0 4px #4da3ff}');
 h.push('html[data-tema="light"] .chip .cp{background:#fff;border-color:#e6e9ee;box-shadow:0 2px 8px rgba(15,20,30,.08)}');
 h.push('html[data-tema="light"] .chip .hari{color:#17181c}');
 h.push('html[data-tema="light"] .chip .angka{color:#17181c}');
@@ -725,23 +760,25 @@ h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-s
 h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
 h.push('html{color-scheme:dark}');
 h.push('</style></head><body' + (BM_ON ? ' class="has-icons"' : '') + '><div class="wrap">');
-// One button in the top-right corner opens the panel (src/panel.js): the date jump first, your
-// bookmarks second, both switched by the tabs inside. The theme switch keeps its own pill in the
-// bottom-right. The public export has no panel, so it gets no button either.
-if (BM_ON) {
+// One button in the top-right corner opens the panel (src/panel.js): the date jump in both exports,
+// the translation switch whenever the room has one, and your bookmarks in the room's own export.
+// The theme switch keeps its own pill in the bottom-right.
+{
+  const labelPnl = BM_ON ? t("html.panelOpen") : (HAS_TR ? t("html.panelTr") : t("html.panelJump"));
   h.push('<div class="icons" id="icons">');
-  h.push('<button class="ico" id="pmenu" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(t("html.panelOpen")) + '" aria-label="' + esc(t("html.panelOpen")) + '">&#8943;<span class="n" data-bmn-n>0</span></button>');
+  h.push('<button class="ico" id="pmenu" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(labelPnl) + '" aria-label="' + esc(labelPnl) + '">&#8943;' + (BM_ON ? '<span class="n" data-bmn-n>0</span>' : '') + '</button>');
   h.push('</div>');
 }
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
 // Sits next to the button so the right label is there before the message list is parsed.
 h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
 h.push('<h1>' + esc(t("html.title")) + ' <span class="oleh">' + esc(t("html.titleBy")) + '</span></h1>');
-h.push('<div class="meta">' + t("html.meta", { ids: esc([...roomIds].join(', ')), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot }) + '</div>');
-// The month jump is the panel's first tab whenever bookmarks are on; a room exported without them has
-// no panel, so there the chips stay in the page right under the title (see the corner buttons below).
+// The room summary line is not printed in the reading column any more: it is handed to the panel
+// footer further down, so it stays on screen whichever tab is showing.
+const META_HTML = t("html.meta", { ids: esc([...roomIds].join(', ')), who: esc(ARTIST_NAME) + ' ' + artist + ((norm.length - artist) ? t("html.metaWhoMe", { n: norm.length - artist }) : ''), n: norm.length, a: esc(wib(first.createDate).slice(0, 16)), b: esc(wib(last.createDate).slice(0, 16)), tz: TZ_LABEL, pages: rows.length, files: files.length, lok: lok, tot: mediaTot });
+// The month chips are the panel's first tab, in both exports, so the reading column never turns into
+// a wall of months above the first message.
 const navHTML = months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byMonth.get(mo) + ')</a>').join('');
-if (!BM_ON) h.push('<div class="nav">' + navHTML + '</div>');
 // The room, right under the title: the artist's own picture (the file the messages use) with the room
 // name beside it. Nothing else lives in the reading column now - the month jump and the bookmarks sit
 // behind the two icon buttons in the top-right corner.
@@ -761,7 +798,7 @@ for (const x of norm) {
   const mo = x.isoWib.slice(0, 7);
   if (mo !== lastMonth) { h.push('<div id="mo-' + mo + '"></div>'); lastMonth = mo; }
   // The day divider carries the date only: the zone is stated once, in the header at the top.
-  if (day !== lastDay) { h.push('<div class="day" id="d-' + day + '"><span class="sr">' + day + '</span>' + esc(labelHari(day)) + '</div>'); lastDay = day; prevType = null; }
+  if (day !== lastDay) { h.push('<div class="day" id="d-' + day + '" title="' + esc(labelHari(day)) + '"><span class="sr">' + day + '</span>' + esc(labelHari(day)) + '</div>'); lastDay = day; prevType = null; }
   const me = x.userType !== 'ARTIST';
   const cont = prevType === x.userType;
   prevType = x.userType;
@@ -775,7 +812,7 @@ for (const x of norm) {
   // it: those get no chrome at all and the rounded media is the whole thing. Voice notes keep
   // their bubble (the player needs a body) and so do gifts (the cover is the bubble).
   const bare = !gKode && !x.text && !x.textEn && !x.deleted && x.media.length > 0 && x.media.every((im) => im.kind !== 'audio');
-  h.push('<div class="bub' + (gKode ? ' gift' + (x.media.length ? '' : ' txt-only') : '') + (bare ? ' bare' : '') + '"' + (gKode ? ' data-gift="' + esc(gKode) + '"' : '') + '>');
+  h.push('<div class="bub' + (gKode ? ' gift' + (x.media.length ? '' : ' txt-only') : '') + (bare ? ' bare' : '') + (x.textEn ? ' hasen' : '') + '"' + (gKode ? ' data-gift="' + esc(gKode) + '"' : '') + '>');
   if (x.deleted) h.push('<span class="del tx">' + esc(x.text || t("html.deleted")) + '</span>');
   else if (x.text) h.push('<span class="tx">' + esc(x.text) + '</span>');
   if (x.textEn) h.push('<div class="en">' + esc(x.textEn) + '</div>');
@@ -828,26 +865,34 @@ h.push('lb.addEventListener("click",function(e){if(e.target===lb)tutup();});');
 h.push('document.addEventListener("keydown",function(e){if(!lb.classList.contains("on"))return;if(e.key==="Escape")tutup();if(e.key==="ArrowLeft")show(i-1);if(e.key==="ArrowRight")show(i+1);});');
 if (giftAda) h.push('var gfc=[].slice.call(document.querySelectorAll(".bub.gift .gfc"));gfc.forEach(function(c){c.addEventListener("click",function(){c.parentNode.classList.add("open");c.setAttribute("aria-expanded","true");});});if(location.hash==="#gift-open")gfc.forEach(function(c){c.parentNode.classList.add("open");});');
 h.push('</script>');
-// The panel itself: the month jump and your bookmarks, out of the way until the corner button asks
-// for it. bm.js keeps #bmlist and #bmnota up to date; src/panel.js is only the on/off switch.
-if (BM_ON) {
+// The panel itself, out of the way until the corner button asks for it: the date jump first in both
+// exports, the translation switch when the room has one, your bookmarks in the room's own export.
+// bm.js keeps #bmlist and #bmnota up to date; src/panel.js is only the on/off switch and the tabs.
+{
   h.push('<div class="pnl" id="panel" aria-hidden="true">');
   h.push('<div class="phead"><div class="tabs" role="tablist">');
-  h.push('<button type="button" id="tabj" role="tab" aria-selected="false" aria-controls="panej">' + esc(t("html.panelJump")) + '</button>');
-  h.push('<button type="button" id="tabb" role="tab" aria-selected="true" aria-controls="paneb">&#9733; ' + esc(t("html.panelBm")) + ' <span data-bmn>(0)</span></button>');
+  h.push('<button type="button" id="tabj" role="tab" aria-selected="' + (BM_ON ? 'false' : 'true') + '" aria-controls="panej">' + esc(t("html.panelJump")) + '</button>');
+  if (BM_ON) h.push('<button type="button" id="tabb" role="tab" aria-selected="true" aria-controls="paneb">&#9733; ' + esc(t("html.panelBm")) + ' <span data-bmn>(0)</span></button>');
+  if (HAS_TR) h.push('<button type="button" id="tabt" role="tab" aria-selected="false" aria-controls="panet">' + esc(t("html.trMenu")) + '</button>');
   h.push('</div><button type="button" class="pcl" id="pcl" aria-label="' + esc(t("html.panelClose")) + '" title="' + esc(t("html.panelClose")) + '">&times;</button></div>');
-  h.push('<div class="pane" id="panej" role="tabpanel" hidden><div class="nav">' + navHTML + '</div></div>');
-  h.push('<div class="pane" id="paneb" role="tabpanel">');
-  h.push('<div class="bb"><button type="button" id="bmex">' + t("html.bmExport") + '</button><button type="button" id="bmim">' + t("html.bmImport") + '</button><span class="bnota" id="bmnota"></span><input type="file" id="bmfi" accept=".json,application/json" hidden></div>');
-  h.push('<div id="bmlist"><div class="bkosong">' + t("html.bmEmpty") + '</div></div>');
-  h.push('</div></div>');
+  h.push('<div class="pane" id="panej" role="tabpanel"' + (BM_ON ? ' hidden' : '') + '><div class="nav">' + navHTML + '</div></div>');
+  if (HAS_TR) h.push('<div class="pane" id="panet" role="tabpanel" hidden><div class="trb" id="trbox"></div></div>');
+  if (BM_ON) {
+    h.push('<div class="pane" id="paneb" role="tabpanel">');
+    h.push('<div class="bb"><button type="button" id="bmex">' + t("html.bmExport") + '</button><button type="button" id="bmim">' + t("html.bmImport") + '</button><span class="bnota" id="bmnota"></span><input type="file" id="bmfi" accept=".json,application/json" hidden></div>');
+    h.push('<div id="bmlist"><div class="bkosong">' + t("html.bmEmpty") + '</div></div>');
+    h.push('</div>');
+  }
+  // Outside the panes on purpose: the summary line is in view on every tab.
+  h.push('<div class="pfoot"><div class="meta">' + META_HTML + '</div></div>');
+  h.push('</div>');
 }
 if (BM_ON) h.push('<div class="mx" id="mx" role="menu" hidden></div>');
 if (BM_ON) h.push('<script>' + BMSKRIP.split('{{BK}}').join(JSON.stringify(bkData)) + '</script>');
 // Always on, in both exports: the chip is a reader-side preference, not personal chat data.
 h.push('<script>' + UISKRIP + '</script>');
-// The corner button and the panel it opens: same script in both exports whenever bookmarks are on.
-if (BM_ON) h.push('<script>' + PANELSKRIP + '</script>');
+// The corner button and the panel it opens: the same script in both exports.
+h.push('<script>' + PANELSKRIP + '</script>');
 h.push('</div></body></html>');
 fs.writeFileSync(path.join(OUT, BASE + '.html'), h.join(NL), 'utf8');
 

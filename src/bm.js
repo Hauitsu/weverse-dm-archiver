@@ -202,6 +202,16 @@
       b2.onclick = function () { tutupMenu(); it[1](); };
       menu.appendChild(b2);
     });
+    // The translation switch is a page-wide reading choice, so it is asked once here and then
+    // applies to every bubble. src/ui.js owns the three modes; this item only carries the request.
+    if (S.tr) {
+      var bt = el("button");
+      bt.type = "button";
+      bt.textContent = S.tr;
+      bt.setAttribute("data-tropen", "");
+      bt.onclick = function () { tutupMenu(); };
+      menu.appendChild(bt);
+    }
     menu.hidden = false;
     var pr = b.getBoundingClientRect();
     var lbr = menu.offsetWidth, tgi = menu.offsetHeight;

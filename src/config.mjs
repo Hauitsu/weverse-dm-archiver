@@ -34,12 +34,12 @@ export const DEFAULTS = {
   // "Share to <name>": where a zip can be handed over - a chat invite, a cloud folder. The build
   // ships one, hidden from a search box but not from a reader (see src/collect.mjs); setting this
   // replaces it. Only this one value is ever opened (never anything the page itself sends).
-  // collectOwned lists rooms the author already has, so they are never asked for; collectSeen
+  // collectOwned lists rooms never worth asking about (empty by default); collectSeen
   // remembers that the once-per-install popup has been shown. collectDebug is for looking at that
   // popup: it offers every room, whatever its archive looks like, and shows the message after every
   // finished run without using up the once-per-install moment.
   collectName: "Hauitsu",
-  collectOwned: "yunha",
+  collectOwned: "",
   collectSeen: false,
   collectDebug: false,
   collectUrl: "",

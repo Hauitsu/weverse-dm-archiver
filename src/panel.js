@@ -1,12 +1,14 @@
-/* The side panel: the month jump and your bookmarks, out of the reading column until you press the
-   button in the top-right corner. Plain ES5 like src/ui.js and src/bm.js; the panel only shows and
-   hides what the renderer already wrote, and the bookmark list itself stays bm.js' business. */
+/* The side panel: the month jump, the translation switch and your bookmarks, out of the reading
+   column until you press the button in the top-right corner. Plain ES5 like src/ui.js and src/bm.js;
+   the panel only shows and hides what the renderer already wrote, the bookmark list itself stays
+   bm.js' business, and the switch inside the panel is built by ui.js. */
 (function () {
   var panel = document.getElementById("panel");
   if (!panel) return;
   var menu = document.getElementById("pmenu"), closer = document.getElementById("pcl");
-  var tabs = { j: document.getElementById("tabj"), b: document.getElementById("tabb") };
-  var panes = { j: document.getElementById("panej"), b: document.getElementById("paneb") };
+  // A tab that is not in the page (no bookmarks, no translations) simply is not in the map.
+  var tabs = { j: document.getElementById("tabj"), b: document.getElementById("tabb"), t: document.getElementById("tabt") };
+  var panes = { j: document.getElementById("panej"), b: document.getElementById("paneb"), t: document.getElementById("panet") };
   var last = "j";   // the tab the next open starts on, so a switch is remembered
 
   function isOpen() { return panel.classList.contains("buka"); }
@@ -43,6 +45,7 @@
   if (closer) closer.onclick = hide;
   if (tabs.j) tabs.j.onclick = function () { last = "j"; select("j"); };
   if (tabs.b) tabs.b.onclick = function () { last = "b"; select("b"); };
+  if (tabs.t) tabs.t.onclick = function () { last = "t"; select("t"); };
   document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") hide(); });
   // Anything else on the page - a message, a photo, the theme switch - puts the panel away again. The
   // corner button is left alone: it carries its own toggle, so one click must never open and close.

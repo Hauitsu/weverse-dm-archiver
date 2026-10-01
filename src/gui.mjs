@@ -10,7 +10,7 @@ import http from "node:http";
 import { spawn } from "node:child_process";
 import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
-import { REPO, dirs, rooms, runRoom, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
+import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
 import { canOffer, collectReady, driveUrl, eligibleRooms, memberName } from "./collect.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
@@ -41,7 +41,7 @@ function cfgWatch() {
   return cfg;
 }
 const state = {
-  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false,
+  phase: "idle", running: false, slug: "", roomName: "", percent: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false, settleUntil: 0,
   log: [], result: null, error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -110,7 +110,7 @@ function shareInfo(slug) {
 
 // Packing a zip is a job of its own: it needs no browser and no login, it runs while the page keeps
 // polling, and it is the only thing this file does that writes into share/.
-const shareJob = { running: false, slug: "", low: false, percent: 0, log: [], error: "", result: null, at: 0 };
+const shareJob = { running: false, stop: false, slug: "", low: false, percent: 0, log: [], error: "", result: null, at: 0 };
 function sharePush(m) {
   const line = String(m);
   shareJob.log.push(line);
@@ -124,24 +124,38 @@ async function startShare(body) {
   if (shareJob.running || state.running) return;
   const r = rooms(cfg).filter((x) => x.slug === String(body.slug || ""))[0];
   if (!r) return;
-  shareJob.running = true; shareJob.slug = r.slug; shareJob.low = !!body.low;
+  shareJob.running = true; shareJob.stop = false; shareJob.slug = r.slug; shareJob.low = !!body.low;
   shareJob.percent = 0; shareJob.log = []; shareJob.error = ""; shareJob.result = null; shareJob.at = Date.now();
   const tr = t();
   sharePush(tr("gui.phase.bundle") + ": " + (r.rowLabel || r.slug));
   try {
-    if (!publicExport(r.slug)) throw new Error(tr("gui.shareNeedPub"));
+    if (!publicExport(r.slug)) {
+      // A room harvested back when sharing was off has a private page and no public one. That is
+      // not a reason to refuse: the public export is rendered here from the same source, and it
+      // is exactly the artist-only copy a zip is allowed to carry.
+      if (!roomPage(r.slug)) throw new Error(tr("gui.shareNeedPub"));
+      sharePush(tr("gui.shareBuildPub"));
+      const built = await renderRoom({
+        slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: artistLabel(r),
+        tz: tzFor(cfg, r), lang: pickLang(cfg.language), only: "artist", rename: publicRenameFor(cfg, r.slug),
+        bookmarks: "off", outDir: publicDirFor(cfg), warn: false, onLog: sharePush,
+      });
+      if (built !== 0 || !publicExport(r.slug)) throw new Error(tr("gui.shareNeedPub"));
+    }
     const b = await bundle({
       slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r),
       roomDir: publicDirFor(cfg), mediaDir: dirs(cfg).media, shareDir: dirs(cfg).share, verifyDir: dirs(cfg).verify,
-      credit: cfg.credit || "", lowQuality: shareJob.low, onLog: sharePush,
+      credit: cfg.credit || "", lowQuality: shareJob.low, onLog: sharePush, shouldStop: () => shareJob.stop,
     });
     shareJob.result = { name: path.basename(b.zip), bytes: b.bytes, sha256: b.sha256, path: b.zip };
     shareJob.percent = 100;
     sharePush("zip: " + path.basename(b.zip) + " (" + fmtSize(b.bytes) + ")");
   } catch (e) {
-    shareJob.error = String((e && e.message) || e);
-    sharePush("error: " + shareJob.error);
-  } finally { shareJob.running = false; }
+    // Cancelling is not a failure: the log below says so, and everything the job held is released
+    // by the finally right after it, which is what brings the share buttons back.
+    if (e && e.stopped) sharePush("stopped by the user");
+    else { shareJob.error = String((e && e.message) || e); sharePush("error: " + shareJob.error); }
+  } finally { shareJob.running = false; shareJob.stop = false; }
 }
 // "Open folder" means the folder that holds the zip, with the zip itself already marked on Windows.
 function openShareFolder(slug) {
@@ -199,7 +213,14 @@ function page() {
   const curShare = String(cfg.shareMode) === "no" ? "no" : "yes";
   const shareOpts = [["yes", "gui.shareYes"], ["no", "gui.shareNo"]]
     .map((m) => "<option value=\"" + m[0] + "\"" + (curShare === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>").join("");
-  const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li style=\"margin:0 0 10px\">" + emph(s) + "</li>").join("") + "</ol>";
+  // The (i) beside "Home page": one look at what that page should look like once the signing in went
+  // through, so nobody has to guess whether they are standing in the right place. The {i} token sits
+  // in each translation, because where it belongs in the sentence is not the same in every language.
+  const homeShot = "<span class=\"tipwrap\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip shot\"><img src=\"/assets/home-page.png\" alt=\"\"><span class=\"cap\">" + esc(tr("gui.homeShot")) + "</span></span></span>";
+  // The same little (i), but this one only has words to say: where the login lives. It is not the
+  // session screenshot, so it keeps the plain text tooltip and hangs off the end of the line.
+  const loginTip = "<span class=\"tipwrap end\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.loginStays")) + "</span></span>";
+  const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li style=\"margin:0 0 10px\">" + emph(s).replace("{login}", loginTip).replace("{i}", homeShot) + "</li>").join("") + "</ol>";
 
   return [
     "<!doctype html><html lang=\"" + pickLang(cfg.language) + "\"><head><meta charset=\"utf-8\">",
@@ -213,9 +234,35 @@ function page() {
     "button{font:inherit;padding:7px 14px;border-radius:8px;border:1px solid #8886;background:#8881;cursor:pointer}",
     "button.mini{padding:3px 9px;font-size:13px;border-radius:6px}.op,.sh{text-align:right}",
     "button.primary{background:#2f6feb;border-color:#2f6feb;color:#fff}button:disabled{opacity:.45;cursor:default}",
+    // Feedback for the seconds between pressing Stop and the run really reaching its stopped
+    // state. The ring spins and both the button and the phase line breathe, so a click that is
+    // waiting on the current page looks different from a click that did nothing at all.
+    "@keyframes wdmPulse{0%,100%{opacity:1}50%{opacity:.3}}",
+    "@keyframes wdmSpin{to{transform:rotate(360deg)}}",
+    "button.busy{animation:wdmPulse 1.1s ease-in-out infinite}",
+    "button.busy::after{content:\"\";display:inline-block;width:9px;height:9px;margin-left:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:wdmSpin .8s linear infinite;vertical-align:-1px}",
+    "#phase.stopping{animation:wdmPulse 1.1s ease-in-out infinite}",
+    "@media (prefers-reduced-motion:reduce){button.busy,#phase.stopping,#fill.live,#shFill.live{animation:none}button.busy::after{animation:none}}",
+// The Share to Hauitsu button gives a small shake once every ten seconds while it sits there: a
+// nudge that is easy to ignore. It claims transform only while the pointer is away from the button,
+// so the hover lift and the press stay exactly as they were, it stops by itself when the button is
+// disabled (a zip is being built), and it obeys the reduced-motion switch below.
+"@keyframes wdmNudge{0%,84%,100%{transform:translateY(0)}87%{transform:translateY(-2px)}90%{transform:translateY(2px)}93%{transform:translateY(-1.5px)}96%{transform:translateY(1.5px)}}",
+"#shTo:not(:disabled):not(:hover):not(:active){animation:wdmNudge 10s ease-in-out infinite}",
+"@media (prefers-reduced-motion:reduce){#shTo{animation:none !important}}",
+    // Ready-to-press feedback for every button: it lifts under the cursor and sinks when pressed, so
+    // a click is felt even when the real answer happens outside the page. Disabled buttons stay put.
+    "button{transition:transform .14s ease,box-shadow .14s ease}",
+    "button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 10px #0002}",
+    "button:active:not(:disabled){transform:translateY(1px) scale(.97);box-shadow:0 1px 2px #0002}",
+    "@media (prefers-reduced-motion:reduce){button{transition:none}button:hover,button:active{transform:none;box-shadow:none}}",
     "#log,#shLog{white-space:pre-wrap;font:12px/1.45 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;background:#8881;border-radius:8px;padding:10px;margin:0}",
     "#shLog{max-height:150px;margin-top:12px}",
     "#bar,#shBar{height:6px;background:#8883;border-radius:3px;overflow:hidden;margin:10px 0}#fill,#shFill{display:block;height:100%;width:0;background:#2f6feb;transition:width .4s}",
+    // Only the bar that belongs to the job running right now crawls, so a slow page still looks
+    // busy instead of frozen. Both bars go back to a plain solid fill the moment their job ends.
+    "@keyframes wdmCrawl{from{background-position:0 0}to{background-position:36px 0}}",
+    "#fill.live,#shFill.live{background-color:#2f6feb;background-image:linear-gradient(45deg,#ffffff40 25%,transparent 25%,transparent 50%,#ffffff40 50%,#ffffff40 75%,transparent 75%,transparent);background-size:36px 36px;animation:wdmCrawl 1s linear infinite}",
     ".grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.muted{opacity:.7;font-size:13px}",
     // The estimate explains itself on hover only, so the page stays short. Pure CSS, no script.
     ".tipwrap{position:relative;display:inline-block;cursor:help}",
@@ -223,12 +270,19 @@ function page() {
     ".tipwrap:hover .tip{display:block}",
     ".tipwrap.flow{position:static}",
     ".tipwrap.flow .tip{min-width:min(460px,100%)}",
+    // A tooltip at the end of a line has nowhere to grow to the right, so it grows left instead of
+    // running off the panel. The wrapper keeps its own position, which is what anchors it to the icon.
+    ".tipwrap.end .tip{left:auto;right:0}",
+".tipwrap:focus-within .tip{display:block}",
+".tip.shot{left:50%;transform:translateX(-50%);min-width:0;width:min(620px,86vw);padding:8px}",
+".tip.shot img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid #8884}",
+".tip.shot .cap{display:block;margin-top:6px;font-size:12px;line-height:1.4;opacity:.85}",
     ".info{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border:1px solid #8888;border-radius:50%;font-size:11px;font-weight:700;font-style:italic;line-height:1;opacity:.75}",
     "input[type=text],select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #8886;background:transparent}",
     "details.adv summary{cursor:pointer;font-size:13px;opacity:.75}details.adv[open] summary{margin-bottom:2px}",
     "em{font-style:italic}em strong,strong em{font-style:normal;font-weight:700}",
     "</style></head><body>",
-    "<h1>" + esc(tr("gui.title")) + " <span class=\"oleh\">" + esc(tr("gui.titleBy")) + "</span></h1><p class=\"sub\">" + esc(tr("gui.tagline")) + "</p>",
+    "<h1>" + esc(tr("gui.title")) + " <span class=\"oleh unis\">" + esc(tr("gui.titleUnis")) + "</span> <span class=\"oleh\">" + esc(tr("gui.titleBy")) + "</span></h1><p class=\"sub\">" + esc(tr("gui.tagline")) + "</p>",
     "<div class=\"grid\" style=\"margin:-6px 0 16px\"><label>" + esc(tr("gui.language")) + " <select id=\"lang\">" + langs + "</select></label>",
     "<span class=\"muted\">" + esc(tr("gui.langHint")) + "</span></div>",
 
@@ -356,7 +410,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  await fetch(\"/api/start\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({rooms:ids,share:el(\"#share\").value,tz:el(\"#tz\").value})});",
     "  tick();",
     "}",
-    "async function stop(){await fetch(\"/api/stop\",{method:\"POST\"});tick();}",
+    "async function stop(){stopping=true;paintStop(true);try{await fetch(\"/api/stop\",{method:\"POST\"});}catch(err){stopping=false;}tick();}",
     "async function openRoom(slug){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"room\",slug:slug})});}",
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w){await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
@@ -366,10 +420,25 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "var ROWSIG=" + JSON.stringify(listSignature(list)) + ";",
 "var lastReload=0;",
 "var shSlug=\"\",lastRooms=[],lastShare=null,shEstBytes=0,toSurprise=false,DBG=false;",
+    "var stopping=false;",
+    "var LBL={stop:" + JSON.stringify(tr("gui.stop")) + ",stopping:" + JSON.stringify(tr("gui.stopping")) + ",settling:" + JSON.stringify(tr("gui.settling")) + "};",
+    "function paintStop(run){el(\"#stop\").disabled=stopping||!run;el(\"#stop\").textContent=stopping?LBL.stopping:LBL.stop;el(\"#stop\").className=stopping?\"busy\":\"\";el(\"#phase\").className=stopping?\"muted stopping\":\"muted\";}",
     "function roomInfo(slug){for(var i=0;i<lastRooms.length;i++){if(lastRooms[i].slug===slug)return lastRooms[i];}return null;}",
     "function hideShare(){el(\"#shModal\").style.display=\"none\";}",
+// Cancel means cancel: while a zip is being built, the same button stops it - the window stays
+// open with the log saying so, and everything comes back once the job has unwound. Otherwise it
+// just closes the window. Escape and the backdrop go through here too, so no path can leave a
+// job running with the console gone quiet.
+"async function closeShare(){",
+"  if(lastShare&&lastShare.running){",
+"    try{await fetch(\"/api/share/stop\",{method:\"POST\"});}catch(err){}",
+"    tick();",
+"    return;",
+"  }",
+"  hideShare();",
+"}",
     "function paintShare(info,sh){",
-    "  var can=!!(info&&info.canZip);",
+    "  var can=!!(info&&info.canZip)||!!(info&&info.canBuild);",
     "  var line=!can?MSG.shNeedPub:(info&&info.zip?MSG.shHave.replace(\"{v}\",info.zip.name+\" (\"+fmtSize(info.zip.bytes)+\")\"):MSG.shNone);",
     "  if(sh&&sh.running)line=MSG.shWorking+(sh.low?\" (low)\":\"\")+\"...\";",
     "  else if(sh&&sh.error)line=MSG.shFail.replace(\"{v}\",sh.error);",
@@ -407,7 +476,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#shTitle\").textContent=MSG.shTitle.replace(\"{v}\",info.label||slug);",
     "  el(\"#shQ\").value=\"full\";",
     "  el(\"#shLog\").textContent=\"\";el(\"#shLog\").style.display=\"none\";",
-    "  el(\"#shBar\").style.display=\"none\";el(\"#shFill\").style.width=\"0%\";",
+    "  el(\"#shBar\").style.display=\"none\";el(\"#shFill\").style.width=\"0%\";el(\"#shFill\").className=\"\";",
     "  paintShare(info,(lastShare&&lastShare.slug===slug&&!lastShare.result&&!lastShare.error)?lastShare:null);",
     "  loadEst(slug);",
     "  el(\"#shModal\").style.display=\"flex\";",
@@ -464,11 +533,18 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "    toSurprise=true;showCollect(s.surprise);",
     "  }",
     "  el(\"#phase\").textContent=s.phaseText;",
-    "  el(\"#fill\").style.width=(s.percent||0)+\"%\";",
+    "  el(\"#fill\").style.width=(s.percent||0)+\"%\";el(\"#fill\").className=s.running?\"live\":\"\";",
     "  logTo(el(\"#log\"),s.log.join(String.fromCharCode(10)));",
-    "  el(\"#start\").disabled=s.running; el(\"#stop\").disabled=!s.running;",
-    "  el(\"#authedWrap\").style.display=s.hurryMode?\"\":\"none\";",
-    "  el(\"#bAuthed\").textContent=(s.hurryMode===\"retry\")?MSG.retry:MSG.authed;",
+    "  if(stopping&&(s.phase===\"stopped\"||!s.running))stopping=false;",
+    "  el(\"#start\").disabled=s.running;",
+    "  paintStop(!!s.running);",
+    "  var settling=!!s.settle;",
+    "  el(\"#authedWrap\").style.display=(s.hurryMode||settling)?\"\":\"none\";",
+    "  el(\"#bAuthed\").textContent=settling?LBL.settling:((s.hurryMode===\"retry\")?MSG.retry:MSG.authed);",
+    // Same busy look the Stop button wears while it works: pulse plus inline spinner, and no second
+    // press while the hand-over is already on its way.
+    "  el(\"#bAuthed\").className=settling?\"busy\":\"\";",
+    "  el(\"#bAuthed\").disabled=settling;",
     "  el(\"#loginNote\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
     "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
     "  under(!!s.running||!!s.result);",
@@ -477,7 +553,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  lastRooms=s.rooms||[];lastShare=s.share||null;DBG=!!s.debug;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
     "  el(\"#start\").disabled=sbusy;",
-    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=DBG||!!(h&&h.open);b.disabled=sbusy||!can;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
+    "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=DBG||!!(h&&h.open);b.disabled=sbusy;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
 // The rows own numbers are the one thing the page cannot work out for itself: they need the room
 // page and every media file it points at. The server hands them over, and this writes them back
 // only when they really moved, so a page sitting idle does no work at all.
@@ -492,6 +568,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  if(shSlug&&el(\"#shModal\").style.display!==\"none\"){",
     "    var sj=(s.share&&s.share.slug===shSlug)?s.share:null;",
     "    paintShare(roomInfo(shSlug),sj);",
+    "    el(\"#shFill\").className=(sj&&s.share&&s.share.running)?\"live\":\"\";",
     "    if(sj){el(\"#shFill\").style.width=(sj.percent||0)+\"%\";logTo(el(\"#shLog\"),(sj.log||[]).join(String.fromCharCode(10)));}",
     "  }",
     "}",
@@ -504,7 +581,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#mGo\").addEventListener(\"click\",start);",
     "el(\"#mNo\").addEventListener(\"click\",hideModal);",
     "el(\"#modal\").addEventListener(\"click\",function(e){if(e.target===el(\"#modal\"))hideModal();});",
-    "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\"){hideModal();hideShare();hideCollect();}});",
+    "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\"){hideModal();closeShare();hideCollect();}});",
     "el(\"#stop\").addEventListener(\"click\",stop);",
     "el(\"#bAuthed\").addEventListener(\"click\",function(){fetch(\"/api/hurry\",{method:\"POST\"});});",
     "el(\"#bChat\").addEventListener(\"click\",function(){openIt(\"chat\");});",
@@ -514,13 +591,13 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#rooms\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-share]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();showShare(b.dataset.share);});",
     "el(\"#shGo\").addEventListener(\"click\",genZip);",
     "el(\"#shQ\").addEventListener(\"change\",paintEst);",
-    "el(\"#shClose\").addEventListener(\"click\",hideShare);",
+    "el(\"#shClose\").addEventListener(\"click\",closeShare);",
     "el(\"#shFolder\").addEventListener(\"click\",function(){if(shSlug)openItSlug(\"shareFolder\",shSlug);});",
     "el(\"#shTo\").addEventListener(\"click\",function(){var h=roomInfo(shSlug)||{};showCollect([h.name||h.label||shSlug],!h.zip);});",
     "el(\"#toGo\").addEventListener(\"click\",function(){fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"collect\"})}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok)alert(MSG.toNoLink);}).catch(function(){alert(MSG.toNoLink);});});",
     "el(\"#toClose\").addEventListener(\"click\",hideCollect);",
     "el(\"#toModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#toModal\"))hideCollect();});",
-    "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))hideShare();});",
+    "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))closeShare();});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
     "total();",
@@ -529,6 +606,11 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
   ].join(NL);
 }
 
+// The cooldown is read from the clock, so it ends by itself: it can never outlive the run, and it
+// does not wait for the hand-over to report back (that would hold the button for a whole minute).
+function settling() { return !!state.running && state.settleUntil > Date.now() && state.phase === "browser"; }
+function settleLeft() { return Math.max(1, Math.ceil((state.settleUntil - Date.now()) / 1000)); }
+
 function stateJson() {
 
   const tr = t();
@@ -536,6 +618,9 @@ function stateJson() {
   let text = tr(key);
   if (text === key) text = state.phase;
   // While the login wait runs, say what is actually being waited for instead of "Starting the browser".
+  // The cooldown line comes first: the window is opening again already, so the countdown is the honest
+  // thing to show while that button is busy.
+  if (settling()) text = tr("gui.settleHint", { s: settleLeft() });
   if (state.phase === "browser" && state.loginWait) text = tr("gui.loginHint");
 if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   if (state.error) text = tr("gui.phase.error") + ": " + state.error;
@@ -546,6 +631,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   const list = rooms(cfg);
   return {
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
+    settle: settling(),
     // The once-per-install popup: a finished run that left them holding a complete room puts the
     // author own message on screen without a click. Empty means there is nothing to show.
     surprise: state.surprise || null,
@@ -555,7 +641,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
     // The room set itself: the page patches numbers when they move, but a row it never had needs a
     // fresh page.
     rowsig: listSignature(list),
-    rooms: list.map(function (x) { const si = shareInfo(x.slug); const er = rowNumbers(cfg, x, tr); return { slug: x.slug, name: memberName(x, pickLang(cfg.language)), canShare: canOffer(cfg, er, x.slug), label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, zip: si.zip, text: er.text, full: er.full, saved: er.saved }; }),
+    rooms: list.map(function (x) { const si = shareInfo(x.slug); const er = rowNumbers(cfg, x, tr); return { slug: x.slug, name: memberName(x, pickLang(cfg.language)), canShare: canOffer(cfg, er, x.slug), label: x.rowLabel || x.slug, open: !!roomPage(x.slug), canZip: si.canZip, canBuild: !!roomPage(x.slug), zip: si.zip, text: er.text, full: er.full, saved: er.saved }; }),
     // The Share popup packs one room on its own: no browser, no login, its own small progress log.
     share: { running: shareJob.running, slug: shareJob.slug, low: shareJob.low, percent: shareJob.percent, error: shareJob.error, result: shareJob.result, log: shareJob.log.slice(-40) },
   };
@@ -592,16 +678,22 @@ async function startJob(body) {
   try {
     setPhase("browser");
     push(tr("gui.loginHint"));
-    // The login wait is automatic; the button only shortens the pause before the next check.
-    state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0; state.plainWait = false;
+    // The press on that button is what begins the hand-over, so the page offers it as soon as the
+    // sign-in window is up; the delayed mode below only ever covers the silent re-check.
+    state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0; state.plainWait = false; state.settleUntil = 0;
     const session = await openSession({
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
       hurryLog: tr("gui.checkNow"),
-      // While the plain sign-in window is up nothing here can see inside it, so that button is the
+      // While the normal sign-in window is up nothing here can see inside it, so that button is the
       // only way to say "done". The same click means "look again" once the automated window is back.
       saidDone: () => { if (!state.hurry) return false; state.hurry = false; return true; },
-      onPlainWait: (on) => { state.plainWait = !!on; if (on) state.hurry = false; },
+      // Each time that window opens the button starts over as "I'm logged in - continue": the
+      // person has just signed in again, so a leftover Retry from the round before would mislead.
+      onPlainWait: (on) => { state.plainWait = !!on; if (on) { state.hurry = false; state.hurryFirstAt = 0; state.settleUntil = 0; } },
+      // The cooldown the page puts on that button, started the moment the hand-over begins: the
+      // browser is already opening again while it runs, so nothing here waits for it.
+      onSettle: (on, ms) => { state.settleUntil = on ? Date.now() + (ms || 0) : 0; },
     });
     state.loginWait = false;
     if (session.error === "stopped" || stopFlag) { setPhase("stopped"); running(false); return; }
@@ -611,8 +703,8 @@ async function startJob(body) {
       running(false);
       return;
     }
-    // Login is behind us - either a fresh sign-in or the session already in the profile. Say so
-    // before the first room starts, so the wait never ends in silence.
+    // The sign-in is behind us: the person pressed the button and the hand-over found the session.
+    // Say so before the first room starts, so the wait never ends in silence.
     push(tr("gui.loginOk"));
     for (const r of list) {
       if (stopFlag) break;
@@ -678,6 +770,21 @@ async function handle(req, res) {
     res.end(page());
     return;
   }
+  // The picture the (i) in the procedure shows: a plain file next to the code, served from disk so
+  // the page itself stays small. A copy that lost the file answers 404 and the tooltip shows its
+  // caption alone instead of a broken image.
+  if (req.method === "GET" && url === "/assets/home-page.png") {
+    try {
+      const buf = fs.readFileSync(path.join(REPO, "assets", "home-page.png"));
+      res.writeHead(200, { "content-type": "image/png", "content-length": buf.length, "cache-control": "max-age=86400" });
+      res.end(buf);
+    } catch (e) {
+      res.writeHead(404, { "content-type": "text/plain" });
+      res.end("not found");
+    }
+    return;
+  }
+
   if (req.method === "GET" && url === "/api/state") { json(200, stateJson()); return; }
   // How big a zip of this room would be, asked for by the Share popup as it opens. One room at a time,
   // on demand: walking a room's media list once a second along with the poll would be waste.
@@ -699,6 +806,13 @@ async function handle(req, res) {
   if (req.method === "POST" && url === "/api/collect-seen") { state.surprise = null; json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/start") { const b = await readBody(req); startJob(b); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/share") { const b = await readBody(req); startShare(b); json(200, { ok: true, running: shareJob.running, slug: shareJob.slug }); return; }
+  if (req.method === "POST" && url === "/api/share/stop") {
+    // Only asks: the job notices at its next checkpoint, kills the encoder it is running and
+    // unwinds itself, so the share buttons come back on their own.
+    if (shareJob.running) { shareJob.stop = true; sharePush("stop requested, killing the file being re-compressed"); }
+    json(200, { ok: true, running: shareJob.running });
+    return;
+  }
   if (req.method === "POST" && url === "/api/stop") { stopFlag = true; push("stop requested, finishing the current step"); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/hurry") { state.hurry = true; if (!state.hurryFirstAt) state.hurryFirstAt = Date.now(); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/config") {

@@ -5,17 +5,19 @@
 Honest answer: nobody outside Weverse can promise anything. What this tool does is stay inside
 what a normal reader does - it only GETs the same two endpoints the app itself calls, paces
 requests 1.5-3 seconds apart with jitter, reads one room at a time, and stops immediately on
-429/403 instead of retrying. It never posts, never deletes, never follows, never reads your
-tokens, and never touches the tab you are logged in on.
+429/403 instead of retrying. It never posts, never deletes, never follows, and never touches
+the tab you are logged in on. It does use the session token - the API only answers signed
+requests - but only inside its own browser window: never written to disk, never logged, never
+read by the program outside that window, and never sent anywhere except Weverse.
 
 If you are nervous, archive one room per day, or stop and continue later. A backup can always be
 finished later: every page is written to disk as it arrives, so stopping costs you nothing.
 
 ## Do I need to know how to code, or open DevTools?
 
-No. You double-click `START.bat`, a browser window and a local page open, you log in once, you
-tick a room and press Start. Everything else is a progress bar. There is a command line too
-(`wdm ...`) if you happen to like typing.
+No. You double-click `START.bat`, the local page opens, you tick a room and press Start, you log
+in in the window the tool opens and you press **I'm logged in - continue**. Everything else is a
+progress bar. There is a command line too (`wdm ...`) if you happen to like typing.
 
 ## Why does it need Node.js installed?
 
@@ -34,15 +36,18 @@ read, reloaded, navigated or closed by this tool.
 That message comes from Google, not from Weverse, and it is about the browser rather than your
 account: Google refuses to sign anyone in from a browser that is being driven over the DevTools
 protocol, which is exactly how the tool reads the page. No flag talks it out of that, so the tool
-splits the job in two. It starts its automated window as usual; if the profile has no live session
-yet, it opens a second window with no debugging port at all. You sign in **there** - Google is happy
-with an ordinary window - and once you press the button on the page (or close that window) the tool
-closes it and takes over the session it left behind in the same profile. The archive itself is
-unchanged: same session, still kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` for next time.
-## Can I keep using Weverse while it runs?
-If the session still is not there when you press the button, the sign-in window simply opens again - the
+splits the job in two. Every run starts with a plain window that has no debugging port at all. You
+sign in **there** - Google is happy with an ordinary window - and once you press the button on the
+page (or close that window) the tool closes it, starts its automated window on the same profile and
+takes over the session that sign-in left behind. The archive itself is unchanged: same session, still
+kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` for next time. It asks for that click even when
+the profile already holds a session from an earlier run: a stored login can be stale, and only you
+can see whether the window really is signed in.
+If the session is still not there when you press the button, the sign-in window simply opens again - the
 tool cycles instead of failing, and only **Stop** ends it, so a login that never arrives is never reported
 as an error.
+
+## Can I keep using Weverse while it runs?
 
 Yes. The tool works in its own window, so nothing you do in your normal browser interferes. Just
 do not run two archives of the same room at the same time from two copies of the tool.
@@ -76,6 +81,7 @@ Every render writes both, from the same archive, so there is nothing to choose u
 | --- | --- | --- |
 | messages | both sides | artist side only |
 | bookmarks | whatever your settings say | never |
+| date jump & translation switch | yes | yes (the same panel, minus the bookmark tab) |
 | your nickname | exactly as harvested | always `EverAfter` |
 | `publicRename` | ignored, the real text is kept | applied |
 | goes into the zip | no | yes |
@@ -96,7 +102,7 @@ warning with a count when it does not.
 
 From `rowLabel` in `rooms.unis.json`: the text the DM list shows for that room, emoji included. It
 is what the page calls the room - the row under the meta line, next to the artist's picture, and the
-name above the artist's bubbles. The `<h1>` is the fixed title `Weverse DM backup` and the room id
+name above the artist's bubbles. The `<h1>` is the fixed title `Weverse DM Archive` and the room id
 leads the grey meta line underneath it (`room WRA2W0P &middot; ...`). The DM API does not carry the
 artist's own name (every message, on both sides, is labelled
 with *your* nickname), so the list page is the only place to read it. `wdm labels` also saves the profile pictures the rows point at as `media/avatars/<room>-artist`,
@@ -115,6 +121,13 @@ qualifies, the popup shows **Share to Hauitsu**: pressing it brings up his short
 that opens the shared drive folder, and you drop the zip in there. For reference, one room is about
 2.5 GB at full quality and about 350 MB re-compressed, and eight rooms at full size come to roughly
 20 GB, more than a free Drive holds.
+
+## Can I stop a zip once it is running?
+
+Press **Cancel** in the Share popup. While a job is running that button stops it instead of closing the
+window: the log at the bottom says what it killed, the file being re-compressed is ended, the half-built
+package in the temp folder is deleted, and every Share button comes back as soon as the job has unwound.
+A zip that was already finished is never touched, and no partial archive is left for you to clean up.
 
 ## What is inside the zip?
 

@@ -63,7 +63,7 @@ function link(src, dest) {
 
 function readme(o, generatedAt) {
   const L = [];
-  L.push("Weverse DM archive - " + o.roomName);
+  L.push("Weverse DM Archive - " + o.roomName);
   L.push("packed " + generatedAt + " with weverse-dm-archiver");
   L.push("");
   L.push("English");
@@ -194,9 +194,21 @@ export async function bundle(opts) {
   fs.rmSync(stageParent, { recursive: true, force: true });
   fs.mkdirSync(path.join(root, "chat"), { recursive: true });
 
+  // A zip that is cancelled halfway must not leave its stage behind: it can hold hundreds of
+  // megabytes of re-compressed media. Everything below asks stopped() before it starts new work,
+  // and halt() throws with .stopped set - that flag is how the GUI tells "cancelled" from "failed".
+  const stopped = () => !!(o.shouldStop && o.shouldStop());
+  const halt = () => {
+    try { fs.rmSync(stageParent, { recursive: true, force: true }); } catch (e) {}
+    const err = new Error("bundle: stopped by the user");
+    err.stopped = true;
+    throw err;
+  };
+
   const want = [slug + ".html", slug + ".md", slug + ".jsonl", "summary.json"];
   let chatFiles = 0;
   for (const name of want) {
+    if (stopped()) halt();
     // The per-room copy wins: summary.json on its own is whatever room was rendered last.
     const own = name === "summary.json" && fs.existsSync(path.join(roomDir, slug + ".summary.json")) ? slug + ".summary.json" : name;
     const abs = path.join(roomDir, own);
@@ -225,6 +237,7 @@ export async function bundle(opts) {
   const compress = low && ffmpeg !== "";
   const jobs = [];
   for (const rel of refs) {
+    if (stopped()) halt();
     const abs = path.join(mediaDir, rel);
     if (!fs.existsSync(abs)) { refMissing++; continue; }
     jobs.push({ rel: rel, abs: abs });
@@ -233,12 +246,16 @@ export async function bundle(opts) {
   else if (compress) log("quality: re-compressing up to " + jobs.length + " media file(s) to " + MAX_SIDE + "px on the long side - this is the slow part");
   let done = 0;
   await pool(jobs, compress ? 4 : 1, async (j) => {
+    // A cancelled zip stops feeding its stage at once, and the few files already being re-encoded
+    // are killed by the stop poll inside run(), so no encoder keeps burning cpu behind the button.
+    if (stopped()) return;
     let size = 0;
     try { size = fs.statSync(j.abs).size; } catch (err) {}
     mediaOriginal += size;
     done++;
     if (compress && supports(j.rel)) {
-      const r = await shrinkOne({ ffmpeg: ffmpeg, src: j.abs, dest: path.join(root, "media", j.rel) });
+      const r = await shrinkOne({ ffmpeg: ffmpeg, src: j.abs, dest: path.join(root, "media", j.rel), shouldStop: o.shouldStop });
+      if (stopped()) return;
       if (r.ok) { shrunk++; mediaFiles++; mediaBytes += r.after; if (done % 250 === 0) log("quality: " + done + "/" + jobs.length + " file(s)"); return; }
       kept++;
     }
@@ -246,6 +263,7 @@ export async function bundle(opts) {
     mediaFiles++;
     mediaBytes += size;
   });
+  if (stopped()) halt();
   if (shrunk) log("quality: re-compressed " + shrunk + " of " + mediaFiles + " media file(s): " + fmtSize(mediaOriginal) + " -> " + fmtSize(mediaBytes) + (kept ? " (" + kept + " would not get smaller, kept as they were)" : ""));
   if (!refs.size && fs.existsSync(mediaDir) && collect(mediaDir, "").some((e) => !e.dir && e.name !== "media-manifest.json")) {
     log("warning: the page does not point at any local media, so the package has no photos or video");
@@ -277,7 +295,14 @@ export async function bundle(opts) {
     { name: top[1], abs: path.join(root, "README.txt"), dir: false },
     { name: top[2], abs: path.join(root, "index.html"), dir: false }]
     .concat(collect(root, rootName + "/").filter((e) => e.dir || top.indexOf(e.name) < 0));
-  const zip = writeZip(zipPath, entries, { onLog: log });
+  if (stopped()) halt();
+  let zip = null;
+  try { zip = writeZip(zipPath, entries, { onLog: log }); }
+  catch (e) {
+    // A half-written zip is worse than no zip at all: it looks finished until somebody opens it.
+    try { fs.rmSync(zipPath, { force: true }); } catch (e2) {}
+    throw e;
+  }
   const sum = sha256File(zipPath);
   // The zip travels alone in share/; its papers live one level up, in verify/ at the repo root.
   const verifyDir = o.verifyDir || path.join(path.dirname(shareDir), "verify");

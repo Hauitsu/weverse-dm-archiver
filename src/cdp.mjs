@@ -63,10 +63,9 @@ export async function attach(wsUrl, opts) {
   return { send: send, evaluate: evaluate, close: close };
 }
 
-// The page keeps the auth token in window.__wdmTok once the hook has seen a request.
-export async function token(cdp) {
-  try { const v = await cdp.evaluate(AUTH_READY, 15000); return v === true ? await cdp.evaluate("window.__wdmTok", 15000) : null; } catch (e) { return null; }
-}
+// The auth token itself never leaves the page: the hook keeps it in window.__wdmTok, every
+// request is built and sent from inside that window (see fetchExpr in net.mjs), and nothing
+// here reads it into this process. Keep it that way - it is a promise made in the README.
 
 // Wait until the page can talk to the API on the user behalf. The hook has to be reinstalled
 // after every navigation (logging in reloads the page), and a small scroll gives the site a

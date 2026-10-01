@@ -1,23 +1,29 @@
-# Weverse DM Archiver
+# Weverse DM Archiver (UNIS Exclusive)
+
+![Weverse DM Archiver - offline HTML backup of your Weverse DM](assets/01-hero.svg)
 
 Back up your own Weverse artist chat (DM) into **one offline HTML file**, plus a Markdown copy
 and a data file: every message, photo, video and timestamp, in your own timezone.
 
 It reads the history the way you would read it yourself - read-only GET requests, human
-pacing, one room at a time. It never posts, never deletes, never follows, never reads your
-login tokens, and never touches the tab you are logged in on.
+pacing, one room at a time. It never posts, never deletes, never follows, and never touches the
+tab you are logged in on. It does have to sign those requests the way the app does, so the
+session token is used **inside its own browser window**: never written to disk, never logged,
+and never read by the program outside that window.
 
-> **Status: ready to use.** Double-click `START.bat`, log in once, pick a room, press Start.
+> **Status: ready to use.** Double-click `START.bat`, pick a room, press **Start** - log in in the window that opens and press **I'm logged in - continue**.
 > A real room has already been through it: 9,574 unique messages across 18 months, 4,119 of them
 > from the artist side, 1,478 media files (1,444 photos, 30 videos, 4 audio), about 2.5 GB.
 
 ## What you get
 
+![What a run leaves behind: the private export, the public export, media and the share zip](assets/03-what-you-get.svg)
+
 - `rooms/<room>.html` - the **private** export: every message from both sides, one self-contained
   page that opens offline in any browser, with day sections, artist highlighting,
   deleted-message markers and bookmarks
-- `rooms-public/<room>.html` - the **public** export: the artist side only, never any bookmarks and no
-  panel, and your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
+- `rooms-public/<room>.html` - the **public** export: the artist side only, never any bookmarks, and
+  your own nickname replaced by `EverAfter` - the copy that is safe to hand to someone else
 - day headings read the way the app writes them - `Sat, Sep 26, 2026`, in the page and in the
   markdown, with the plain `2026-09-26` kept off-screen in the page so find-on-page still works
 - a light theme for the page itself, switched from the round button in the bottom-right corner: there your own
@@ -27,20 +33,20 @@ login tokens, and never touches the tab you are logged in on.
   under the date; one nickname grey (`#666666`) on both sides in both themes, and the choice is remembered
   per browser - dark stays the default
 - one round ⋯ button in the top-right corner opens a panel from the right: the date jump as its first
-  tab, your bookmarks as its second (the bookmark count rides on the button as a small badge, the
-  button and the tabs carry tooltips). The panel closes on that button, on ✕, on Esc, and on any click
+  tab, your bookmarks as its second in the private export (the bookmark count rides on the button as a
+  small badge, the button and the tabs carry tooltips) and the built-in translation as the last one
+  whenever the room carries it. The panel closes on that button, on ✕, on Esc, and on any click
   outside it. The month chips are a list of links there instead of a row under the title, the bookmark
   tab carries the JSON export and import, and on a wide window the page box narrows by the width of the
   panel so the reading column recentres to the left of it instead of sitting behind it (the column
   keeps its auto margins - a fixed width would only push it right and leave the gap on the left)
-  push it right and leave the gap on the left)
 - the days-together chip the app shows at the top of a conversation: it stays pinned while the page
   scrolls, parking just under the day header so the two read as one HUD. The number is **live** -
   every day you open the archive it says one more - and behind it sit the app's ten bubble colours:
   the heart or the number opens the swatch row, the words after it are yours to rename
   (15 characters). Only the artist bubble takes the colour, only in that room, and only in your
   browser - see [Bubble colour and the days chip](#bubble-colour-and-the-days-chip)
-- a header that names the backup instead of the room: `Weverse DM backup` with a grey `by Hauitsu`, and the
+- a header that names the archive instead of the room: `Weverse DM Archive` with a grey `by Hauitsu`, and the
   room sits right under that grey line - the artist's own picture, round and 96px wide (`--pf`, one line of
   CSS, and the file itself is 256x256 if you want it 1:1) with the room name beside it. The room id rides in
   the grey line under the title, at the front. The tab title is the room name followed by `DM`, so a row of
@@ -63,14 +69,17 @@ login tokens, and never touches the tab you are logged in on.
 
 ## Quick start
 
+![Four steps: double-click START.bat, pick a room, press Start, log in, open the DM](assets/02-how-it-works.svg)
+
 1. Install **Node.js 20 or newer** if you do not have it. `START.bat` opens the download page
    when it cannot find Node.
-2. Double-click **`START.bat`**. Two windows appear: a browser using its own private profile, and
-   the local page (usually `http://127.0.0.1:8787`; if that port is taken by the system, the tool
-   picks another one and the console prints the address it used).
-3. Log in to Weverse once in that browser window.
-4. Tick a room and press **Start** - the popup explains the separate browser window first (hovering
-   the button says the same) - then confirm. Progress streams page by page.
+2. Double-click **`START.bat`**. The local page opens in your browser (usually
+   `http://127.0.0.1:8787`; if that port is taken by the system, the tool picks another one and the
+   console prints the address it used), along with a small console window.
+3. Tick a room and press **Start**. The tool opens its own browser window: log in to Weverse there,
+   then press **I'm logged in - continue** on the page. It asks for that press on every run, even
+   when the profile already holds a session - the popup explains the same before anything starts.
+4. Progress streams page by page.
 5. When it finishes: **Open chat**, **Open folder**, or take the share zip from `share/` - it is made
    by default, and the picker can turn it off. A re-compressed zip is a per-room choice, asked for
    in that room's **Share** popup.
@@ -85,8 +94,9 @@ A room backed up from the very start of the group's history can be handed back t
 collects them. The **Share** popup then grows a **Share to Hauitsu** button; pressing it shows his own
 short message and a single button that opens the shared drive folder, where the zip can be dropped.
 Only a room whose archive starts at April 2025 and still reaches the current month is offered - a
-backup that stops three months ago is missing exactly the part nobody can fetch back later - and a
-room the collector already has (`collectOwned`) is never asked for. The link itself is not written out
+backup that stops three months ago is missing exactly the part nobody can fetch back later. Holding
+any such room in full is what counts, whichever room it is; `collectOwned` in `config.json` can leave
+slugs out if you would rather not be asked for them. The link itself is not written out
 in this repository: it is stitched together when the button is pressed, which keeps it out of a search
 box, though not away from anyone who reads the source. `collectUrl` in `config.json` replaces it.
 After the first run that leaves you holding such a room, that message also comes up on its own - once
@@ -157,13 +167,15 @@ archive as personal use.
 | GET only - `/dm/v2.0/messages` and the video `download-info` endpoint | no write reaches your account, ever |
 | pacing 1.5-3 s apart with jitter, one room at a time | it looks like a human scrolling |
 | stop on HTTP 429/403, no forced retry | never hammer the API |
-| never read or copy tokens/cookies | an archive cannot leak what was never read |
+| the API token is read in memory to sign its own GETs | nothing token-shaped is written to disk or logged |
 | its own browser window and profile | the session you browse with is never reloaded, closed or navigated |
 
 Nothing can promise zero risk. `docs/FAQ.md` has the honest version, including what to do if you
 are nervous.
 
 ## Privacy
+
+![The private export keeps both sides; the public export keeps the artist side and hides your nickname](assets/05-private-public.svg)
 
 Everything stays on your computer. Nothing is uploaded, there is no telemetry and no account of
 ours; the archive is plain files you can copy to a drive, share or delete.
@@ -200,6 +212,8 @@ reports are welcome - see `docs/ROADMAP.md`.
 MIT - see `LICENSE`.
 
 ## Bubble colour and the days chip
+
+![Features in every room page: date jump, translation, days together, message options, media, themes](assets/07-same-in-every-room.svg)
 
 Every conversation opens with the same pill the app puts there: a heart, the number of days you have
 been talking, and the words after it. The pill is sticky, so it rides along the top-right of the page
@@ -254,6 +268,29 @@ so an archive nobody has picked a colour in still looks like the app.
 The chip ships in **both** exports - it is a reading preference like the theme button, and it carries
 none of your chat data. `src/ui.js` builds it after the page loads, so the markup stays lean.
 
+## Original text and the built-in translation
+
+An artist message can carry two texts: the one the artist typed and the English line Weverse shows
+under it. The page prints both - the translation as a smaller italic line inside the same bubble.
+
+How that pair is read is one page-wide choice, not a per-message one. The **Translation** tab in the
+panel picks between
+
+* **Original + English** - both, the default,
+* **Original** - the words the artist typed, translation hidden,
+* **English** - the translation only.
+
+The same three modes are on the ⋯ menu next to any message in the private export (the panel is the
+only way in for the public one). The choice is kept in `localStorage`, so it is per browser and per
+archive, and it is set on `<html>` before the first paint - a page you read in English mode never
+flashes the original first. Bubbles with nothing to translate keep their text in every mode; only
+messages that really have both change. The markdown export prints the pair the same way, the italic
+line under the original.
+
+The renderer only emits the tab and the menu item when the room carries translations at all, so an
+archive without them has no switch and no dead space. `src/ui.js` builds the buttons - the file
+carries both texts already, and a mode never loads or rewrites anything.
+
 ## Bookmarks
 
 Bookmarks are yours to make, inside the page. Every message carries the same three-dot button the
@@ -262,7 +299,8 @@ space always reserved so nothing shifts), and on a touch screen, where there is 
 always there. It offers
 * **Bookmark this message** - the message gets a star and a line in the bookmarks panel, behind the ⋯
   button in the top-right corner (that panel's second tab, its first is the date jump),
-  the top-right corner (its first tab is the date jump),
+* **Translation** - the same three reading modes as the panel's translation tab (see above); the menu
+  item is only a way in, the choice it makes covers the whole page,
 * **Copy text** - the words to the clipboard (or the media link, or what kind of media it was),
 * **Copy date and time** - the stamp, for quoting a message somewhere else.
 

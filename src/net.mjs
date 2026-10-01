@@ -9,8 +9,9 @@
 //     (path truncated to 255 chars) + timestamp, with a key that ships in the public web
 //     bundle. It is not a user secret and it cannot read anything the logged-in browser
 //     could not already read; the request still relies on the session cookie and the
-//     Authorization header the app itself sends. We never read, store or log that header --
-//     we only keep the last one the page produced, in memory, to replay our own GET.
+//     Authorization header the app itself sends. That header never leaves the page: the hook
+//     keeps the last one it saw in window.__wdmTok, our own GET replays it from there, and
+//     nothing writes it, logs it or reads it into the Node side.
 //
 //  2. `prev` is an opaque cursor, not a date. If you hand the server a `prev` that is not
 //     a real message boundary, it silently answers with the NEWEST page instead of an

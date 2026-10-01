@@ -269,11 +269,13 @@ function auditPublic(o, dir, log) {
   log(left === 0 ? "render: public export checked, the hidden name is gone" : "warning: " + left + " occurrence(s) of the hidden name are still in the public export");
 }
 
-// Start the private browser window and wait until it can talk to the API.
+// Sign in by hand, then start the private browser window and wait until it can talk to the API.
 // The one thing nothing here can look inside is the plain sign-in window: it has no debugging port
 // by design, so only the person typing in it knows when the typing is done. They say so with the
 // page button (the GUI), by closing the window, or by pressing Enter where the tool runs in a
 // terminal. Returns why the wait ended so the caller can tell a stop from a timeout.
+// That window opens on every run, even when the profile still holds a session from yesterday: a
+// stored login can be stale, and this side cannot look inside the window to know either way.
 // A browser left behind by an earlier run still holds the profile, and a launch on a locked
 // profile just hands its arguments to that old instance: no fresh port opens, no page appears, and
 // the run dies with "no-page". Clear the way before the first launch of a session.
@@ -298,6 +300,11 @@ export async function clearLeftovers(profile, onLog) {
   if (n) { log("browser: closed " + n + " browser process(es) left over from an earlier run"); await sleep(600); }
   return n;
 }
+// How long the page keeps that button busy after the press. The hand-over itself starts on the
+// click - the window closes and the browser opens again immediately - so this is only the cooldown
+// that stops a second press from racing the hand-over it just started.
+export const SETTLE_AFTER_CLICK_MS = 15000;
+
 async function waitForGo(proc, opts, log) {
   const o = opts || {};
   const stop = o.shouldStop || (() => false);
@@ -341,33 +348,33 @@ export async function openSession(o) {
     });
     return { cdp: cdp, browser: started, name: found.name, auth: ok };
   };
-  // The session already in the profile is what every run after the first lives on, so look for it
-  // first: this is the window that can read the page, and opening a second one for nothing would be
-  // a pointless extra step.
+  // Every run starts by hand: open the window Google accepts, let the person sign in, and wait for
+  // them to say the signing in is done. Nothing here decides on its own that the session already in
+  // the profile still works - the person in front of the window is the only one who can see that.
   await clearLeftovers(prof, log);
-  const started = await open();
-  const probe = await use(started, opts.probeMs || 15000);
-  if (probe.error) return probe;
-  if (probe.auth) return { cdp: probe.cdp, browser: probe.browser, name: probe.name };
-  // Nothing in the profile yet - and the browser that can read the page is exactly the one Google
-  // refuses. From here it is a cycle, not a countdown: hand the typing to a normal window, take over
-  // the session it leaves behind, and if there is still nothing, open the sign-in window again. The
-  // button on the page is a real check because pressing it runs that whole hand-over, and a login
-  // that never arrives is nobody's error - Stop is the only way out, and the tool keeps the window
-  // open until then.
-  let current = started;   // the automated browser we are holding right now
-  log("browser: no Weverse session in this profile yet");
+  let current = null;   // the automated browser we are holding right now, if any
+  log("browser: opening the normal sign-in window first, even when this profile has signed in before");
+  // The browser that can read the page is exactly the one Google refuses, so from here it is a
+  // cycle, not a countdown: hand the typing to a normal window, take over the session it leaves
+  // behind, and if there is still nothing, open the sign-in window again. The button on the page is
+  // a real check because pressing it runs that whole hand-over, and a login that never arrives is
+  // nobody's error - Stop is the only way out, and the tool keeps the window open until then.
   for (;;) {
     if (opts.shouldStop && opts.shouldStop()) return { error: "stopped", cdp: null, browser: null };
     // The automated window holds the profile lock, and a second launch would only hand its arguments
     // to that running instance - so it has to be gone before the sign-in window opens, or the window
     // meant to be plain would inherit the very debug port Google refuses.
-    killBrowser(current.proc);
-    await waitExit(current.proc, 15000);
+    if (current) { killBrowser(current.proc); await waitExit(current.proc, 15000); current = null; }
     log("browser: opening a normal window to sign in - Google refuses a browser that is driven over DevTools");
     const plain = await launchPlain({ browserPath: found.path, profile: prof, url: "https://weverse.io/", onLog: log });
     if (opts.onPlainWait) opts.onPlainWait(true);
     const why = await waitForGo(plain.proc, opts, log);
+    // The click is the starting gun, not a pause: this window goes away and the browser opens again
+    // right now. What the person gets instead is a cooldown on the page - the button stays busy for
+    // this long - so nothing can be pressed twice while that hand-over is still in flight.
+    if (why === "done" && opts.onSettle) {
+      opts.onSettle(true, opts.settleMs == null ? SETTLE_AFTER_CLICK_MS : Number(opts.settleMs));
+    }
     if (opts.onPlainWait) opts.onPlainWait(false);
     killBrowser(plain.proc);
     await waitExit(plain.proc, 15000);
@@ -375,10 +382,13 @@ export async function openSession(o) {
     log("browser: taking over the session the sign-in window left behind");
     const again = await open();
     current = again;
-    const got = await use(again, opts.authTimeoutMs || 300000);
+    // Right after a sign-in the session is either there or it is not: a short look keeps the
+    // window from coming back with nothing to say. authTimeoutMs stays the ceiling, so a caller
+    // can shorten it but never stretch it past a minute.
+    const got = await use(again, Math.min(opts.authTimeoutMs || 45000, 60000));
     if (got.error) return got;
     if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
-    log("browser: the profile still has no session - opening the sign-in window again");
+    log("browser: still no session after that sign-in - the normal window comes back, press the button when you are done");
     await sleep(1500);
   }
 }

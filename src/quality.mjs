@@ -70,16 +70,20 @@ export function argsFor(src, dest, kind) {
   return null;
 }
 
-function run(bin, args, timeoutMs) {
+// shouldStop is polled while ffmpeg works: cancelling a zip kills the file being re-compressed
+// within a moment instead of holding the cancel up until that file finishes on its own.
+function run(bin, args, timeoutMs, shouldStop) {
   return new Promise((resolve) => {
     let done = false;
-    const finish = (r) => { if (!done) { done = true; resolve(r); } };
+    let watch = null;
+    const finish = (r) => { if (watch) { clearInterval(watch); watch = null; } if (!done) { done = true; resolve(r); } };
     let p = null;
     try { p = spawn(bin, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: true }); }
     catch (e) { return finish({ ok: false, why: String(e && e.message ? e.message : e) }); }
     let err = "";
     if (p.stderr) p.stderr.on("data", (b) => { if (err.length < 400) err += String(b); });
     const timer = setTimeout(() => { try { p.kill(); } catch (e) {} finish({ ok: false, why: "timed out" }); }, timeoutMs);
+    if (shouldStop) watch = setInterval(() => { if (shouldStop()) { try { p.kill(); } catch (e) {} finish({ ok: false, why: "stopped" }); } }, 200);
     p.on("error", (e) => { clearTimeout(timer); finish({ ok: false, why: String(e && e.message ? e.message : e) }); });
     p.on("close", (code) => { clearTimeout(timer); finish(code === 0 ? { ok: true } : { ok: false, why: err.trim().split("\n").pop() || ("ffmpeg exit " + code) }); });
   });
@@ -99,7 +103,7 @@ export async function shrinkOne(o) {
   const args = argsFor(src, dest, kind);
   if (!args) return { ok: false, skipped: "kept as is", kind, before };
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  const r = await run(ffmpeg, args, Number(o.timeoutMs || 600000));
+  const r = await run(ffmpeg, args, Number(o.timeoutMs || 600000), o.shouldStop);
   if (!r.ok) { try { fs.rmSync(dest, { force: true }); } catch (e) {} return { ok: false, skipped: r.why, kind, before }; }
   const after = sizeOf(dest);
   if (!after || (before && after >= before)) {

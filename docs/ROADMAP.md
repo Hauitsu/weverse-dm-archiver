@@ -34,7 +34,8 @@ JSONL out of 12 page files.
 1. GET only, no POST/PUT/DELETE.
 2. Human pacing (1.5-3 s) with jitter, one room at a time.
 3. Stop on 429/403, never force a retry.
-4. Never read tokens/cookies, never touch the tab the user is logged in on.
+4. Never store, log or read tokens/cookies outside the page (the session token stays inside the
+   browser window), never touch the tab the user is logged in on.
 5. Never ask the user for a timezone: the default is the machine zone (`auto`). Pinning one is
    available, but it is never a question the tool insists on.
 6. No runtime dependency: everything runs on Node itself, with no package to install.

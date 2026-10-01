@@ -133,14 +133,22 @@
     if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); sunting(); }
   };
 
+  // The pill sits exactly under the day band, so its pin has to equal the band's height (37px -
+  // see .day in src/render.mjs). Every band is one line, so they all measure the same; the tallest
+  // one wins in case a label ever grows, and a resize or a late layout gets the same answer instead
+  // of leaving the pill out of step with the band it is parked under.
+  function ukur() {
+    var ds = document.querySelectorAll(".day"), h = 0;
+    for (var i = 0; i < ds.length; i++) { var v = ds[i].offsetHeight; if (v > h) h = v; }
+    if (h) chip.style.setProperty("--chip-atas", h + "px");
+  }
   function pasang() {
     var wrap = document.querySelector(".wrap");
     if (!wrap || document.querySelector(".chip")) return;
     var d = wrap.querySelector(".day, .m");
     if (d) wrap.insertBefore(chip, d); else wrap.appendChild(chip);
     // Park the sticky pill just below the day header instead of on top of the date.
-    var hd = wrap.querySelector(".day");
-    if (hd) chip.style.setProperty("--chip-atas", Math.round(hd.offsetHeight) + "px");
+    ukur(); // the chip is on screen now, so the day bands can be measured
     tulisAngka();
     tulis();
     tanda();
@@ -153,7 +161,98 @@
     new MutationObserver(function () { terapkan(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-tema"] });
   }
   // Today is not a constant: refresh on a timer, and again whenever the page is looked at.
+  window.addEventListener("resize", ukur);
+  window.addEventListener("load", ukur);
   setInterval(tulisAngka, 60000);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) tulisAngka(); });
   window.addEventListener("focus", tulisAngka);
+})();
+
+/* The translation switch: Weverse's own English line under a message can be read together with the
+   original text, on its own, or not at all. Same idea as the theme above - a reader-side choice kept
+   in this browser and applied by flipping one attribute on <html>. Both texts already sit inside the
+   file, so a mode never loads or rewrites anything. The renderer only emits this when the archive
+   really carries translations, and then TR is missing and nothing below runs. */
+(function () {
+  "use strict";
+  var WD = window.WD || {}, TR = WD.TR;
+  if (!TR) return;
+  var KEY = "wdm-tr", d = document.documentElement, aktif = "both", tombol = [];
+  var MODES = [["both", TR.both], ["orig", TR.orig], ["en", TR.en]];
+
+  function baca() {
+    try {
+      var m = localStorage.getItem(KEY);
+      if (m === "both" || m === "orig" || m === "en") return m;
+    } catch (e) {}
+    return "both";
+  }
+  // Both places the switch appears hold their own three buttons, so every copy follows the choice.
+  function segarkan() {
+    for (var i = 0; i < tombol.length; i++) {
+      var b = tombol[i], on = b.getAttribute("data-mode") === aktif;
+      b.setAttribute("aria-pressed", String(on));
+      b.textContent = (on ? "\u2713 " : "") + b.getAttribute("data-label");
+    }
+  }
+  function pakai(m) {
+    aktif = m;
+    d.setAttribute("data-tr", m);
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    segarkan();
+  }
+  function daftar() {
+    var box = document.createDocumentFragment();
+    MODES.forEach(function (m) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("data-mode", m[0]);
+      b.setAttribute("data-label", m[1]);
+      b.setAttribute("aria-pressed", "false");
+      b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); pakai(m[0]); };
+      tombol.push(b);
+      box.appendChild(b);
+    });
+    return box;
+  }
+  var kotak = document.getElementById("trbox");
+  if (kotak) kotak.appendChild(daftar());
+
+  // The three-dot menu asks for the same three modes; this popup is where it gets them. It borrows
+  // the menu's own look (.mx) so the two never drift apart.
+  var pop = document.createElement("div");
+  pop.className = "mx";
+  pop.id = "trpop";
+  pop.setAttribute("role", "group");
+  pop.setAttribute("aria-label", TR.t);
+  pop.hidden = true;
+  pop.appendChild(daftar());
+  pop.addEventListener("click", function (ev) {
+    if (ev.target && ev.target.tagName === "BUTTON") tutupPop();
+  });
+  document.body.appendChild(pop);
+
+  function tutupPop() { pop.hidden = true; }
+  function bukaPop(anchor) {
+    pop.hidden = false;
+    var pr = anchor.getBoundingClientRect();
+    var lbr = pop.offsetWidth, tgi = pop.offsetHeight;
+    var kiri = Math.max(8, Math.min(window.innerWidth - lbr - 8, pr.right - lbr));
+    var atas = pr.top - tgi - 6;                 // above the button when there is room
+    if (atas < 8) atas = pr.bottom + 6;          // otherwise below it
+    atas = Math.max(8, Math.min(window.innerHeight - tgi - 8, atas));
+    pop.style.left = kiri + "px";
+    pop.style.top = atas + "px";
+  }
+  // Capture, not bubble: bm.js empties the three-dot menu in its own click handler, and an element
+  // that has already left the page measures as 0x0. On the way down the item is still on screen.
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    var a = t && t.closest ? t.closest("[data-tropen]") : null;
+    if (a) { ev.preventDefault(); bukaPop(a); return; }   // the click that opens it must not close it
+    if (!pop.hidden && t && !pop.contains(t)) tutupPop();
+  }, true);
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && !pop.hidden) tutupPop(); });
+
+  pakai(baca());
 })();

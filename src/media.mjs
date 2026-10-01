@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PACING, videoInfoPath, signedUrl, fetchExpr } from "./net.mjs";
 import { ensureAuth } from "./cdp.mjs";
+import { fmtSize } from "./size.mjs";
 
 const NL = String.fromCharCode(10);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

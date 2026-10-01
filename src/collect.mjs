@@ -17,10 +17,10 @@ import { fileURLToPath } from "node:url";
 import { DM_START_MONTH, monthIndex, thisMonth } from "./pipeline.mjs";
 import { rowNumbers } from "./rowinfo.mjs";
 
-// Rooms the author already holds a complete backup of, so asking for them would be pointless. A
-// comma separated list of slugs in config.json (collectOwned) replaces this; an empty string turns
-// the exception off and offers every complete room.
-const OWNED = "yunha";
+// Rooms never worth asking about, because the author already holds them. Empty by default: holding
+// any room in full is what makes someone eligible, and the room they happen to hold is their own
+// business. A comma separated list of slugs in config.json (collectOwned) still excludes some.
+const OWNED = "";
 
 // The byte size zoner() looks for. tools/make-blob.mjs writes the carrier file and this number
 // together, and tools/publish.ps1 checks the two against each other before publishing, so they cannot

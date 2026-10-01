@@ -18,28 +18,37 @@ Extract the folder anywhere (for example `D:\weverse-archive`) and double-click 
 
 Two things open:
 
-- a browser window that uses its own profile - it is a separate session, not the browser you
-  normally use, so nothing you are logged into elsewhere is affected;
 - the local page, usually at `http://127.0.0.1:8787` (only on your own machine). If Windows has
-  reserved that port, the tool picks another and the console prints which one it used.
+  reserved that port, the tool picks another and the console prints which one it used;
+- a small console window (minimised). It prints the same progress as the page; it is safe to close,
+  and closing it stops the tool.
 
-A small console window also appears (minimised). It prints the same progress as the page; it is
-safe to close, and closing it stops the tool.
+The browser window the archive is made from comes later, when you press **Start** (section 3). It
+uses its own profile - a separate session, not the browser you normally use - so nothing you are
+logged into elsewhere is affected.
 
-## 2. Log in once
+## 2. Sign in
 
-In the browser window that opened, log in to Weverse the normal way and open the artist you want.
-Signing in with **Google** is the one case that needs a second window, and it is Google's rule, not
-Weverse's: Google refuses to sign anyone in from a browser that is being automated ("this browser or
-app may not be secure"). So when the profile has no live session, the tool opens a normal window with
-no debugging port - sign in **there**, press the button on the page (or close that window) when you are
-done, and the tool takes over the session it left in the profile.
-If that session still is not there, the tool does not give up and it does not fail: it opens the sign-in
-window again, and again, until you press **Stop**. A login that never arrives is your call, never an error.
-The page shows "Waiting for a Weverse login" until the session is live. You only do this once:
-the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile`.
+The window you type in is the tool's own, and it opens when you press **Start** (section 3). Signing
+in with **Google** works, but it is Google's rule that this window has to be a plain one: Google
+refuses to sign anyone in from a browser that is being automated ("this browser or app may not be
+secure"), so the window that opens has no debugging port.
 
-The tool never sees or stores your password, and never reads your login token.
+Log in to Weverse there, then press **I'm logged in - continue** on the local page (or just close that
+window): the tool closes it and takes over the session it left in the profile. That press also starts a
+short cooldown (about fifteen seconds, counted down on the page): the window is already opening again, the
+button simply stays busy until the cooldown ends, so a second press cannot race the hand-over.
+It asks for that press on **every** run, even when the profile still has a session from last time: a
+stored login can be stale, and only you can see whether the window really is signed in. If the session
+is still not there after a press, the tool does not give up and it does not fail: the sign-in window
+comes back, again and again, until you press **Stop**. A login that never arrives is your call, never
+an error.
+
+You only sign in once - the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` - and
+later runs only need that button press.
+
+The tool never sees or stores your password. It does use the session you signed in with: the API
+token is read in memory to sign its own GET requests, never written to disk and never logged.
 
 ## 3. Pick rooms and press Start
 
@@ -47,8 +56,8 @@ Each row is one DM room, with its size. A room that already has an archive also 
 button on the right, which jumps straight to its saved chat page. A room that has been archived
 once shows what it really uses; the rest show the ceiling for a whole conversation (up to 3 GB).
 Tick one or more rooms
-and press **Start**. A popup explains it again - fresh profile, log in once, then be back on the
-Weverse Home page with that window still open - before anything starts; confirm it. Rooms are archived one after another, never at the same time, with 1.5-3
+and press **Start**. A popup explains it again - its own profile, sign in in the window that opens,
+then press **I'm logged in - continue** - before anything starts; confirm it. Rooms are archived one after another, never at the same time, with 1.5-3
 seconds between pages.
 
 The lower half of the page - the size estimate, the zip choice, the Start button - stays hidden
@@ -59,11 +68,10 @@ Options:
 - **Language (top of the page)** - English, Korean or Indonesian. It switches the whole tool at
   once: the page, the log lines and the exported chat all follow it. `auto` in `config.json`
   follows the Windows language instead.
-- **If the login finished but the tool does not notice** - after a minute of waiting, the line reads
-  "login success but not detected?" and the **I'm logged in - continue** button appears. It only asks
-  for the next check right away (2.5 s becomes 0.25 s); it cannot skip the token check, so a wrong
-  press simply keeps waiting. A minute after that press the button turns into **Retry** - nothing
-  retries on its own, you decide when it is worth another look.
+- **If you pressed the button but the session is not found** - the tool looks for a minute, then the
+  normal window comes back with the same button, ready for another try. A press cannot skip the session
+  check, so one that does not land simply keeps waiting. A minute after a press the button turns into
+  **Retry** - nothing retries on its own, you decide when it is worth another look.
 - **Signing in with Google** - the button above is also the "done" signal for the normal sign-in
   window; the moment you press it the tool closes that window and takes the session over - and if that session still is not there, the sign-in window comes back instead of the run ending.
 - **Also make a shareable zip** - two choices, remembered in `config.json`. **Yes** (the default)
@@ -76,6 +84,9 @@ Options:
 - **Share** (on a room row) - packs that one room on the spot, without touching the others. The
   popup says what the zip is expected to weigh, counted from the files that would go in, and the
   number changes with the quality choice in the same popup.
+  **Cancel** closes the popup - and while a zip is being built it stops that job instead: the log in
+  the same window says so, the encoder in flight is ended, the half-built package in the temp folder is
+  deleted, and the Share buttons come back as soon as the job has unwound.
   The list keeps itself current: once a run ends, the row sizes, the total and the Open and Share
   buttons update within a second, and a room added to `rooms.unis.json` appears on its own.
   A room backed up from the very start of the group's history (April 2025, and still reaching this
@@ -83,7 +94,8 @@ Options:
   and a button that opens the shared drive folder to drop the zip into. A room that has no zip yet
   says so in that same message, pointing back at **Generate zip** in the window behind it. The same
   message comes up on its own once per install, right after the first run that leaves you holding
-  such a room; rooms the collector already has (`collectOwned`) are never asked for.
+  such a room. Holding any such room in full is what counts, whichever room it is; `collectOwned` in
+  `config.json` can leave slugs out.
 - **Estimated size** - the line under the list adds up every room you tick; hover it for the
   reasoning. The estimate is a ceiling, not a promise: this group's conversation starts April 2025, a
   room that has never been saved is quoted as up to `estimateGb` (3 GB), a saved room is projected
@@ -192,7 +204,8 @@ and `--remove` falls back to the bundled Noto font (see the FAQ).
 Nothing to harvest: bookmarks are made inside the page. Open a private export, press the three dots
 next to a message and pick **Bookmark this message** - the message gets a star and a line in the
 bookmarks panel, behind the ⋯ button in the top-right corner (that panel's second tab, its first is the
-date jump). The list starts empty and lives in your
+date jump and its last, when the room has translations, is the reading switch). The list starts empty
+and lives in your
 browser (`localStorage`, per room);
 **Export JSON** in that list saves it as `bookmarks-<slug>.json` and **Import JSON** reads one back.
 
