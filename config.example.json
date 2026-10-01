@@ -19,5 +19,6 @@
   "collectDebug": false,
   "collectUrl": "",
   "ffmpegPath": "",
+  "thumbs": "auto",
   "credit": ""
 }

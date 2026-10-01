@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from './config.mjs';
 import { makeT } from './i18n.mjs';
+import { thumbRel } from './thumbs.mjs';
 
 // config.json is optional; an environment variable that is already set always wins over it.
 loadConfig();
@@ -24,6 +25,10 @@ const t = makeT();
 const LOCALE_HARI = { en: "en-US", ko: "ko-KR", id: "id-ID" }[t.lang] || t.lang;
 const fmtHari = new Intl.DateTimeFormat(LOCALE_HARI, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const labelHari = (day) => { try { return fmtHari.format(new Date(day + "T12:00:00Z")); } catch (e) { return day; } };
+// Month headings for the media gallery, same idea: noon UTC on the first of the month, so the wording
+// follows the dictionary's language without ever depending on the machine time zone.
+const fmtBulan = new Intl.DateTimeFormat(LOCALE_HARI, { year: "numeric", month: "short", timeZone: "UTC" });
+const labelBulan = (mo) => { try { return fmtBulan.format(new Date(mo + "-01T12:00:00Z")); } catch (e) { return mo; } };
 
 const ROOT = process.cwd();
 const SRC_DIR = process.env.DM_SRC || path.join(ROOT, 'downloads');
@@ -92,7 +97,10 @@ const VIDEO_POSTER_EXT = process.env.DM_VIDEO_POSTER_EXT || THUMB_EXT;
 const VIDEO_ASLI_REL = String(process.env.DM_VIDEO_ASLI_REL || '').replace(/\/+$/, '');
 const extOf = (u) => { const x = String(u || '').split('?')[0].split('.').pop(); return /^[A-Za-z0-9]{2,5}$/.test(x) ? x.toLowerCase() : 'bin'; };
 const mediaFile = (x, im, i) => { const isP = im.kind === 'photo'; const rel = (isP ? 'photos/' : 'video/') + x.isoWib.slice(0, 10) + '-' + x.messageId + (i ? '-' + i : '') + '.' + (isP ? extOf(im.url) : 'mp4'); return { rel: rel, web: (isP ? PHOTO_REL : VIDEO_REL) + '/' + rel, ada: fs.existsSync(path.join(MEDIA_ABS, rel)) }; };
-const thumbWeb = (o) => THUMB_DIR ? THUMB_DIR + '/' + path.basename(o.f.rel).replace(/\.[A-Za-z0-9]+$/, '') + THUMB_EXT : null;
+// A thumb is linked only when that exact file is on disk. The pass that runs before the download finds
+// none of them and keeps the originals, so the page never points at a file that is not there yet.
+const thumbAda = (rel) => { try { return fs.existsSync(path.join(MEDIA_ABS, thumbRel(rel))); } catch (e) { return false; } };
+const thumbWeb = (o) => THUMB_DIR && thumbAda(o.f.rel) ? THUMB_DIR + '/' + path.basename(o.f.rel).replace(/\.[A-Za-z0-9]+$/, '') + THUMB_EXT : null;
 const namaMedia = (o) => path.basename(o.f.rel).replace(/\.[A-Za-z0-9]+$/, '');
 const videoPoster = (o) => { if (!VIDEO_POSTER || (o.im && o.im.kind === 'audio')) return null; const w = VIDEO_POSTER + '/' + namaMedia(o) + VIDEO_POSTER_EXT; return fs.existsSync(path.join(OUT, w)) ? w : null; };
 const videoAsli = (o) => { if (!VIDEO_ASLI_REL || !o.f.ada) return null; const w = VIDEO_ASLI_REL + '/' + path.basename(o.f.rel); return o.f.web === w ? null : w; };
@@ -386,6 +394,9 @@ const WARNA_PALET = WARNA.map(([nama, swatch, gelap, terang]) => {
 // no switch at all: no menu item, no tab, nothing extra written into the page.
 const HAS_TR = norm.some((x) => x.textEn);
 const UISKRIP = fs.readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
+// The media gallery and the lightbox behind it (see src/gallery.js): inlined like the others, so the
+// export stays a single file plus its media folder.
+const GALSKRIP = fs.readFileSync(new URL('./gallery.js', import.meta.url), 'utf8');
 const uiData = {
   room: BASE,
   mulai: first.createDate,
@@ -572,6 +583,48 @@ h.push('.lb img{max-width:94vw;max-height:88vh;border-radius:10px}');
 h.push('.lb button{position:absolute;background:rgba(255,255,255,.08);border:0;color:#fff;font-size:22px;width:44px;height:44px;border-radius:50%;cursor:pointer}');
 h.push('.lb .x{top:16px;right:16px}.lb .pv{left:16px;top:48%}.lb .nx{right:16px;top:48%}');
 h.push('.lb .ct{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);color:#98a2b3;font-size:12px}');
+// ---- media gallery: a full-screen overlay over the transcript, opened from the corner icon ----
+h.push('.gal{position:fixed;inset:0;z-index:60;background:rgba(6,8,11,.97);display:none;flex-direction:column}');
+h.push('.gal.on{display:flex}');
+h.push('.gal .gh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 56px 10px 14px;border-bottom:1px solid #2f2f2f}');
+h.push('.gal .gt{font-size:14px;font-weight:600}');
+h.push('.gal .fbar{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px}');
+h.push('.gal .fb{font-family:inherit;font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid transparent;background:rgba(255,255,255,.08);color:#cbd3dd;cursor:pointer}');
+h.push('.gal .fb[aria-pressed="true"]{background:#2b6cff;color:#fff}');
+h.push('.gal .gc{position:absolute;top:10px;right:12px;width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#fff;font-size:20px;cursor:pointer}');
+h.push('.gal .gb{flex:1 1 auto;overflow:auto;padding:clamp(10px,1vw,20px) clamp(12px,1.2vw,26px) 44px}');
+// The overlay fills the window, so it grows with it: tiles and the month/day headings take their size
+// from the viewport (clamp keeps them readable on a phone). The tile stops at 200px because the thumb
+// behind it is 400px wide, which is exactly 2x at a dense screen - bigger would only look soft.
+h.push('.gal .gm{font-size:clamp(12px,1.1vw,22px);color:#8b95a5;margin:clamp(14px,1.7vh,30px) 0 6px;letter-spacing:.06em;text-transform:uppercase}');
+h.push('.gal .gd{font-size:clamp(12px,1vw,20px);color:#cbd3dd;margin:clamp(8px,1vh,20px) 0 6px}');
+h.push('.gal .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(96px,10vw,200px),1fr));gap:clamp(4px,.45vw,12px)}');
+h.push('.gal .tl{position:relative;aspect-ratio:1/1;padding:0;border:0;border-radius:clamp(6px,.5vw,14px);overflow:hidden;background:#141821;cursor:pointer}');
+h.push('.gal .tl img{width:100%;height:100%;object-fit:cover;display:block}');
+h.push('.gal .tl .d{position:absolute;right:5px;top:5px;font-size:clamp(10px,.8vw,16px);color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 5px}');
+h.push('.gal .tl .k{display:flex;align-items:center;justify-content:center;height:100%;font-size:clamp(20px,2.2vw,46px)}');
+// The tile the lightbox came back to wears a ring for a moment, so the grid points at the file that
+// was on screen instead of leaving the eye to find it.
+h.push('.gal .tl.pin{outline:2px solid #2b6cff;outline-offset:2px}');
+h.push('.gal .empty{color:#98a2b3;font-size:13px;padding:26px 4px}');
+h.push('html[data-tema="light"] .gal{background:rgba(255,255,255,.98)}');
+h.push('html[data-tema="light"] .gal .gh{border-color:#e6eaf0}');
+h.push('html[data-tema="light"] .gal .gm{color:#6b7480}');
+h.push('html[data-tema="light"] .gal .gd{color:#3a424e}');
+h.push('html[data-tema="light"] .gal .fb{background:#eef1f5;color:#39414d}');
+h.push('html[data-tema="light"] .gal .fb[aria-pressed="true"]{background:#2b6cff;color:#fff}');
+h.push('html[data-tema="light"] .gal .tl{background:#eef1f5}');
+h.push('html[data-tema="light"] .gal .gc{background:#eef1f5;color:#17181c}');
+h.push('html[data-tema="light"] .gal .empty{color:#5b6472}');
+// The lightbox gets the two round buttons that tie a picture to its message and to the gallery. All
+// three sit in the top right corner in reading order - jump to message, gallery, close - so the two
+// that lead somewhere are found before the one that ends it.
+h.push('.lb .gl{right:68px;top:16px;font-size:19px}');
+h.push('.lb .jm{right:120px;top:16px;font-size:19px}');
+h.push('.lb video{max-width:94vw;max-height:88vh;border-radius:10px;background:#000}');
+h.push('.lb audio{width:min(560px,88vw)}');
+// Where a jump lands: the bubble keeps a ring for a couple of seconds so the eye can find it.
+h.push('.m .bub.flash{box-shadow:0 0 0 2px #2b6cff,0 0 0 6px rgba(43,108,255,.28)}');
 h.push('.gf{color:#e0b341;font-size:12px;margin-top:3px}');
 if (giftAda) {
   const dasar = giftAset.NORMAL || Object.values(giftAset)[0];
@@ -781,7 +834,11 @@ h.push('</style></head><body' + (BM_ON ? ' class="has-icons"' : '') + '><div cla
 // The theme switch keeps its own pill in the bottom-right.
 {
   const labelPnl = BM_ON ? t("html.panelOpen") : (HAS_TR ? t("html.panelTr") : t("html.panelJump"));
+  const labelGal = t("html.galOpen");
   h.push('<div class="icons" id="icons">');
+  // The gallery keeps the top corner spot, with the panel button under it: the private page and the
+  // shared one show the same pictures, so both get the same pair in the same order.
+  h.push('<button class="ico" id="gbtn" type="button" aria-controls="gal" aria-expanded="false" title="' + esc(labelGal) + '" aria-label="' + esc(labelGal) + '">&#128444;&#65039;</button>');
   h.push('<button class="ico" id="pmenu" type="button" aria-controls="panel" aria-expanded="false" title="' + esc(labelPnl) + '" aria-label="' + esc(labelPnl) + '">&#8943;' + (BM_ON ? '<span class="n" data-bmn-n>0</span>' : '') + '</button>');
   h.push('</div>');
 }
@@ -806,6 +863,10 @@ const navHTML = months.map((mo) => '<a href="#mo-' + mo + '">' + mo + ' (' + byM
     : '<div class="pf pfi"><span>' + esc(awal) + '</span></div>')
 + '<div class="rn">' + esc(ROOM_NAME) + '</div></div>');
 }
+// The media gallery reads this list: [message id, kind, day, small copy, file, seconds] per photo,
+// video and voice note, in the order the messages appear. Only files that are really on disk are
+// listed, so no tile in the overlay can point at something that is not there.
+const galeri = [];
 lastDay = '';
 let lastMonth = '';
 let prevType = null;
@@ -818,7 +879,7 @@ for (const x of norm) {
   const me = x.userType !== 'ARTIST';
   const cont = prevType === x.userType;
   prevType = x.userType;
-  h.push('<div class="' + (me ? 'm me' : 'm artist') + (cont ? ' cont' : '') + '"' + (BM_ON ? ' data-m="' + esc(x.messageId) + '"' : '') + '>');
+  h.push('<div class="' + (me ? 'm me' : 'm artist') + (cont ? ' cont' : '') + '"' + ((BM_ON || x.media.length) ? ' data-m="' + esc(x.messageId) + '"' : '') + '>');
   const av = avWeb(me ? 'me' : 'artist');
   h.push(av && !cont ? '<img class="av" src="' + esc(av) + '" alt="">' : '<div class="av" style="background:transparent"></div>');
   h.push('<div class="col">');
@@ -835,6 +896,10 @@ for (const x of norm) {
   if (x.media.length) {
     const ph = [], vd = [], au = [];
     x.media.forEach((im, i) => { const o = { im: im, f: mediaFile(x, im, i) }; if (im.kind === 'photo') ph.push(o); else if (im.kind === 'audio') au.push(o); else vd.push(o); });
+    const detik = (o) => (o.im && o.im.attrs && o.im.attrs.duration ? Number(o.im.attrs.duration) || 0 : 0);
+    for (const o of ph) if (o.f.ada) galeri.push([x.messageId, 'p', day, thumbWeb(o) || '', o.f.web, 0]);
+    for (const o of vd) if (o.f.ada) galeri.push([x.messageId, 'v', day, videoPoster(o) || '', o.f.web, detik(o)]);
+    for (const o of au) if (o.f.ada) galeri.push([x.messageId, 'a', day, '', o.f.web, detik(o)]);
     if (ph.length) {
       h.push('<div class="media' + (ph.length > 1 ? ' two' : '') + '">');
       for (const o of ph) {
@@ -864,23 +929,29 @@ for (const x of norm) {
   h.push('<div class="tm">' + (BM_ON ? '<span class="bmk"></span><span class="jam">' + jamTeks + '</span>' : jamTeks) + '</div>');
   h.push('</div>');
 }
-h.push('<div class="lb" id="lb"><img id="lbi" alt=""><button class="x" id="lbx">&times;</button><button class="pv" id="lbp">&#8249;</button><button class="nx" id="lbn">&#8250;</button><div class="ct" id="lbc"></div></div>');
-h.push('<script>');
-h.push('var G=[].slice.call(document.querySelectorAll("a.ph")),i=0,lb=document.getElementById("lb"),img=document.getElementById("lbi"),ct=document.getElementById("lbc");');
-h.push('function tutup(){lb.classList.remove("on");img.removeAttribute("src");}');
-if (THUMB_DIR) {
-  h.push('function show(n){if(!G.length)return;i=(n+G.length)%G.length;var k=G[i].querySelector("img"),kecil=k?k.getAttribute("src"):"";img.onerror=function(){img.onerror=null;if(kecil&&img.getAttribute("src")!==kecil){img.setAttribute("src",kecil);ct.textContent=(i+1)+" / "+G.length+" · kecil (tanpa asli)";}};img.src=G[i].getAttribute("href");ct.textContent=(i+1)+" / "+G.length+" · asli";lb.classList.add("on");}');
-} else {
-  h.push('function show(n){if(!G.length)return;i=(n+G.length)%G.length;img.src=G[i].getAttribute("href");ct.textContent=(i+1)+" / "+G.length;lb.classList.add("on");}');
-}
-h.push('G.forEach(function(a,n){a.addEventListener("click",function(e){e.preventDefault();show(n);});});');
-h.push('document.getElementById("lbx").onclick=tutup;');
-h.push('document.getElementById("lbp").onclick=function(e){e.stopPropagation();show(i-1);};');
-h.push('document.getElementById("lbn").onclick=function(e){e.stopPropagation();show(i+1);};');
-h.push('lb.addEventListener("click",function(e){if(e.target===lb)tutup();});');
-h.push('document.addEventListener("keydown",function(e){if(!lb.classList.contains("on"))return;if(e.key==="Escape")tutup();if(e.key==="ArrowLeft")show(i-1);if(e.key==="ArrowRight")show(i+1);});');
-if (giftAda) h.push('var gfc=[].slice.call(document.querySelectorAll(".bub.gift .gfc"));gfc.forEach(function(c){c.addEventListener("click",function(){c.parentNode.classList.add("open");c.setAttribute("aria-expanded","true");});});if(location.hash==="#gift-open")gfc.forEach(function(c){c.parentNode.classList.add("open");});');
-h.push('</script>');
+h.push('<div class="lb" id="lb"><img id="lbi" alt=""><video id="lbv" controls playsinline hidden></video><audio id="lba" controls hidden></audio><button class="jm" id="lbj" title="' + esc(t("html.galJump")) + '" aria-label="' + esc(t("html.galJump")) + '">&#128172;&#65039;</button><button class="gl" id="lbg" title="' + esc(t("html.galToGal")) + '" aria-label="' + esc(t("html.galToGal")) + '">&#128444;&#65039;</button><button class="x" id="lbx">&times;</button><button class="pv" id="lbp">&#8249;</button><button class="nx" id="lbn">&#8250;</button><div class="ct" id="lbc"></div></div>');
+// The media gallery: one full-screen overlay whose tiles are built in the browser from WG (see
+// src/gallery.js), so the page keeps a single copy of the media list instead of a second transcript.
+h.push('<div class="gal" id="gal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="' + esc(t("html.galTitle")) + '">');
+h.push('<div class="gh"><div class="gt">' + esc(t("html.galTitle")) + '</div><div class="fbar" id="gfb">'
+  + '<button class="fb" type="button" data-k="all" aria-pressed="true">' + esc(t("html.galAll")) + '</button>'
+  + '<button class="fb" type="button" data-k="p" aria-pressed="false">' + esc(t("html.galPhoto")) + '</button>'
+  + '<button class="fb" type="button" data-k="v" aria-pressed="false">' + esc(t("html.galVideo")) + '</button>'
+  + '<button class="fb" type="button" data-k="a" aria-pressed="false">' + esc(t("html.galVoice")) + '</button>'
+  + '</div><button class="gc" id="gcl" type="button" aria-label="' + esc(t("html.galClose")) + '" title="' + esc(t("html.galClose")) + '">&times;</button></div>');
+h.push('<div class="gb" id="gb"></div></div>');
+// WG, WGM and WDT are the whole gallery input: the files, the month headings and the few words that
+// change with the language. src/gallery.js is the only code that reads them.
+const bulanAda = [];
+for (const g of galeri) { const mo2 = g[2].slice(0, 7); if (bulanAda.indexOf(mo2) < 0) bulanAda.push(mo2); }
+const wgm = {};
+for (const mo2 of bulanAda) wgm[mo2] = labelBulan(mo2);
+h.push('<script>var WG=' + JSON.stringify(galeri) + ';var WGM=' + JSON.stringify(wgm) + ';var WDT=' + JSON.stringify({
+  empty: t("html.galEmpty"), p: t("html.galPhoto"), v: t("html.galVideo"), a: t("html.galVoice"),
+  orig: t("html.lbOriginal"), small: t("html.lbSmall"),
+}) + ';</script>');
+h.push('<script>' + GALSKRIP + '</script>');
+if (giftAda) h.push('<script>var gfc=[].slice.call(document.querySelectorAll(".bub.gift .gfc"));gfc.forEach(function(c){c.addEventListener("click",function(){c.parentNode.classList.add("open");c.setAttribute("aria-expanded","true");});});if(location.hash==="#gift-open")gfc.forEach(function(c){c.parentNode.classList.add("open");});</script>');
 // The panel itself, out of the way until the corner button asks for it: the date jump first in both
 // exports, the translation switch when the room has one, your bookmarks in the room's own export.
 // bm.js keeps #bmlist and #bmnota up to date; src/panel.js is only the on/off switch and the tabs.

@@ -4,6 +4,7 @@
 //   node src/cli.mjs harvest --room yunha        walk the history (starts the private browser)
 //   node src/cli.mjs render  --room yunha        build both exports (private + public) from disk
 //   node src/cli.mjs media   --room yunha        download the photos and video (no browser if complete)
+//   node src/cli.mjs thumbs                      build the small webp copies the page shows (cached)
 //   node src/cli.mjs share   --room yunha        one zip in share/, ready to send
 //   node src/cli.mjs labels                      read the room names off the DM list into rooms.unis.json
 //   node src/cli.mjs all     --room yunha --share
@@ -15,6 +16,7 @@ import { REPO, dirs, rooms, runRoom, renderBoth, publicDirFor, srcFor, openSessi
 import { downloadMedia, pendingItems } from "./media.mjs";
 import { bundle } from "./bundle.mjs";
 import { findFfmpeg } from "./quality.mjs";
+import { buildThumbs, summary } from "./thumbs.mjs";
 import { findBrowser } from "./browser.mjs";
 import { readArchive } from "./harvest.mjs";
 import { artistLabel, loadRooms, saveRooms } from "./rooms.mjs";
@@ -134,6 +136,22 @@ const commands = {
     if (!pendingItems({ jsonl: jsonl, mediaDir: d.media, kind: kind }).length) { log(JSON.stringify(await fetchAll(undefined), null, 1)); return; }
     await withSession(async (s) => { log(JSON.stringify(await fetchAll(s.cdp), null, 1)); });
   },
+  thumbs: async () => {
+    // Thumbnails live in the shared media folder, named after the file they came from, so this is one
+    // command for every room ever downloaded - the cache decides what still needs building. The
+    // pipeline builds them on its own; this is for catching up later without a new download.
+    const ffmpeg = findFfmpeg(cfg);
+    if (!ffmpeg) { log("no ffmpeg: nothing to build. Put ffmpeg in runtime/ffmpeg/, or set ffmpegPath in config.json."); process.exit(1); }
+    const before = summary(d.media);
+    const t0 = Date.now();
+    const st = await buildThumbs({
+      mediaDir: d.media, cfg: cfg, ffmpeg: ffmpeg, enabled: true, force: has("force"), onLog: log,
+      onProgress: (p) => { if (p.done % 250 === 0 || p.done === p.total) log("  " + p.done + "/" + p.total + "  " + Math.round((Date.now() - t0) / 1000) + " s"); },
+    });
+    const after = summary(d.media);
+    const secs = Math.round((Date.now() - t0) / 1000);
+    log((st.skipped ? "skipped" : st.made + " built") + ", " + st.failed + " failed, " + secs + " s  (" + before.thumbs + " -> " + after.thumbs + " of " + after.files + " file(s), " + Math.round(after.bytes / 1048576) + " MB)");
+  },
   share: async () => {
     const r = pick();
     const b = await bundle({ slug: r.slug, roomId: r.roomId, roomName: r.rowLabel || r.slug, artist: artistLabel(r), roomDir: publicDirFor(), mediaDir: d.media, shareDir: d.share, verifyDir: d.verify, credit: cfg.credit || "", lowQuality: has("low"), onLog: log });
@@ -157,11 +175,13 @@ const commands = {
     log("downloads  " + d.downloads);
     log("config     " + (process.env.WDM_CONFIG || path.join(REPO, "config.json")));
     log("ffmpeg     " + (findFfmpeg(cfg) || "none found - expected in runtime/ffmpeg/, or set ffmpegPath"));
+    const ts = summary(d.media);
+    log("thumbs     " + (findFfmpeg(cfg) ? ts.thumbs + " of " + ts.files + " media file(s) built (" + Math.round(ts.bytes / 1048576) + " MB), mode " + cfg.thumbs : "off (no ffmpeg), mode " + cfg.thumbs));
     const list = rooms(cfg);
     log("rooms file " + list.length + " room(s): " + list.map((r) => r.slug).join(", "));
   },
   help: async () => {
-    log("usage: node src/cli.mjs <rooms|harvest|render|media|share|all|doctor> [--room <slug>] [--share] [--low] [--lang en|ko|id]");
+    log("usage: node src/cli.mjs <rooms|harvest|render|media|thumbs|share|all|doctor> [--room <slug>] [--share] [--low] [--lang en|ko|id]");
   },
 };
 

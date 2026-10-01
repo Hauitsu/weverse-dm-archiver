@@ -16,6 +16,8 @@ import { spawn } from "node:child_process";
 import { loadConfig } from "./config.mjs";
 import { harvest, readArchive, saveArtistPhoto } from "./harvest.mjs";
 import { downloadMedia } from "./media.mjs";
+import { buildThumbs, makeQueue, modeOf } from "./thumbs.mjs";
+import { findFfmpeg } from "./quality.mjs";
 import { bundle } from "./bundle.mjs";
 import { findBrowser, launch, launchPlain, killBrowser, waitExit, profileDir } from "./browser.mjs";
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
@@ -175,6 +177,12 @@ function warnMissingMedia(o, outDir, log) {
 // render, and running it apart keeps its environment exactly as documented.
 export async function renderRoom(o) {
   const outDir = o.outDir || dirs().rooms;
+  // Thumbnails are linked only while the user wants them and ffmpeg can build them. The renderer
+  // still checks every single one on disk before linking it, so the pass that runs before a download
+  // simply keeps the originals instead of pointing at files that are not there yet.
+  const cfg = loadConfig();
+  const ffmpeg = findFfmpeg(cfg);
+  const thumbsOn = modeOf(cfg, ffmpeg) === "on";
   const env = Object.assign({}, process.env, {
     DM_SRC: o.srcDir,
     DM_EXPORT: outDir,
@@ -185,6 +193,8 @@ export async function renderRoom(o) {
     DM_TZ: o.tz || "auto",
     DM_MEDIA: dirs().media,
     DM_MEDIA_REL: "../media",
+    DM_THUMB_DIR: thumbsOn ? "../media/thumbs/photos" : "",
+    DM_VIDEO_POSTER: thumbsOn ? "../media/thumbs/video" : "",
     DM_BOOKMARKS: o.bookmarks === undefined ? "" : o.bookmarks,
     WDM_LANG: o.lang || "en",
     DM_LANG: o.lang || "en",
@@ -424,13 +434,34 @@ export async function runRoom(o) {
   out.phases.renderPublic = r1.public;
   if (r1.private !== 0) return Object.assign(out, { error: "render" });
 
+  // Thumbnails ride along with the download (see src/thumbs.mjs): the cpu work happens while the next
+  // file is still on the wire, so a fresh room pays almost no extra wait for the small copies the page
+  // and the gallery show. Files that were already on disk from an earlier run are covered by the sweep
+  // below, and neither path ever rebuilds a thumb that is newer than the file it came from.
+  const cfg = loadConfig();
+  const ffmpeg = findFfmpeg(cfg);
+  const thumbsOn = modeOf(cfg, ffmpeg) === "on";
+  const thumbQueue = makeQueue({ mediaDir: d.media, enabled: thumbsOn, ffmpeg: ffmpeg, shouldStop: stop, onLog: log });
   progress({ phase: "media", slug: o.slug, data: { done: 0, total: 0 } });
   const m = await downloadMedia({
     jsonl: path.join(d.rooms, o.slug + ".jsonl"), mediaDir: d.media, roomId: o.roomId, cdp: o.cdp,
     kind: o.kind, conc: o.conc, onLog: log, onProgress: (p) => progress({ phase: "media", slug: o.slug, data: p }), shouldStop: stop,
+    // kind comes from the downloader: a voice note is an mp4 without a picture, so it is skipped.
+    onSaved: (rel, kind) => { if (kind !== "audio") thumbQueue.push(rel); },
   });
   out.phases.media = m;
+  // Everything the download pushed is already written by now; drain waits for the last one.
+  const beside = await thumbQueue.drain();
+  if (beside.queued) log("thumbs: " + beside.made + " built beside the download" + (beside.failed ? ", " + beside.failed + " skipped" : ""));
   if (stop()) return Object.assign(out, { stopped: true });
+  if (thumbsOn) {
+    const sweep = await buildThumbs({
+      mediaDir: d.media, cfg: cfg, ffmpeg: ffmpeg, enabled: true, shouldStop: stop, onLog: log,
+      onProgress: (p) => progress({ phase: "media", slug: o.slug, data: { done: m.total || 0, total: m.total || 0, thumbs: p } }),
+    });
+    if (sweep.total) log("thumbs: " + sweep.made + " built for files that were already on disk" + (sweep.failed ? ", " + sweep.failed + " skipped" : ""));
+    out.phases.thumbs = { beside: beside.made, swept: sweep.made, failed: beside.failed + sweep.failed, bytes: beside.bytes + sweep.bytes };
+  }
 
   // The second pass is what makes the gallery show the files we now have locally.
   progress({ phase: "render", slug: o.slug, data: { pass: 2 } });

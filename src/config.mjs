@@ -32,6 +32,11 @@ export const DEFAULTS = {
   // Empty means the copy that ships in runtime/ffmpeg, then the ffmpeg on PATH. Set this when
   // ffmpeg lives somewhere unusual.
   ffmpegPath: "",
+  // Thumbnails: the small webp copies the page and the media gallery show instead of the originals.
+  // "auto" builds them whenever ffmpeg is around - during the download, so they add no wait - and
+  // "on" insists. "off" leaves the page exactly as it was before they existed. The Advanced
+  // checkbox in the window writes "on"/"off"; leaving it alone keeps "auto".
+  thumbs: "auto",
   // "Share to <name>": where a zip can be handed over - a chat invite, a cloud folder. The build
   // ships one, hidden from a search box but not from a reader (see src/collect.mjs); setting this
   // replaces it. Only this one value is ever opened (never anything the page itself sends).
@@ -49,6 +54,7 @@ export const DEFAULTS = {
 // Missing file = all defaults. A file that exists but does not parse is a real error:
 // silently falling back would hide a typo the user needs to see.
 export const SHARE_MODES = ["yes", "low", "no"];
+export const THUMB_MODES = ["auto", "on", "off"];
 
 export function readConfig(file) {
   const f = file || CONFIG_FILE;
@@ -62,6 +68,7 @@ export function readConfig(file) {
   const cfg = Object.assign({}, DEFAULTS, raw);
   cfg.pacing = Object.assign({}, DEFAULTS.pacing, raw.pacing || {});
   if (SHARE_MODES.indexOf(String(cfg.shareMode)) < 0) cfg.shareMode = DEFAULTS.shareMode;
+  if (THUMB_MODES.indexOf(String(cfg.thumbs)) < 0) cfg.thumbs = DEFAULTS.thumbs;
   if (typeof cfg.collectUrl !== "string") cfg.collectUrl = DEFAULTS.collectUrl;
   cfg.collectUrl = cfg.collectUrl.trim();
   if (typeof cfg.collectOwned !== "string") cfg.collectOwned = DEFAULTS.collectOwned;
@@ -97,5 +104,6 @@ export function loadConfig(file) {
   put("DM_EXPORT", cfg.output ? path.resolve(ROOT, cfg.output) : "");
   put("DM_GAP_MIN", cfg.pacing.minMs);
   put("DM_GAP_MAX", cfg.pacing.maxMs);
+  put("DM_THUMBS", cfg.thumbs);
   return cfg;
 }

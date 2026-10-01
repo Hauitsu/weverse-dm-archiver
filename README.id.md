@@ -126,7 +126,8 @@ begitu tiba, jadi proses berikutnya melanjutkan dari tempat berhentinya, bukan m
   tidak ditulis sama sekali.
 
 Daftar aturan lengkapnya ada di [Aturan keamanan yang diikuti alat
-ini](#aturan-keamanan-yang-diikuti-alat-ini) di bawah. `docs/FAQ.md` berisi versi jujurnya, termasuk
+ini](#aturan-keamanan-yang-diikuti-alat-ini) di bawah.
+[`docs/FAQ.md`](docs/FAQ.md) berisi versi jujurnya, termasuk
 apa yang harus dilakukan kalau kamu ragu.
 
 ## Yang bisa dilakukan halaman itu
@@ -191,9 +192,10 @@ berpindah.
 **Butuh ruang berapa besar?** Sekitar 2,5 GB per room pada kualitas penuh, sebagian besar untuk foto
 dan video.
 
-Lebih detail: `docs/QUICK-START.md` untuk langkah-langkahnya, `docs/FAQ.md` untuk jawaban jujurnya,
-`docs/ROADMAP.md` untuk rencananya. Kedua berkas itu masih berbahasa Inggris. Detail teknisnya
-dilipat di bagian bawah berkas ini.
+Lebih detail: [`docs/QUICK-START.md`](docs/QUICK-START.md) untuk langkah-langkahnya,
+[`docs/FAQ.md`](docs/FAQ.md) untuk jawaban jujurnya, [`docs/ROADMAP.md`](docs/ROADMAP.md) untuk
+rencananya. Kedua berkas itu masih berbahasa Inggris. Detail teknisnya dilipat di bagian bawah
+berkas ini.
 
 ## Bagian teknis
 
@@ -227,8 +229,8 @@ Satu proses terdiri dari lima fase (`gui.phase.*` di `src/lang/*.json`):
 | token API dibaca di memori untuk menandatangani GET-nya sendiri | tidak ada yang berbentuk token ditulis ke disk atau masuk log |
 | jendela dan profil browser sendiri | sesi yang kamu pakai untuk menjelajah tidak pernah dimuat ulang, ditutup atau dipindah |
 
-Tidak ada yang bisa menjanjikan risiko nol. `docs/FAQ.md` berisi versi jujurnya, termasuk apa yang
-harus dilakukan kalau kamu ragu.
+Tidak ada yang bisa menjanjikan risiko nol. [`docs/FAQ.md`](docs/FAQ.md) berisi versi jujurnya,
+termasuk apa yang harus dilakukan kalau kamu ragu.
 
 ### Baris perintah
 
@@ -488,7 +490,7 @@ Windows.
 ## Ikut berkontribusi
 
 Id room untuk grup lain, terjemahan UI (Inggris, Korea dan Indonesia sudah tersedia) dan laporan bug
-sangat diterima - lihat `docs/ROADMAP.md`.
+sangat diterima - lihat [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Lisensi
 

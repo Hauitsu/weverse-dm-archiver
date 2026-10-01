@@ -253,7 +253,9 @@ export async function bundle(opts) {
     try { size = fs.statSync(j.abs).size; } catch (err) {}
     mediaOriginal += size;
     done++;
-    if (compress && supports(j.rel)) {
+    // A thumbnail is already a small file: re-compressing 1474 of them would cost minutes of cpu to
+    // save a few megabytes, so the low quality pass links them as they are.
+    if (compress && j.rel.indexOf("thumbs/") !== 0 && supports(j.rel)) {
       const r = await shrinkOne({ ffmpeg: ffmpeg, src: j.abs, dest: path.join(root, "media", j.rel), shouldStop: o.shouldStop });
       if (stopped()) return;
       if (r.ok) { shrunk++; mediaFiles++; mediaBytes += r.after; if (done % 250 === 0) log("quality: " + done + "/" + jobs.length + " file(s)"); return; }

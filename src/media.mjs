@@ -156,6 +156,9 @@ export async function downloadMedia(opts) {
     fs.renameSync(part, dest);
     stats.ok++; stats.bytes += buf.length; streak = 0;
     manifest[key] = { file: rel, bytes: buf.length, kind: x.kind, status: "ok" };
+    // The thumbnail queue in src/pipeline.mjs takes it from here, so that cpu work happens while the
+    // next file is still downloading. It must never be able to break a download.
+    if (o.onSaved) { try { o.onSaved(rel, x.kind); } catch (e) {} }
   }
 
   const worker = async () => {

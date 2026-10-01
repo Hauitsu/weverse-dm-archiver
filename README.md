@@ -123,7 +123,7 @@ arrives, so the next run picks up where it stopped instead of starting over.
   not written at all.
 
 The exact list of rules is in [Safety rules this tool follows](#safety-rules-this-tool-follows)
-below. `docs/FAQ.md` has the honest version, including what to do if you are nervous.
+below. [`docs/FAQ.md`](docs/FAQ.md) has the honest version, including what to do if you are nervous.
 
 ## What the page can do
 
@@ -139,8 +139,12 @@ below. `docs/FAQ.md` has the honest version, including what to do if you are ner
   browser, you can export it as a file, and a later render can bake it back in.
 - **Message options.** Copy the text of a message, copy its date and time, or switch the
   translation mode for the whole page.
-- **Photos, videos, voice notes and gifts.** Click a photo for full size, with prev/next; gifts
-  keep the cover the app shows and open to whatever is inside; voice notes play in the page.
+- **Photos, videos, voice notes and gifts.** Click a photo for full size, with prev/next, or use
+  the picture button in the top-right corner for the **media gallery**: every photo, video and voice
+  note of the room in one grid, grouped by month and by day, with an all/photos/video/voice-note
+  filter. A tile opens the untouched original, and two round buttons in its corner lead back to the
+  grid or straight to the message it came from. Gifts keep the cover the app shows and open to
+  whatever is inside; voice notes play in the page.
 - **Themes and bubble colour.** Light or dark, and the app's ten bubble colours for the artist's
   side, picked from the heart in the days chip.
 
@@ -181,8 +185,9 @@ normal HTML file, but it points at the media files beside it, so the folder has 
 
 **How much space do I need?** About 2.5 GB per room at full quality, most of it photos and video.
 
-More detail: `docs/QUICK-START.md` for the steps, `docs/FAQ.md` for the honest answers,
-`docs/ROADMAP.md` for what is planned. The technical detail is folded at the bottom of this file.
+More detail: [`docs/QUICK-START.md`](docs/QUICK-START.md) for the steps,
+[`docs/FAQ.md`](docs/FAQ.md) for the honest answers, [`docs/ROADMAP.md`](docs/ROADMAP.md) for what
+is planned. The technical detail is folded at the bottom of this file.
 
 ---
 
@@ -217,8 +222,8 @@ A run is five phases (`gui.phase.*` in `src/lang/*.json`):
 | the API token is read in memory to sign its own GETs | nothing token-shaped is written to disk or logged |
 | its own browser window and profile | the session you browse with is never reloaded, closed or navigated |
 
-Nothing can promise zero risk. `docs/FAQ.md` has the honest version, including what to do if you are
-nervous.
+Nothing can promise zero risk. [`docs/FAQ.md`](docs/FAQ.md) has the honest version, including what
+to do if you are nervous.
 
 ### Command line
 
@@ -231,6 +236,7 @@ nervous.
 | `wdm harvest --room yunha` | walk the history backwards (starts the private browser) |
 | `wdm render --room yunha` | build both exports (private + public) from what is on disk |
 | `wdm media --room yunha` | download the photos and video the export points at |
+| `wdm thumbs` | build the small webp copies the page shows (`all` does this too; safe to re-run) |
 | `wdm share --room yunha` | one zip in `share/`, built from the public export |
 | `wdm all --room yunha --share` | all of the above, in order |
 | `wdm doctor` | check node, browser, rooms and folders |
@@ -241,14 +247,16 @@ nervous.
 rooms/               private export: <room>.html, <room>.md, <room>.jsonl, summary.json, fonts/
 rooms-public/        public export: the same files for the artist side only
 media/               photos/, video/, avatars/, fonts/ at original quality
+media/thumbs/        photos/, video/ - the small webp copies the page shows (about 2% of them)
 downloads/<room>/    one JSONL line per page of history (this is what makes it resumable)
 share/               share zips: weverse-dm-<room>.zip, one per room
 verify/              .sha256 + .manifest.json of each zip (nothing to send)
 ```
 
 Rooms never share a folder under `downloads/`, so one room history can never leak into another room
-export. The export always points at the original media, so there is no quality knob: one room is
-roughly 2.5 GB, almost all of it photos and video. What ships with the repo (fonts, avatars) and
+export. Every click in the page leads to the untouched original, and the page itself shows a small
+webp copy of each picture, so there is no quality knob either way: one room is roughly 2.5 GB,
+almost all of it photos and video, plus about 30 MB of small copies. What ships with the repo (fonts, avatars) and
 what each file holds is in the folded blocks at the end of this file.
 
 ### The reader page, in full
@@ -475,7 +483,7 @@ Windows.
 ## Contributing
 
 Room ids for other groups, UI translations (English, Korean and Indonesian ship today) and bug
-reports are welcome - see `docs/ROADMAP.md`.
+reports are welcome - see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## License
 

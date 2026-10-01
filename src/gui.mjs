@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
 import { spawn } from "node:child_process";
-import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES } from "./config.mjs";
+import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES, THUMB_MODES } from "./config.mjs";
 import { makeT, pickLang } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
@@ -135,33 +135,6 @@ async function startShare(body) {
       // is exactly the artist-only copy a zip is allowed to carry.
       if (!roomPage(r.slug)) throw new Error(tr("gui.shareNeedPub"));
       sharePush(tr("gui.shareBuildPub"));
-// One room is four measured steps and a small prologue. The weights are roughly how long each step
-// takes, so the bar keeps telling the truth about where a run stands: the walk through the history and
-// the downloads carry most of it, the render and the zip share the rest. The order below is the order
-// the pipeline runs them in, because a step starts out credited with every step before it.
-const WEIGHT = { browser: 5, harvest: 40, render: 10, media: 35, bundle: 10 };
-const WEIGHT_TOTAL = Object.keys(WEIGHT).reduce((a, k) => a + WEIGHT[k], 0);
-// The walk backwards ends when the room runs out, so its total is not known in advance. While it runs,
-// the bar uses a curve that moves quickly at first and slows down as the walk gets long; when the run
-// was given an explicit page cap, that cap is the exact total and it wins.
-const HARVEST_KNEE = 120;
-
-// How far into the bar a step stands: every step before it counts as done, plus its own reported
-// fraction. A null fraction means the step has nothing to count (the render, the zip), and the bar
-// holds the ground the step before it reached rather than inventing a number.
-function phaseSpan(phase, frac) {
-  if (!(phase in WEIGHT)) return state.floor || 0;
-  let done = 0;
-  for (const k of Object.keys(WEIGHT)) {
-    if (k === phase) break;
-    done += WEIGHT[k];
-  }
-  const f = frac == null ? null : Math.max(0, Math.min(1, frac));
-  const own = f == null ? 0 : WEIGHT[phase] * f;
-  return 100 * ((done + own) / WEIGHT_TOTAL);
-}
-// The bar never walks backwards and never claims a run is finished before it is.
-function pct(v) { state.floor = Math.min(99, Math.max(state.floor || 0, Math.round(v))); return state.floor; }
       const built = await renderRoom({
         slug: r.slug, srcDir: srcFor(r.slug), roomName: r.rowLabel || r.slug, artist: artistLabel(r),
         tz: tzFor(cfg, r), lang: pickLang(cfg.language), only: "artist", rename: publicRenameFor(cfg, r.slug),
@@ -375,7 +348,11 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
     "<details class=\"adv\" style=\"margin-top:20px\"><summary>" + esc(tr("gui.advanced")) + "</summary>",
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <select id=\"tz\">" + opts + "</select></label>",
-    "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div></details>",
+    "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div>",
+    // Small copies of the media, so the page and the gallery open quickly. On by default: it is built
+    // beside the download and cached, and it is the difference between reading 29 MB and 2 GB.
+    "<div class=\"grid\" style=\"margin-top:8px\"><label><input type=\"checkbox\" id=\"thumbs\"" + (String(cfg.thumbs || "auto") === "off" ? "" : " checked") + "> " + esc(tr("gui.thumbs")) + "</label>",
+    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.thumbsHint")) + "</span></span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><span class=\"tipwrap\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<span class=\"tip\">" + esc(tr("gui.browserHint")) + "</span></span>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
@@ -647,6 +624,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#shModal\").addEventListener(\"click\",function(e){if(e.target===el(\"#shModal\"))closeShare();});",
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
+    "el(\"#thumbs\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({thumbs:e.target.checked?\"on\":\"off\"})});});",
     "total();",
     "setInterval(tick,1000); tick(); setInterval(paintCool,200);",
     "</script></body></html>",
@@ -704,6 +682,34 @@ function readBody(req) {
 
 let stopFlag = false;
 function running(flag) { state.running = flag; if (!flag) stopFlag = false; }
+
+// One room is four measured steps and a small prologue. The weights are roughly how long each step
+// takes, so the bar keeps telling the truth about where a run stands: the walk through the history and
+// the downloads carry most of it, the render and the zip share the rest. The order below is the order
+// the pipeline runs them in, because a step starts out credited with every step before it.
+const WEIGHT = { browser: 5, harvest: 40, render: 10, media: 35, bundle: 10 };
+const WEIGHT_TOTAL = Object.keys(WEIGHT).reduce((a, k) => a + WEIGHT[k], 0);
+// The walk backwards ends when the room runs out, so its total is not known in advance. While it runs,
+// the bar uses a curve that moves quickly at first and slows down as the walk gets long; when the run
+// was given an explicit page cap, that cap is the exact total and it wins.
+const HARVEST_KNEE = 120;
+
+// How far into the bar a step stands: every step before it counts as done, plus its own reported
+// fraction. A null fraction means the step has nothing to count (the render, the zip), and the bar
+// holds the ground the step before it reached rather than inventing a number.
+function phaseSpan(phase, frac) {
+  if (!(phase in WEIGHT)) return state.floor || 0;
+  let done = 0;
+  for (const k of Object.keys(WEIGHT)) {
+    if (k === phase) break;
+    done += WEIGHT[k];
+  }
+  const f = frac == null ? null : Math.max(0, Math.min(1, frac));
+  const own = f == null ? 0 : WEIGHT[phase] * f;
+  return 100 * ((done + own) / WEIGHT_TOTAL);
+}
+// The bar never walks backwards and never claims a run is finished before it is.
+function pct(v) { state.floor = Math.min(99, Math.max(state.floor || 0, Math.round(v))); return state.floor; }
 
 async function startJob(body) {
   if (state.running) return;
@@ -885,7 +891,8 @@ async function handle(req, res) {
     if (b.language) { try { cfg = saveConfig({ language: String(b.language) }); } catch (e) {} }
     if (b.tz) { try { cfg = saveConfig({ tz: String(b.tz) }); } catch (e) {} }
     if (b.shareMode && SHARE_MODES.indexOf(String(b.shareMode)) >= 0) { try { cfg = saveConfig({ shareMode: String(b.shareMode) }); } catch (e) {} }
-    json(200, { ok: true, language: cfg.language, tz: cfg.tz });
+    if (b.thumbs && THUMB_MODES.indexOf(String(b.thumbs)) >= 0) { try { cfg = saveConfig({ thumbs: String(b.thumbs) }); } catch (e) {} }
+    json(200, { ok: true, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs });
     return;
   }
   if (req.method === "POST" && url === "/api/open") {

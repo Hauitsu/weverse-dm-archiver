@@ -77,8 +77,9 @@ export function argsFor(src, dest, kind) {
 }
 
 // shouldStop is polled while ffmpeg works: cancelling a zip kills the file being re-compressed
-// within a moment instead of holding the cancel up until that file finishes on its own.
-function run(bin, args, timeoutMs, shouldStop) {
+// within a moment instead of holding the cancel up until that file finishes on its own. Exported
+// because src/thumbs.mjs runs ffmpeg the same way, one file at a time.
+export function run(bin, args, timeoutMs, shouldStop) {
   return new Promise((resolve) => {
     let done = false;
     let watch = null;
