@@ -9,6 +9,7 @@
 | M5 | publish gate | `tools/publish.ps1`: file selection + secret scan + commit | **done** |
 | M6 | docs/demo | README, quick start, FAQ and roadmap updated; still open: screenshots, and a small synthetic demo archive to try the tool without an account | partial |
 | M7 | optional light package | smaller media for people who need something small enough to send | **done** as the zip's "Low quality" choice in the Share popup (`src/quality.mjs`: 1280px on the long side, h264 video, 64 kbps audio, via `ffmpeg`); the archive keeps its originals |
+| M8 | portable download | the release zip carries Node.js 20 in `runtime\node\` and ffmpeg in `runtime\ffmpeg\`; both launchers run those copies and fall back to `PATH`, so a user installs nothing | **done** |
 
 Engine already in place: resumable JSONL page fetching (`src/net.mjs`), room registry
 (`src/rooms.mjs`), config loading (`src/config.mjs`), browser discovery and CDP

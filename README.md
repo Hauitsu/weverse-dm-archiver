@@ -43,18 +43,16 @@ away from your normal browser.
    **[weverse-dm-archiver.zip](https://github.com/Hauitsu/weverse-dm-archiver/releases/latest/download/weverse-dm-archiver.zip)**.
    It is the portable build: **Node.js and ffmpeg travel inside it**, so there is nothing to install.
    Unzip it into a folder of your own (not `Program Files`): the tool writes its archive next to
-   itself, so it needs a folder Windows lets it write to.
-1. **Node.js 20 or newer.** Already in the portable download. Only the source copy needs an install
-   (or a `node.exe` dropped into `runtime\node\`); `START.bat` opens the download page when it cannot
-   find Node.
-2. **Double-click `START.bat`.** The tool's own page opens in your browser - usually
+   itself, so it needs a folder Windows lets it write to. **Nothing else to install** - only a
+   source copy needs a Node.js of its own (see *What you need* below).
+1. **Double-click `START.bat`.** The tool's own page opens in your browser - usually
    `http://127.0.0.1:8787`; if that port is taken it picks another one and the small console window
    prints the address it used.
-3. **Tick a room and press Start.** A popup repeats these steps first, then a separate browser
+2. **Tick a room and press Start.** A popup repeats these steps first, then a separate browser
    window opens on a fresh Weverse page. **Log in there**, stay on the Home page and **do not close
    it**, then come back and press **I'm logged in - continue**. It asks for that press on every run,
    even when the profile already holds a session.
-4. **Wait.** The progress walks backwards through the history, page by page. When it says done,
+3. **Wait.** The progress walks backwards through the history, page by page. When it says done,
    press **Open chat** to read the archive, **Open folder** to see the files, or take the zip from
    the **Share** button on that room's row.
 
@@ -104,10 +102,10 @@ below. `docs/FAQ.md` has the honest version, including what to do if you are ner
 
 - **Windows is the tested path** (`START.bat`, `wdm.bat`). The JavaScript modules run wherever
   Node runs; only the launchers are Windows-specific.
-- **Node.js 20 or newer**, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; `browserPath`
-  in `config.json` points at anything unusual). The portable download already carries Node.js in
-  `runtime\node\` and ffmpeg in `runtime\ffmpeg\`; with the source copy, install Node.js or drop
-  `node.exe` in `runtime\node\`.
+- **Nothing to install**, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; `browserPath`
+  in `config.json` points at anything unusual). The portable download carries Node.js 20 in
+  `runtime\node\` and ffmpeg in `runtime\ffmpeg\`, and the launchers run those copies; only a source
+  copy needs a Node.js of its own on `PATH` (or a `node.exe` dropped into `runtime\node\`).
 - **Only rooms your own account can already read.** This bypasses no membership and no paywall.
 - **One room is around 2.5 GB** at full quality (the selected-rooms line quotes a 3 GB ceiling
   until a room has been archived once). The share zip can be built from re-compressed copies instead

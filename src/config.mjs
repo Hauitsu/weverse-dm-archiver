@@ -29,7 +29,8 @@ export const DEFAULTS = {
   // What the picker keeps for the share zip: "yes", "low" or "no". Low re-compresses the copies
   // that go inside the zip; the archive itself always keeps the originals.
   shareMode: "yes",
-  // Empty means "the ffmpeg on PATH". Set it when ffmpeg lives somewhere unusual.
+  // Empty means the copy that ships in runtime/ffmpeg, then the ffmpeg on PATH. Set this when
+  // ffmpeg lives somewhere unusual.
   ffmpegPath: "",
   // "Share to <name>": where a zip can be handed over - a chat invite, a cloud folder. The build
   // ships one, hidden from a search box but not from a reader (see src/collect.mjs); setting this

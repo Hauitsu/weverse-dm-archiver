@@ -6,10 +6,10 @@ file, or type a command - but every command is listed too, in case you prefer th
 ## 0. What you need
 
 - Windows 10 or 11 (macOS and Linux work too if you run the commands by hand).
-- **Node.js 20 or newer.** The portable download already carries it, with ffmpeg next to it in
-  `runtime\`; the launchers run `runtime\node\node.exe` when it is there and fall back to the `node`
-  on your `PATH`. Only the source copy needs an install: double-clicking `START.bat` opens the Node
-  download page and stops until you have it.
+- **Nothing to install.** The download carries Node.js 20 in `runtime\node\` with ffmpeg next to
+  it in `runtime\ffmpeg\`, and `START.bat`/`wdm.bat` run those copies. Only a source copy falls back
+  to the `node` on your `PATH` - and then `START.bat` opens the Node download page and stops until
+  you install it.
 - Chrome, Edge, Brave or Vivaldi. The tool starts its own window of whichever it finds first.
 - Disk space: about 3 GB per room, plus the same again if you also make the share zip (a
   re-compressed one is a fraction of that).
@@ -161,8 +161,9 @@ does not work.
 
 ## If something goes wrong
 
-- **"Node.js 20 or newer is required"** - the portable download carries one in `runtime\node\`; with
-  the source copy, install it from the link that just opened, then start `START.bat` again.
+- **"Node.js 20 or newer is required"** - you are running the source copy: the portable download
+  carries Node.js in `runtime\node\` and never shows this. Install it from the link that just
+  opened, then start `START.bat` again.
 - **"No Chrome or Edge found"** - install one, or add `"browserPath": "C:/path/to/browser.exe"`
   to `config.json` (copy `config.example.json` to `config.json` first).
 - **The page did not open, or the address looks different** - Windows reserves whole port ranges when

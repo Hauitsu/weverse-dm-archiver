@@ -62,7 +62,7 @@ archived once. Measured on an 18-month room: 9,574 unique messages
 HTML, plus 970 KB of Markdown and 8.2 MB of JSONL. Photos and videos are saved exactly as Weverse served them - the archive itself has no quality knob:
 what Weverse gave, it keeps. Size is traded only in the share zip, and only when you ask for it:
 **Low quality** in a room's **Share** popup re-compresses the copies inside that zip (1280px on
-the long side, h264 video, 64 kbps audio) with the `ffmpeg` on your `PATH`. Anything that would not get smaller keeps its
+the long side, h264 video, 64 kbps audio) with the `ffmpeg` that ships in `runtime\ffmpeg\` (the one on your `PATH` is the fallback). Anything that would not get smaller keeps its
 original bytes, and `rooms/` and `media/` are never touched.
 
 If you only want to *send* the archive to someone, use the share zip: it is the same data (artist

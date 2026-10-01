@@ -156,7 +156,7 @@ const commands = {
     log("media      " + d.media + (fs.existsSync(d.media) ? "" : "  (will be created)"));
     log("downloads  " + d.downloads);
     log("config     " + (process.env.WDM_CONFIG || path.join(REPO, "config.json")));
-    log("ffmpeg     " + (findFfmpeg(cfg) || "none found - a low quality zip needs it, or set ffmpegPath"));
+    log("ffmpeg     " + (findFfmpeg(cfg) || "none found - expected in runtime/ffmpeg/, or set ffmpegPath"));
     const list = rooms(cfg);
     log("rooms file " + list.length + " room(s): " + list.map((r) => r.slug).join(", "));
   },
