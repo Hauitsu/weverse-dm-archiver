@@ -49,7 +49,9 @@ and unzip it into a folder of your own, for example `D:\weverse-archive`.
 Keep it somewhere you own. The archive is written inside that same folder, so a place like
 `Program Files` will refuse it - Desktop, Documents, another drive or a USB stick are all fine.
 
-Nothing else to install. Only a copy run from the source needs Node.js (see *What you need* below).
+Nothing else to install: this zip carries its own Node.js. Only a "source copy" - the tool taken
+from the repository, not from this zip - needs Node.js on the machine (see
+[What you need](#what-you-need-and-what-it-will-not-do)).
 
 ### 2. Double-click `START.bat`
 
