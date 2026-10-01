@@ -1,5 +1,11 @@
 English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
 
+> **Heads up: UNIS Weverse DM ends on Friday 2 October 2026, 3:00 PM KST (06:00 UTC).** Weverse posted an
+> [advance notice](https://weverse.io/unis/notice/39476); buying new DM already stopped on 28 September. After
+> that date you cannot send or receive new messages, and although the messages from before it stay readable,
+> **access to My Media and Favorites will be restricted**. If you want a room on your own disk - every
+> message, photo, video and voice note - archive it before then.
+
 # Weverse DM Archiver (UNIS Exclusive)
 
 ![Weverse DM Archiver - your Weverse DMs, saved as a page that opens offline](assets/01-hero.svg)

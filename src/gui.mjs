@@ -221,12 +221,20 @@ function page() {
   // session screenshot, so it keeps the plain text tooltip and hangs off the end of the line.
   const loginTip = "<span class=\"tipwrap end\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.loginStays")) + "</span></span>";
   const noteHtml = "<ol style=\"margin:0;padding-left:22px\">" + tr("gui.startNote").split(NL).map((s) => "<li style=\"margin:0 0 10px\">" + emph(s).replace("{login}", loginTip).replace("{i}", homeShot) + "</li>").join("") + "</ol>";
+  // The banner picture is a local file the owner may swap at any time, so its timestamp rides in the URL.
+  // That is what makes a replaced file show up on a plain reload, even in a browser still holding the old
+  // copy under the bare /assets/milky-way.png name (the route below answers no-store for the same reason).
+  const bannerV = (() => { try { return Math.round(fs.statSync(path.join(REPO, "assets", "milky-way.png")).mtimeMs); } catch (e) { return 0; } })();
 
   return [
     "<!doctype html><html lang=\"" + pickLang(cfg.language) + "\"><head><meta charset=\"utf-8\">",
     "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
     "<title>" + esc(tr("gui.title")) + "</title><style>",
     ":root{color-scheme:light dark}body{font-family:system-ui,Segoe UI,Malgun Gothic,sans-serif;margin:0;padding:24px;max-width:900px;line-height:1.5}",
+    // The banner sits in the page flow right after the panels, so it stays under the rooms list while
+    // nothing is selected and slides further down as the settings, result and log panels appear.
+    ".banner{margin:0;border-radius:16px;overflow:hidden;border:1px solid #8886;box-shadow:0 10px 30px #0003}",
+    ".banner img{display:block;width:100%;height:auto}",
     "h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}.oleh{font-weight:400;opacity:.7}",
     "section{border:1px solid #8884;border-radius:10px;padding:14px 16px;margin:0 0 14px}",
     "label.row{display:grid;grid-template-columns:24px minmax(120px,1fr) 150px 76px 92px 74px 72px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #8882;cursor:pointer}",
@@ -361,6 +369,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "<section id=\"loginNote\" style=\"display:none\">" + noteHtml + "</section>",
     "<section id=\"logBox\" style=\"display:none\"><strong>" + esc(tr("gui.log")) + "</strong><div id=\"log\"></div></section>",
     "</div>",
+    "<div class=\"banner\"><img src=\"/assets/milky-way.png?v=" + bannerV + "\" alt=\"\"></div>",
     "<script>",
     "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",self:" + JSON.stringify(tr("gui.totalSelf")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + ",shTitle:" + JSON.stringify(tr("gui.sharePopup")) + ",shHave:" + JSON.stringify(tr("gui.shareHas")) + ",shNone:" + JSON.stringify(tr("gui.shareNone")) + ",shNeedPub:" + JSON.stringify(tr("gui.shareNeedPub")) + ",shEst:" + JSON.stringify(tr("gui.shareEst")) + ",shEstLow:" + JSON.stringify(tr("gui.shareEstLow")) + ",shWorking:" + JSON.stringify(tr("gui.phase.bundle")) + ",shGenerate:" + JSON.stringify(tr("gui.shareGenerate")) + ",shDone:" + JSON.stringify(tr("gui.shareDone")) + ",shFail:" + JSON.stringify(tr("gui.shareFail")) + ",shGoTip:" + JSON.stringify(tr("gui.shareHint")) + "};",
     "function el(s){return document.querySelector(s);}",
@@ -773,13 +782,16 @@ async function handle(req, res) {
     res.end(page());
     return;
   }
-  // The picture the (i) in the procedure shows: a plain file next to the code, served from disk so
-  // the page itself stays small. A copy that lost the file answers 404 and the tooltip shows its
-  // caption alone instead of a broken image.
-  if (req.method === "GET" && url === "/assets/home-page.png") {
+  // The still pictures that ship next to the code, served from disk so the page itself stays small.
+  // Only the names listed here are served, so the route can never walk out of assets/; a copy that lost
+  // one answers 404, and the (i) tip then shows its caption alone. Both are PNG, so one content type
+  // covers the pair. Nothing here is cached: these are local files the owner replaces while the tool is
+  // in use, and a day-old browser copy is exactly how a swapped picture ends up looking stale.
+  const ASSETS = { "/assets/home-page.png": "home-page.png", "/assets/milky-way.png": "milky-way.png" };
+  if (req.method === "GET" && ASSETS[url]) {
     try {
-      const buf = fs.readFileSync(path.join(REPO, "assets", "home-page.png"));
-      res.writeHead(200, { "content-type": "image/png", "content-length": buf.length, "cache-control": "max-age=86400" });
+      const buf = fs.readFileSync(path.join(REPO, "assets", ASSETS[url]));
+      res.writeHead(200, { "content-type": "image/png", "content-length": buf.length, "cache-control": "no-store" });
       res.end(buf);
     } catch (e) {
       res.writeHead(404, { "content-type": "text/plain" });
