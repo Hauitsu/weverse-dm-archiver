@@ -243,12 +243,12 @@ function page() {
     "button.busy::after{content:\"\";display:inline-block;width:9px;height:9px;margin-left:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:wdmSpin .8s linear infinite;vertical-align:-1px}",
     "#phase.stopping{animation:wdmPulse 1.1s ease-in-out infinite}",
     "@media (prefers-reduced-motion:reduce){button.busy,#phase.stopping,#fill.live,#shFill.live{animation:none}button.busy::after{animation:none}}",
-// The Share to Hauitsu button gives a small shake once every ten seconds while it sits there: a
-// nudge that is easy to ignore. It claims transform only while the pointer is away from the button,
-// so the hover lift and the press stay exactly as they were, it stops by itself when the button is
-// disabled (a zip is being built), and it obeys the reduced-motion switch below.
-"@keyframes wdmNudge{0%,84%,100%{transform:translateY(0)}87%{transform:translateY(-2px)}90%{transform:translateY(2px)}93%{transform:translateY(-1.5px)}96%{transform:translateY(1.5px)}}",
-"#shTo:not(:disabled):not(:hover):not(:active){animation:wdmNudge 10s ease-in-out infinite}",
+// The Share to Hauitsu button gives a small shake once every five seconds while it sits there: eight
+// quick up-and-down passes that are easy to ignore. It claims transform only while the pointer is
+// away from the button, so the hover lift and the press stay exactly as they were, it stops by itself
+// when the button is disabled (a zip is being built), and it obeys the reduced-motion switch below.
+"@keyframes wdmNudge{0%,82%,100%{transform:translateY(0)}84%{transform:translateY(-2px)}86%{transform:translateY(2px)}88%{transform:translateY(-2px)}90%{transform:translateY(2px)}92%{transform:translateY(-2px)}94%{transform:translateY(2px)}96%{transform:translateY(-2px)}98%{transform:translateY(2px)}}",
+"#shTo:not(:disabled):not(:hover):not(:active){animation:wdmNudge 5s ease-in-out infinite}",
 "@media (prefers-reduced-motion:reduce){#shTo{animation:none !important}}",
     // Ready-to-press feedback for every button: it lifts under the cursor and sinks when pressed, so
     // a click is felt even when the real answer happens outside the page. Disabled buttons stay put.

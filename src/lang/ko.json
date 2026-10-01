@@ -110,7 +110,7 @@
   "gui.shareTo": "{name}에게 공유",
   "gui.toTitle": "Hauitsu의 메시지",
   "gui.toL1": "안녕하세요 EverAfter! 저는 같은 EverAfter인 Hauitsu예요 🧍‍♂️",
-  "gui.toL2": "{v} DM의 전체 대화 기록을 성공적으로 백업하셨네요",
+  "gui.toL2": "{v} DM의 전체 대화 기록을 성공적으로 아카이브하셨네요",
   "gui.toL3": "저는 윤하 DM 전체 백업만 겨우 가지고 있어요",
   "gui.toL4": "그런데 UNIS 모든 멤버의 백업을 가지고 싶어요😭",
   "gui.toL5": "zip을 공유해 주실 의향이 있다면 아래 제 Google Drive 링크에 업로드해 주세요 🙏",
