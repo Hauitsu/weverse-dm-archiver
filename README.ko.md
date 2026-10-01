@@ -141,8 +141,16 @@ HTML 파일 하나입니다:
 
 ## 필요한 것, 그리고 하지 않는 것
 
-- **Windows가 검증된 경로입니다** (`START.bat`, `wdm.bat`). JavaScript 모듈은 Node가 도는 곳이면
-  어디서든 실행됩니다; Windows 전용은 실행 파일(launcher)뿐입니다.
+- **Windows 10 또는 11만 검증된 경로입니다** (`START.bat`, `wdm.bat`). macOS와 Linux에서는 아직
+  아무도 실행해 본 적이 없고, 포터블 다운로드는 구조상 Windows 전용입니다: 그 안의 Node.js와
+  ffmpeg는 `node.exe`와 `ffmpeg.exe`입니다. JavaScript 모듈은 Node가 도는 곳이면 어디서든 실행되도록
+  작성되었습니다 - macOS에서는 `open`, 그 밖의 시스템에서는 `xdg-open`으로 브라우저를 열고, 남은
+  프로세스는 PowerShell 대신 `pkill`로 정리하며, 상태 폴더는 `~/weverse-dm-archiver`, 브라우저
+  프로필은 `~/AppData/Local/`로 떨어집니다 - 하지만 그 두 시스템에서는 브라우저를 여전히 Windows 설치
+  위치에서만 찾으므로 `browserPath`를 직접 지정해야 하고(Mac이라면
+  `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`), Node.js 20과 `ffmpeg`는 Homebrew나
+  배포판에서 마련하고, 실행하는 것은 소스 사본입니다. 그곳에서도 될 것으로 예상되지만, 된다고
+  알려진 것은 아닙니다.
 - **설치할 것이 없습니다**, 그리고 Chromium 브라우저 하나 (Chrome, Edge, Brave, Vivaldi;
   `config.json`의 `browserPath`로 특이한 경로도 지정할 수 있습니다). 포터블 다운로드는
   `runtime\node\`에 Node.js 20을, `runtime\ffmpeg\`에 ffmpeg를 담고 있고 실행 파일이 그 사본을
@@ -456,6 +464,14 @@ Apple의 것이고 - 원본 저장소는 교육용 사용만을 명시합니다 
 
 다른 그룹의 방 id, UI 번역(현재 영어, 한국어, 인도네시아어 제공), 버그 보고는 환영합니다 -
 [`docs/ROADMAP.md`](docs/ROADMAP.md)를 보세요.
+
+**특히 macOS와 Linux 테스터를 찾습니다.** 이 도구는 Windows에서만 실행된 적이 있어서 "Mac에서도
+되나요?"에 대한 정직한 답은 아무도 모른다는 것입니다. 해 보실 생각이라면 소스 사본과
+[필요한 것](#필요한-것-그리고-하지-않는-것) 항목의 단계면 충분합니다. 그리고 결과를 알려 주세요:
+정확한 명령, `browserPath`로 지정한 브라우저, 터미널 출력, 어디서 멈췄는지. 잘 됐다는 보고도
+안 됐다는 보고만큼 중요합니다 - 어느 쪽이든 "될 것으로 예상됨"을 정직하게 "검증됨"으로 바꿔 줍니다.
+macOS 실행 파일이나 macOS 브라우저 경로를 추가하는 패치는 실제 macOS 기기에서의 보고와 **함께**
+환영합니다; 보고가 없으면 지원된다고 말할 수 없습니다.
 
 ## 라이선스
 

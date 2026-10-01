@@ -152,8 +152,16 @@ apa yang harus dilakukan kalau kamu ragu.
 
 ## Yang kamu butuhkan, dan yang tidak akan dilakukannya
 
-- **Windows adalah jalur yang teruji** (`START.bat`, `wdm.bat`). Modul JavaScript-nya berjalan di
-  mana pun Node berjalan; hanya peluncur (launcher) yang khusus Windows.
+- **Windows 10 atau 11 adalah satu-satunya jalur yang teruji** (`START.bat`, `wdm.bat`). Belum ada
+  yang menjalankannya di macOS atau Linux, dan unduhan portable-nya memang khusus Windows: Node.js
+  dan ffmpeg di dalamnya adalah `node.exe` dan `ffmpeg.exe`. Modul JavaScript-nya ditulis untuk
+  berjalan di mana pun Node berjalan - browser dibuka dengan `open` di macOS dan `xdg-open` di sistem
+  lain, sisa proses dibersihkan dengan `pkill` bukan PowerShell, dan folder state jatuh ke
+  `~/weverse-dm-archiver` dengan profil browser di `~/AppData/Local/` - tapi di dua sistem itu browser
+  tetap hanya dicari di lokasi pemasangan Windows, jadi `browserPath` harus kamu isi sendiri (di Mac:
+  `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`), Node.js 20 dan `ffmpeg` kamu
+  sediakan dari Homebrew atau distribusi kamu, dan yang dijalankan adalah salinan source. Diharapkan
+  jalan di sana; belum diketahui jalan.
 - **Tidak ada yang perlu di-install**, dan satu browser Chromium (Chrome, Edge, Brave atau Vivaldi;
   `browserPath` di `config.json` bisa diarahkan ke apa pun yang tidak biasa). Unduhan portable
   membawa Node.js 20 di `runtime\node\` dan ffmpeg di `runtime\ffmpeg\`, dan launcher-nya
@@ -491,6 +499,15 @@ Windows.
 
 Id room untuk grup lain, terjemahan UI (Inggris, Korea dan Indonesia sudah tersedia) dan laporan bug
 sangat diterima - lihat [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+**Penguji macOS dan Linux paling dicari.** Alat ini baru pernah dijalankan di Windows, jadi jawaban
+jujur untuk "jalan nggak di Mac?" adalah belum ada yang tahu. Kalau kamu mau mencoba, salinan source
+dan langkah di [Yang kamu butuhkan](#yang-kamu-butuhkan-dan-yang-tidak-akan-dilakukannya) sudah cukup;
+lalu laporkan apa yang terjadi - perintah persisnya, browser yang kamu tunjuk lewat `browserPath`,
+keluaran terminalnya, dan di mana berhentinya. Laporan bahwa itu jalan sama berharganya dengan laporan
+bahwa itu gagal: dua-duanya mengubah "diharapkan jalan" menjadi sesuatu yang jujur boleh ditulis
+"teruji". Patch yang menambah peluncur macOS atau path browser macOS diterima **beserta** laporan dari
+mesin macOS sungguhan; tanpa itu tidak bisa disebut didukung.
 
 ## Lisensi
 

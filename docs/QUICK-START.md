@@ -5,7 +5,9 @@ file, or type a command - but every command is listed too, in case you prefer th
 
 ## 0. What you need
 
-- Windows 10 or 11 (macOS and Linux work too if you run the commands by hand).
+- Windows 10 or 11 for the tested path. macOS and Linux are untested: the modules are written to run
+  there, but the launchers are Windows-only, the browser is looked for in Windows install locations
+  only (set `browserPath`), and Node.js and `ffmpeg` are yours to supply.
 - **Nothing to install.** The download carries Node.js 20 in `runtime\node\` with ffmpeg next to
   it in `runtime\ffmpeg\`, and `START.bat`/`wdm.bat` run those copies. Only a source copy falls back
   to the `node` on your `PATH` - and then `START.bat` opens the Node download page and stops until

@@ -150,8 +150,16 @@ below. [`docs/FAQ.md`](docs/FAQ.md) has the honest version, including what to do
 
 ## What you need, and what it will not do
 
-- **Windows is the tested path** (`START.bat`, `wdm.bat`). The JavaScript modules run wherever
-  Node runs; only the launchers are Windows-specific.
+- **Windows 10 or 11 is the only tested path** (`START.bat`, `wdm.bat`). Nobody has run this on macOS
+  or Linux yet, and the portable download is Windows-only by nature: the Node.js and ffmpeg inside it
+  are `node.exe` and `ffmpeg.exe`. The JavaScript modules are written to run wherever Node runs - the
+  browser is opened with `open` on macOS and `xdg-open` elsewhere, leftover processes are cleared
+  with `pkill` instead of PowerShell, and the state folder falls back to `~/weverse-dm-archiver` with
+  the browser profile in `~/AppData/Local/` - but on those two systems the browser is still looked for
+  in Windows install locations only, so `browserPath` has to point at it yourself (on a Mac:
+  `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`), Node.js 20 and `ffmpeg` come from
+  Homebrew or your distribution, and what you run is the source copy. It is expected to work there; it
+  is not known to.
 - **Nothing to install**, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; `browserPath`
   in `config.json` points at anything unusual). The portable download carries Node.js 20 in
   `runtime\node\` and ffmpeg in `runtime\ffmpeg\`, and the launchers run those copies; only a source
@@ -484,6 +492,15 @@ Windows.
 
 Room ids for other groups, UI translations (English, Korean and Indonesian ship today) and bug
 reports are welcome - see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+**macOS and Linux testers are the ones most wanted.** This tool has only ever been run on Windows, so
+the honest answer to "does it work on a Mac?" is that nobody knows. If you are willing to try, the
+source copy and the steps under [What you need](#what-you-need-and-what-it-will-not-do) are all it
+takes; then report what happened - the exact command, the browser you pointed `browserPath` at, what
+the terminal printed, and where it stopped. A report that it worked counts as much as one that it did
+not: either turns "expected to work" into something that can honestly be written down as tested. A
+patch that adds a macOS launcher or macOS browser paths is welcome **with** a report from a real macOS
+machine; without one it cannot be called supported.
 
 ## License
 
