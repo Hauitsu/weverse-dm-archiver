@@ -131,7 +131,7 @@
   "gui.shareDone": "Done: {v}",
   "gui.shareFail": "Failed: {v}",
   "gui.startNote": "Click **Start**, then a **separate browser window** opens a fresh **Weverse page**.\n**Login** to **Weverse** in that window.{login}\nAfter **login success**, make sure you are on the **Home page**{i} and **do not close it**, then **come back here and click I'm logged in - continue**.\nThe separate browser window might close by itself and open again by itself, then the download should be starting.",
-  "gui.homeShot": "The Weverse home page - the window has to still be open when you press the button.",
+  "gui.homeShot": "The Weverse home page - the login button is no longer showing - the window has to still be open when you click I'm logged in - continue button.",
   "gui.loginStays": "Your login info stays in this computer, it's never get uploaded.",
   "gui.advanced": "Advanced: time zone",
   "gui.langHint": "the page and the exported chat are written in this language",

@@ -131,7 +131,7 @@
   "gui.shareDone": "완료: {v}",
   "gui.shareFail": "실패: {v}",
   "gui.startNote": "**Start**를 누르면 **별도의 브라우저 창**이 열리고 새 **Weverse 페이지**가 표시됩니다.\n그 창에서 **Weverse**에 **로그인**하세요.{login}\n**로그인 성공** 후 **Home page**{i}에 있는지 확인하고 **창을 닫지 마세요**. 그다음 **여기로 돌아와 I'm logged in - continue 버튼을 누르세요**.\n별도의 브라우저 창이 스스로 닫혔다가 다시 열릴 수 있으며, 그러면 다운로드가 시작되어야 합니다.",
-  "gui.homeShot": "위버스 홈 페이지입니다 - 버튼을 누를 때 창이 열려 있어야 합니다.",
+  "gui.homeShot": "위버스 홈 페이지 - 로그인 버튼이 더 이상 보이지 않습니다 - 뒤로 돌아와서 I'm logged in - continue 버튼을 누를 때 창이 열려 있어야 합니다.",
   "gui.loginStays": "로그인 정보는 이 컴퓨터에만 남고, 어디에도 업로드되지 않습니다.",
   "gui.advanced": "고급 설정: 시간대",
   "gui.langHint": "이 페이지와 내보낸 채팅이 이 언어로 만들어집니다",

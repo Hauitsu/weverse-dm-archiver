@@ -272,7 +272,10 @@ function page() {
     ".tipwrap.flow .tip{min-width:min(460px,100%)}",
     // A tooltip at the end of a line has nowhere to grow to the right, so it grows left instead of
     // running off the panel. The wrapper keeps its own position, which is what anchors it to the icon.
-    ".tipwrap.end .tip{left:auto;right:0}",
+    // It also drops the 460px floor the left-aligned tips use: with the right edge pinned to the icon a
+    // floor would show up as dead space beside the words, so this one is exactly as wide as its sentence
+    // (and wraps once that would pass 460px, or 86vw on a narrow window).
+    ".tipwrap.end .tip{left:auto;right:0;min-width:0;width:max-content;max-width:min(460px,86vw)}",
 ".tipwrap:focus-within .tip{display:block}",
 ".tip.shot{left:50%;transform:translateX(-50%);min-width:0;width:min(620px,86vw);padding:8px}",
 ".tip.shot img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid #8884}",

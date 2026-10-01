@@ -131,7 +131,7 @@
   "gui.shareDone": "Selesai: {v}",
   "gui.shareFail": "Gagal: {v}",
   "gui.startNote": "Klik **Start**, lalu sebuah **jendela browser terpisah** akan membuka **halaman Weverse** baru.\n**Login** ke **Weverse** di jendela itu.{login}\nSetelah **login berhasil**, pastikan kamu berada di **Home page**{i} dan **jangan ditutup**, lalu **kembali ke sini dan klik I'm logged in - continue**.\nJendela browser terpisah bisa menutup sendiri lalu terbuka sendiri, lalu unduhan harusnya mulai.",
-  "gui.homeShot": "Halaman Home Weverse - jendelanya harus masih terbuka saat kamu menekan tombolnya.",
+  "gui.homeShot": "Halaman Home Weverse - tombol login sudah tidak terlihat lagi - jendelanya harus masih terbuka saat kamu menekan tombol I'm logged in - continue.",
   "gui.loginStays": "Info login kamu tetap di komputer ini, tidak pernah diunggah.",
   "gui.advanced": "Pengaturan lanjutan: zona waktu",
   "gui.langHint": "halaman ini dan obrolan hasil ekspor memakai bahasa ini",
