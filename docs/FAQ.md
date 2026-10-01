@@ -19,11 +19,13 @@ No. You double-click `START.bat`, the local page opens, you tick a room and pres
 in in the window the tool opens and you press **I'm logged in - continue**. Everything else is a
 progress bar. There is a command line too (`wdm ...`) if you happen to like typing.
 
-## Why does it need Node.js installed?
+## Do I have to install Node.js or ffmpeg?
 
-The tool is JavaScript, and Node is the engine that runs it. Shipping Node inside the zip would
-add about 90 MB to the download; `START.bat` checks for it and opens the download page if it is
-missing. That is the only prerequisite.
+No. The tool is JavaScript, and Node is the engine that runs it - so the download ships one. The
+portable zip carries Node.js in `runtime\node\` and ffmpeg in `runtime\ffmpeg\`; the launchers run the
+copy inside the folder and only look for a Node.js on your `PATH` when you use the source copy
+instead. Nothing is installed on your machine and nothing is written outside the folder you unzipped
+into (the browser profile is the one exception, and it lives under `%LOCALAPPDATA%`).
 
 ## Will it close my browser or log me out?
 

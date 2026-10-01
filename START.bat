@@ -1,14 +1,18 @@
 @echo off
 rem Weverse DM archiver - double-click this file.
-rem Needs Node.js 20 or newer: https://nodejs.org/en/download
+rem Node.js 20 or newer is needed. The portable download carries its own copy in runtime\node, so
+rem nothing has to be installed; the source copy falls back to the node on PATH.
 setlocal
 cd /d "%~dp0"
 
-where node >nul 2>nul
-if errorlevel 1 (
+set "NODEEXE="
+if exist "%~dp0runtime\node\node.exe" set "NODEEXE=%~dp0runtime\node\node.exe"
+if not defined NODEEXE for %%I in (node.exe) do if not "%%~$PATH:I"=="" set "NODEEXE=%%~$PATH:I"
+if not defined NODEEXE (
   echo.
-  echo Node.js 20 or newer is required and was not found.
-  echo Opening the download page. Install the LTS version, then run this file again.
+  echo Node.js 20 or newer was not found.
+  echo Use the portable download, which carries its own Node.js, or install the LTS version
+  echo from the page that just opened, then run this file again.
   echo.
   start "" "https://nodejs.org/en/download"
   pause
@@ -16,6 +20,6 @@ if errorlevel 1 (
 )
 
 echo Starting the archiver window...
-start "weverse-dm-archiver" /min cmd /c node "src\gui.mjs" %*
+start "weverse-dm-archiver" /min cmd /c ""%NODEEXE%" "src\gui.mjs" %*"
 timeout /t 2 >nul
 exit /b 0

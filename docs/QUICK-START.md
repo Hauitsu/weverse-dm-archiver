@@ -6,15 +6,19 @@ file, or type a command - but every command is listed too, in case you prefer th
 ## 0. What you need
 
 - Windows 10 or 11 (macOS and Linux work too if you run the commands by hand).
-- **Node.js 20 or newer.** If you do not have it, double-clicking `START.bat` opens the download
-  page and stops; install the LTS version and run `START.bat` again.
+- **Node.js 20 or newer.** The portable download already carries it, with ffmpeg next to it in
+  `runtime\`; the launchers run `runtime\node\node.exe` when it is there and fall back to the `node`
+  on your `PATH`. Only the source copy needs an install: double-clicking `START.bat` opens the Node
+  download page and stops until you have it.
 - Chrome, Edge, Brave or Vivaldi. The tool starts its own window of whichever it finds first.
 - Disk space: about 3 GB per room, plus the same again if you also make the share zip (a
   re-compressed one is a fraction of that).
 
 ## 1. Start it
 
-Extract the folder anywhere (for example `D:\weverse-archive`) and double-click **`START.bat`**.
+Get the zip - **Node.js and ffmpeg are already inside it** - from the
+[release download](https://github.com/Hauitsu/weverse-dm-archiver/releases/latest/download/weverse-dm-archiver.zip),
+extract the folder anywhere (for example `D:\weverse-archive`) and double-click **`START.bat`**.
 
 Two things open:
 
@@ -79,8 +83,9 @@ Options:
   languages; only artist messages and media are inside, your own messages are left out. **No** skips
   the zip entirely. A re-compressed zip is not a batch choice: ask for it per room, in that room's
   **Share** popup (next bullet), which is where **Low quality** lives - 1280px on the long side, h264
-  video, 64 kbps audio, needing `ffmpeg` on your `PATH`. The archive in `rooms/` and `media/` keeps
-  its originals either way.
+  video, 64 kbps audio, needing `ffmpeg` (the portable download keeps one in `runtime\ffmpeg\`, and
+  that copy is tried first; otherwise your `PATH`). The archive in `rooms/` and `media/` keeps its
+  originals either way.
 - **Share** (on a room row) - packs that one room on the spot, without touching the others. The
   popup says what the zip is expected to weigh, counted from the files that would go in, and the
   number changes with the quality choice in the same popup.
@@ -102,7 +107,8 @@ Options:
   from its own measured rate, and the shareable zip adds roughly the same again at **Yes** - a
   re-compressed one adds far less, and **No** adds nothing.
 - **Advanced settings** - collapsed, so you can ignore it. Two settings live in `config.json`
-  rather than here: `ffmpegPath`, for when `ffmpeg` is not on your `PATH`, and `estimateGb`. The file
+  rather than here: `ffmpegPath`, for when `ffmpeg` is neither the copy inside `runtime\` nor on your
+  `PATH`, and `estimateGb`. The file
   is read again whenever it changes, so an edit takes effect on the next poll - no restart needed. The time
   zone lives there in the picker: `auto`
   follows the machine, or pick a zone from the list (`Asia/Jakarta`) to pin one. The timestamps in the
@@ -155,8 +161,8 @@ does not work.
 
 ## If something goes wrong
 
-- **"Node.js 20 or newer is required"** - install it from the link that just opened, then start
-  `START.bat` again.
+- **"Node.js 20 or newer is required"** - the portable download carries one in `runtime\node\`; with
+  the source copy, install it from the link that just opened, then start `START.bat` again.
 - **"No Chrome or Edge found"** - install one, or add `"browserPath": "C:/path/to/browser.exe"`
   to `config.json` (copy `config.example.json` to `config.json` first).
 - **The page did not open, or the address looks different** - Windows reserves whole port ranges when

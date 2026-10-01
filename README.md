@@ -9,8 +9,9 @@ in it, and the conversation in the order it happened.
 Nothing is uploaded anywhere, and there is no account to make. When a run finishes you are holding
 plain files on your own disk - keep them, copy them to a drive, or delete them whenever you like.
 
-> **Ready to use.** Double-click `START.bat`, tick a room, press **Start**, log in in the window
-> that opens, then press **I'm logged in - continue**. A real room has already been through it:
+> **Ready to use.** Unzip it - Node.js and ffmpeg are already inside - then double-click `START.bat`,
+> tick a room, press **Start**, log in in the window that opens and press **I'm logged in - continue**.
+> A real room has already been through it:
 > 9,574 unique messages across 18 months, 4,119 of them from the artist side, 1,478 media files
 > (1,444 photos, 30 videos, 4 audio), about 2.5 GB.
 
@@ -40,10 +41,12 @@ away from your normal browser.
 
 0. **Download the tool and unzip it.** One click - the Releases page is not needed:
    **[weverse-dm-archiver.zip](https://github.com/Hauitsu/weverse-dm-archiver/releases/latest/download/weverse-dm-archiver.zip)**.
+   It is the portable build: **Node.js and ffmpeg travel inside it**, so there is nothing to install.
    Unzip it into a folder of your own (not `Program Files`): the tool writes its archive next to
    itself, so it needs a folder Windows lets it write to.
-1. **Install Node.js 20 or newer** if you do not have it. `START.bat` opens the download page
-   when it cannot find Node.
+1. **Node.js 20 or newer.** Already in the portable download. Only the source copy needs an install
+   (or a `node.exe` dropped into `runtime\node\`); `START.bat` opens the download page when it cannot
+   find Node.
 2. **Double-click `START.bat`.** The tool's own page opens in your browser - usually
    `http://127.0.0.1:8787`; if that port is taken it picks another one and the small console window
    prints the address it used.
@@ -102,12 +105,15 @@ below. `docs/FAQ.md` has the honest version, including what to do if you are ner
 - **Windows is the tested path** (`START.bat`, `wdm.bat`). The JavaScript modules run wherever
   Node runs; only the launchers are Windows-specific.
 - **Node.js 20 or newer**, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; `browserPath`
-  in `config.json` points at anything unusual).
+  in `config.json` points at anything unusual). The portable download already carries Node.js in
+  `runtime\node\` and ffmpeg in `runtime\ffmpeg\`; with the source copy, install Node.js or drop
+  `node.exe` in `runtime\node\`.
 - **Only rooms your own account can already read.** This bypasses no membership and no paywall.
 - **One room is around 2.5 GB** at full quality (the selected-rooms line quotes a 3 GB ceiling
   until a room has been archived once). The share zip can be built from re-compressed copies instead
   ("Low quality" in a room's **Share** popup: 1280px on the long side, h264 video, 64 kbps audio),
-  which needs an `ffmpeg` on `PATH`; the archive on disk keeps its originals either way.
+  which needs `ffmpeg`: the copy in `runtime\ffmpeg\` is used when it is there, otherwise the one on
+  your `PATH` (or `ffmpegPath` in `config.json`); the archive on disk keeps its originals either way.
 - **Nothing is posted, deleted or changed** on Weverse, and no message can be edited through the
   archive: it is a copy to read.
 
@@ -116,8 +122,8 @@ below. `docs/FAQ.md` has the honest version, including what to do if you are ner
 **Does it cost anything?** No. It is a free, open-source tool (MIT licence) with no account, no
 subscription and nothing to sign up for.
 
-**Do I need to know anything technical?** No. Install Node.js, double-click `START.bat`, tick a room
-and press Start. Everything else is buttons.
+**Do I need to know anything technical?** No. Unzip the download - Node.js and ffmpeg are already
+inside it - double-click `START.bat`, tick a room and press Start. Everything else is buttons.
 
 **Do you get my Weverse password?** No. You type it into the browser window the tool opens, the way
 you would in any browser. It is never written to a file, never logged and never sent to us - there
@@ -148,8 +154,9 @@ program outside that window.
 
 A run is five phases (`gui.phase.*` in `src/lang/*.json`):
 
-1. **Starting the browser** - `START.bat` checks Node, then `node src\gui.mjs` serves the local
-   page and opens the browser window.
+1. **Starting the browser** - `START.bat` picks the Node to run: its own copy in `runtime\node` when
+   the portable download is used, otherwise the one on `PATH`. Then `node src\gui.mjs` serves the
+   local page and opens the browser window.
 2. **Walking the history backwards** - one JSONL line per page of history into
    `downloads/<room>/`, which is what makes a run resumable.
 3. **Building the page** - both exports are rendered from what is on disk; no network here.

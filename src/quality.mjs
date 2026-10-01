@@ -9,6 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import { ROOT } from "./rooms.mjs";
 
 // 1280px on the long side is the size a phone or a laptop actually shows; anything above it is paid
 // for twice (in the zip and in the download) and never seen.
@@ -33,11 +34,16 @@ export function kindOf(file) {
 
 export const supports = (file) => kindOf(file) !== "other";
 
-// config wins, then PATH. The probe is a real run, because on Windows a bare "ffmpeg" that is not
-// installed throws ENOENT -- which is exactly the answer wanted here.
+// config wins, then the copy that ships with a portable download, then PATH. The probe is a real
+// run, because on Windows a bare "ffmpeg" that is not installed throws ENOENT -- which is exactly
+// the answer wanted here.
 export function findFfmpeg(cfg) {
   const explicit = cfg && cfg.ffmpegPath ? String(cfg.ffmpegPath) : "";
   if (explicit) return fs.existsSync(explicit) ? explicit : "";
+  // The portable download carries its own ffmpeg in runtime/ffmpeg, so a low quality zip works on a
+  // machine with nothing installed. It is tried before PATH: that build is the one tested with.
+  const bundled = path.join(ROOT, "runtime", "ffmpeg", process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg");
+  if (fs.existsSync(bundled)) return bundled;
   try {
     const r = spawnSync("ffmpeg", ["-version"], { stdio: "ignore", timeout: 10000 });
     if (!r.error && r.status === 0) return "ffmpeg";
