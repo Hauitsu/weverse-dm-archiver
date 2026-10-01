@@ -134,10 +134,6 @@ More detail: `docs/QUICK-START.md` for the steps, `docs/FAQ.md` for the honest a
 
 ## The technical part
 
-The short version ends here. This part is how it talks to Weverse, what it writes and where; the
-reader page itself - theme colours, the ten bubble colours, the translation modes, how bookmarks are
-stored - is folded into the blocks at the end of this file.
-
 ### How it works
 
 It reads the history the way you would read it yourself - read-only `GET` requests, human pacing,
