@@ -42,7 +42,7 @@ function cfgWatch() {
 }
 const state = {
   phase: "idle", running: false, slug: "", roomName: "", percent: 0, floor: 0, maxPages: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false, settleUntil: 0,
-  log: [], result: null, error: "", startedAt: 0,
+  log: [], result: null, results: [], error: "", startedAt: 0,
 };
 const push = (m) => {
   const line = String(m);
@@ -272,9 +272,16 @@ function page() {
     "@keyframes wdmCrawl{from{background-position:0 0}to{background-position:36px 0}}",
     "#fill.live,#shFill.live{background-color:#2f6feb;background-image:linear-gradient(45deg,#ffffff40 25%,transparent 25%,transparent 50%,#ffffff40 50%,#ffffff40 75%,transparent 75%,transparent);background-size:36px 36px;animation:wdmCrawl 1s linear infinite}",
     ".grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.muted{opacity:.7;font-size:13px}",
-    // The estimate explains itself on hover only, so the page stays short. Pure CSS, no script.
+    // One line per finished room. A run can cover several rooms and each ends with its own export, so
+    // the three buttons sit in the row they belong to instead of on whichever room finished last.
+    ".resrow{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:7px 0;border-bottom:1px solid #8882}",
+    ".resrow:last-child{border-bottom:0}",
+    // The estimate explains itself on hover only, so the page stays short. Showing it is still pure
+    // CSS; the nudging back inside the window (fitTip below) is the one part CSS cannot work out for
+    // itself. That nudge rides its own "translate", so the centring a screenshot tip does with
+    // "transform" is left alone, and a tip taller than the window scrolls instead of being cut off.
     ".tipwrap{position:relative;display:inline-block;cursor:help}",
-    ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;min-width:460px;margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003}",
+    ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;min-width:460px;margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003;translate:var(--tipdx,0) var(--tipdy,0);max-height:calc(100vh - 20px);overflow:auto}",
     ".tipwrap:hover .tip{display:block}",
     ".tipwrap.flow{position:static}",
     ".tipwrap.flow .tip{min-width:min(460px,100%)}",
@@ -362,7 +369,8 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 
 
     "<section id=\"result\" style=\"display:none\"><strong>" + esc(tr("gui.result")) + "</strong>",
-    "<p id=\"resline\"></p><div class=\"grid\">",
+    "<div id=\"resrows\"></div>",
+    "<p id=\"resline\"></p><div class=\"grid\" id=\"resgrid\">",
     "<button id=\"bChat\">" + esc(tr("gui.openChat")) + "</button>",
     "<button id=\"bFolder\">" + esc(tr("gui.openFolder")) + "</button>",
     "<button id=\"bZip\">" + esc(tr("gui.openZip")) + "</button>",
@@ -386,6 +394,9 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "MSG.toTitle=" + JSON.stringify(tr("gui.toTitle")) + ";",
     "MSG.toNoZip=" + JSON.stringify(tr("gui.toNoZip")) + ";",
     "MSG.toNoLink=" + JSON.stringify(tr("gui.toNoLink")) + ";",
+    "MSG.rowDm=" + JSON.stringify(tr("gui.openChat")) + ";",
+    "MSG.rowFolder=" + JSON.stringify(tr("gui.openFolder")) + ";",
+    "MSG.rowZip=" + JSON.stringify(tr("gui.openZip")) + ";",
     "var TO=[" + [tr("gui.toL1"), tr("gui.toL2"), tr("gui.toL3"), tr("gui.toL4"), tr("gui.toL5"), tr("gui.toL6"), tr("gui.toL7"), tr("gui.toL8"), tr("gui.toL9")].map(function(s){return JSON.stringify(s);}).join(",") + "];",
     "function em(s){return esc(String(s)).replace(/\\*\\*([^*]+)\\*\\*|\\*([^*]+)\\*/g,function(m,b,i){return b!==undefined?\"<strong>\"+b+\"</strong>\":\"<em>\"+i+\"</em>\";});}",
     "function all(v){document.querySelectorAll(\"#rooms input[data-slug]\").forEach(function(c){c.checked=v;});total();}",
@@ -431,6 +442,61 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
     "async function openIt(w,btn){if(!cool(w,btn))return;await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
     "async function openItSlug(what,slug,btn){if(!cool(what,btn))return;await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:what,slug:slug})});}",
+    // The Result panel used to describe the last room of the run only, so a run of several rooms left
+    // every earlier one with no way back to its page. One line per room now, in the order they ran.
+    "function paintResults(rs){",
+    "  var box=el(\"#resrows\");",
+    "  if(!rs.length){",
+    "    if(box.dataset.sig!==\"\"){box.dataset.sig=\"\";box.textContent=\"\";}",
+    "    el(\"#resline\").style.display=\"\";el(\"#resmeta\").style.display=\"\";return;",
+    "  }",
+    "  el(\"#resline\").style.display=\"none\";el(\"#resmeta\").style.display=\"none\";",
+    "  var sig=rs.map(function(x){return (x.slug||\"\")+\"|\"+(x.ids||\"\")+\"|\"+(x.meta||\"\");}).join(\";\");",
+    "  if(box.dataset.sig===sig)return;",
+    "  box.dataset.sig=sig;box.textContent=\"\";",
+    "  rs.forEach(function(x){",
+    "    var row=document.createElement(\"div\");row.className=\"resrow\";",
+    "    var ln=document.createElement(\"span\");ln.className=\"muted\";ln.textContent=x.line+(x.meta?\" (\"+x.meta+\")\":\"\");",
+    "    row.appendChild(ln);",
+    "    var g=document.createElement(\"div\");g.className=\"grid\";",
+    "    [[\"room\",MSG.rowDm],[\"folder\",MSG.rowFolder],[\"zip\",MSG.rowZip]].forEach(function(p){",
+    "      var b=document.createElement(\"button\");b.type=\"button\";b.className=\"mini\";b.dataset.what=p[0];b.dataset.slug=x.slug||\"\";b.textContent=p[1];g.appendChild(b);",
+    "    });",
+    "    row.appendChild(g);box.appendChild(row);",
+    "  });",
+    "}",
+    // Every tip is up to 620px wide and hangs off the side of whatever carries it, so one near the
+    // edge of the window used to be cut off. It is measured before it can be seen and nudged back
+    // inside: sideways first, then upwards when the bottom would be out of reach. A tip taller than
+    // the window ends up pinned to its top and scrolls, which is what the max-height above is for.
+    "function fitTip(wrap){",
+    "  var tip=wrap.querySelector(\".tip\");",
+    "  if(!tip)return;",
+    "  tip.style.setProperty(\"--tipdx\",\"0px\");tip.style.setProperty(\"--tipdy\",\"0px\");",
+    "  var wasShown=tip.style.display;",
+    "  tip.style.display=\"block\";tip.style.visibility=\"hidden\";",
+    "  var r=tip.getBoundingClientRect();",
+    "  tip.style.display=wasShown;tip.style.visibility=\"\";",
+    "  if(!r.width&&!r.height)return;",
+    "  var pad=10,vw=document.documentElement.clientWidth,vh=document.documentElement.clientHeight,dx=0,dy=0;",
+    "  if(r.right>vw-pad)dx=(vw-pad)-r.right;",
+    "  if(r.left+dx<pad)dx=pad-r.left;",
+    "  if(r.bottom>vh-pad)dy=(vh-pad)-r.bottom;",
+    "  if(r.top+dy<pad)dy=pad-r.top;",
+    "  if(dx)tip.style.setProperty(\"--tipdx\",dx+\"px\");",
+    "  if(dy)tip.style.setProperty(\"--tipdy\",dy+\"px\");",
+    "}",
+    "var fittedWrap=null;",
+    "function fitFrom(e){",
+    "  var w=(e.target&&e.target.closest)?e.target.closest(\".tipwrap\"):null;",
+    "  if(!w||w===fittedWrap)return;",
+    "  fittedWrap=w;fitTip(w);",
+    "}",
+    "document.addEventListener(\"mouseover\",fitFrom,true);",
+    "document.addEventListener(\"focusin\",fitFrom,true);",
+    "document.addEventListener(\"mouseout\",function(e){if(fittedWrap&&(!e.relatedTarget||!fittedWrap.contains(e.relatedTarget)))fittedWrap=null;},true);",
+    "window.addEventListener(\"resize\",function(){fittedWrap=null;document.querySelectorAll(\".tipwrap:hover\").forEach(fitTip);});",
+    "window.addEventListener(\"scroll\",function(){document.querySelectorAll(\".tipwrap:hover\").forEach(fitTip);},true);",
     // The page was built from exactly this list of rooms. When the poll reports a different one - a room
 // added to rooms.unis.json while the window was open - only a fresh page can show that row.
 "var ROWSIG=" + JSON.stringify(listSignature(list)) + ";",
@@ -570,9 +636,11 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#bAuthed\").className=settling?\"busy\":\"\";",
     "  el(\"#bAuthed\").disabled=settling;",
     "  el(\"#loginNote\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
-    "  el(\"#result\").style.display=s.result?\"block\":\"none\";",
-    "  under(!!s.running||!!s.result);",
-    "  if(s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
+    "  var rr=s.results||[];",
+    "  el(\"#result\").style.display=(s.result||rr.length)?\"block\":\"none\";",
+    "  under(!!s.running||!!s.result||rr.length>0);",
+    "  paintResults(rr);",
+    "  if(!rr.length&&s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open||!!coolLeft('room:'+b.dataset.slug);b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
     "  lastRooms=s.rooms||[];lastShare=s.share||null;DBG=!!s.debug;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
@@ -611,6 +679,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#bChat\").addEventListener(\"click\",function(){openIt('chat',el('#bChat'));});",
     "el(\"#bFolder\").addEventListener(\"click\",function(){openIt('folder',el('#bFolder'));});",
     "el(\"#bZip\").addEventListener(\"click\",function(){openIt('zip',el('#bZip'));});",
+    "el(\"#resrows\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-what]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();openItSlug(b.dataset.what,b.dataset.slug,b);});",
     // The row is a label, so the click is stopped before it reaches the checkbox underneath.
     "el(\"#rooms\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-share]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();showShare(b.dataset.share);});",
     "el(\"#shGo\").addEventListener(\"click\",genZip);",
@@ -661,7 +730,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
     // author own message on screen without a click. Empty means there is nothing to show.
     surprise: state.surprise || null,
     debug: !!cfg.collectDebug,
-    log: state.log, result: state.result, error: state.error,
+    log: state.log, result: state.result, results: state.results, error: state.error,
     // Only what the rows need to keep their Open button honest while a run goes on.
     // The room set itself: the page patches numbers when they move, but a row it never had needs a
     // fresh page.
@@ -725,7 +794,7 @@ async function startJob(body) {
   if (shareMode !== cfg.shareMode) { try { cfg = saveConfig({ shareMode: shareMode }); } catch (e) {} }
   if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
       running(true);
-  state.result = null; state.error = ""; state.log = []; state.percent = 0; state.floor = 0; state.maxPages = 0; state.progress = null; state.startedAt = Date.now();
+  state.result = null; state.results = []; state.error = ""; state.log = []; state.percent = 0; state.floor = 0; state.maxPages = 0; state.progress = null; state.startedAt = Date.now();
   const tr = t();
   const results = [];
   try {
@@ -791,6 +860,10 @@ async function startJob(body) {
         },
       });
       results.push({ slug: r.slug, roomName: roomName, res: res, roomId: r.roomId });
+      // The Result panel lists every room the run touched, not just the last one, so the row is built
+      // here as each room lands: the ids it now holds and the zip it just wrote, if it wrote one.
+      const idsDone = String((res.phases.harvest && res.phases.harvest.ids) || 0);
+      state.results.push({ slug: r.slug, name: roomName, ids: idsDone, meta: res.phases.bundle ? path.basename(res.phases.bundle.zip) : "", line: tr("gui.doneText", { n: idsDone, v: roomName }) });
       if (res.error) { state.error = "render failed"; setPhase("error"); running(false); return; }
       if (res.stopped) break;
     }
