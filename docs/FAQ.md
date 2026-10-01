@@ -204,6 +204,10 @@ from the oldest message already on disk. Duplicate messages are dropped by id, s
 half-done room never doubles anything. Photos and videos already downloaded are skipped too, and
 once a room is complete the media step does not even open a browser. Finishing later stays cheap.
 
+Messages that arrived since the last run come first: every run asks for the pages after the newest
+message already on disk before it walks back into the past, so a room you archived long ago still
+gains a new DM the next time you press Start.
+
 ## Is anything uploaded?
 
 No. Everything stays on your computer: no telemetry, no server of ours, no account of ours. The

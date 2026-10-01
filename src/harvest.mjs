@@ -120,6 +120,49 @@ export async function harvest(opts) {
   log("archive: " + before.files.length + " part file(s), " + before.seen.size + " message id(s), oldest " + (before.deepest == null ? "none" : new Date(before.deepest).toISOString()));
   if (before.pages > 0) log("resuming from cursor " + cursor + " (part " + partIdx + ")");
 
+  // Messages that arrived since the last run sit above the newest line on disk, and the walk below
+  // only ever asks for pages older than the oldest one. On its own that means a room which has been
+  // walked back to its first message can never pick up a new DM again: prev at the oldest message
+  // answers with an empty page and the run writes nothing. So catch up forwards first, from the
+  // newest message on disk, and only then carry on into the past.
+  let caught = 0, caughtIds = 0;
+  if (before.newest != null && PACING.catchUpPages > 0) {
+    let forward = String(before.newest);
+    log("catching up from " + new Date(before.newest).toISOString() + " (newest on disk)");
+    for (let i = 0; i < PACING.catchUpPages && pages < maxPages; i++) {
+      if (stop()) break;
+      if ((Date.now() - t0) > budgetMs) { log("catch-up stopped: out of time"); break; }
+      const req = requestFor("after", roomId, forward, Date.now());
+      let res = null;
+      try { res = JSON.parse(await cdp.evaluate(fetchExpr(req.url), 60000)); } catch (e) { res = { err: String(e.message || e) }; }
+      if (!res || res.err) { log("catch-up stopped: " + String((res && res.err) || "no answer").slice(0, 140)); break; }
+      if (res.s !== 200) { log("catch-up stopped: http " + res.s); break; }
+      let page = null;
+      try { page = parsePage(res.text); } catch (e) { log("catch-up stopped: unreadable page (" + String(e.message || e).slice(0, 120) + ")"); break; }
+      if (!page.data.length) { log("catch-up: nothing newer in the room"); break; }
+      // The walk runs forwards from a message already on disk, so the first page that carries
+      // nothing new is the seam: everything above it is archived already.
+      const fresh = page.messageIds.filter((id) => !before.seen.has(id));
+      if (!fresh.length) { log("catch-up: nothing newer than the archive"); break; }
+      const rec = {
+        roomId: roomId, dir: "after", cursor: forward, capturedAt: Date.now(),
+        msgCount: page.data.length, oldest: page.oldest, newest: page.newest, newIds: fresh.length,
+        url: req.url, body: res.text,
+      };
+      try {
+        fs.appendFileSync(path.join(dir, partName(tag, partIdx)), JSON.stringify(rec) + NL);
+      } catch (e) { log("catch-up stopped: the archive folder cannot be written to (" + String(e.message || e) + ")"); break; }
+      for (const id of fresh) before.seen.add(id);
+      written++; pages++; partPages++; caught++; caughtIds += fresh.length;
+      if (partPages >= pagesPerPart) { partIdx++; partPages = 0; }
+      progress({ pages: pages, maxPages: maxPagesGiven ? maxPages : null, part: partIdx, cursor: forward, got: page.data.length, newIds: fresh.length, uniq: before.seen.size, oldest: page.oldest, newest: page.newest, bytes: before.bytes, catchUp: true });
+      if (page.after == null) { log("catch-up: the newest message is on disk"); break; }
+      forward = page.after;
+      await sleep(gap());
+    }
+    if (caught) log("catch-up: " + caughtIds + " new message(s) in " + caught + " page(s)");
+  }
+
   progress({ maxPages: maxPagesGiven ? maxPages : null, pages: 0, uniq: before.seen.size });
   while (pages < maxPages && (Date.now() - t0) < budgetMs) {
     if (stop()) { log("stopped by request"); break; }
@@ -198,7 +241,55 @@ export async function harvest(opts) {
   }
 
   const after = readArchive(dir);
-  const summary = { roomId: roomId, pages: pages, written: written, ids: after.seen.size, newIds: after.seen.size - seenAtStart, deepest: after.deepest, newest: after.newest, endReached: endReached, partIdx: partIdx, elapsedMs: Date.now() - t0 };
+  const summary = { roomId: roomId, pages: pages, written: written, ids: after.seen.size, newIds: after.seen.size - seenAtStart, caughtUp: caught, caughtUpIds: caughtIds, deepest: after.deepest, newest: after.newest, endReached: endReached, partIdx: partIdx, elapsedMs: Date.now() - t0 };
   log("harvest done: " + summary.pages + " page(s), " + summary.newIds + " new message(s), " + (summary.endReached ? "start of room reached" : "stopped early"));
   return summary;
+}
+
+// --- self-test -------------------------------------------------------------
+// node src/harvest.mjs --check   Runs the catch-up against a stubbed page source: no browser, no
+// network, no sign-in. This is the regression test for a room that stopped picking up new messages
+// because the walk only ever looked into the past.
+
+const isMain = process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("src/harvest.mjs");
+if (isMain && process.argv.includes("--check")) {
+  const os = await import("node:os");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wdm-harvest-"));
+  const TAG = "weverse-dm-test";
+  let bad = 0;
+  const cek = (ok, label) => { if (!ok) bad++; console.log((ok ? "ok   " : "FAIL ") + label); };
+  const halaman = (msgs, prev, after) => JSON.stringify({
+    data: msgs.map((m) => ({ messageId: m[0], createDate: m[1], userType: "ARTIST", text: "x" })),
+    paging: {
+      previousParams: prev == null ? null : { prev: String(prev) },
+      nextParams: after == null ? null : { after: String(after) },
+    },
+  });
+  const rec = (body, n) => JSON.stringify({ roomId: "WRAAAAA", dir: "prev", cursor: SENTINEL, msgCount: 2, oldest: 1000, newest: 2000, body: body }) + NL;
+  fs.writeFileSync(path.join(root, TAG + "-part001.jsonl"), rec(halaman([["A", 1000], ["B", 2000]], 1000, 2000)));
+
+  // The stub answers from the cursor in the URL the way the API does: after walks forwards in
+  // hundred-message pages, prev walks backwards, and a page with nothing left comes back empty.
+  const stub = {
+    evaluate: async (expr) => {
+      const a = Number((expr.match(/after=(\d+)/) || [])[1]);
+      let body = halaman([], null, null);          // prev: past the first message of the room
+      if (a === 2000) body = halaman([["C", 3000], ["D", 4000]], 3000, 4000);
+      if (a === 4000) body = halaman([["B", 2000], ["C", 3000], ["D", 4000]], 2000, 4000);
+      return JSON.stringify({ s: 200, len: body.length, text: body });
+    },
+  };
+
+  const run1 = await harvest({ roomId: "WRAAAAA", tag: TAG, outDir: root, cdp: stub, onLog: () => {}, maxPages: 10 });
+  cek(run1.caughtUp === 1 && run1.caughtUpIds === 2, "run 1 writes the 2 new messages in 1 page (" + run1.caughtUp + "/" + run1.caughtUpIds + ")");
+  cek(fs.readdirSync(root).filter((n) => n.endsWith(".jsonl")).length === 2, "run 1 adds one part file");
+
+  const run2 = await harvest({ roomId: "WRAAAAA", tag: TAG, outDir: root, cdp: stub, onLog: () => {}, maxPages: 10 });
+  cek(run2.caughtUp === 0 && run2.caughtUpIds === 0, "run 2 with nothing new writes nothing (" + run2.caughtUp + "/" + run2.caughtUpIds + ")");
+  cek(fs.readdirSync(root).filter((n) => n.endsWith(".jsonl")).length === 2, "run 2 adds no part file");
+  cek(readArchive(root).seen.size === 4, "the archive holds 4 unique ids (" + readArchive(root).seen.size + ")");
+
+  fs.rmSync(root, { recursive: true, force: true });
+  console.log(bad ? "FAIL: " + bad + " problem(s)" : "OK: catch-up walks forwards and stops at what is already on disk");
+  process.exit(bad ? 1 : 0);
 }

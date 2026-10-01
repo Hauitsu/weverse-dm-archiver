@@ -31,6 +31,10 @@ export const PACING = {
   gapMinMs: 1500,
   gapMaxMs: 3000,
   pagesPerPart: 200,
+  // Messages that arrived since the last run are picked up by walking forwards from the newest
+  // message on disk, 100 at a time. The cap keeps one run after a long absence from turning into an
+  // unbounded poll; the next run carries on from wherever this one stopped.
+  catchUpPages: 40,
   maxConsecutiveFailures: 3,
   maxBadStatus: 8,
 };
