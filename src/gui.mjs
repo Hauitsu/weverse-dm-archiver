@@ -369,12 +369,9 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 
 
     "<section id=\"result\" style=\"display:none\"><strong>" + esc(tr("gui.result")) + "</strong>",
-    "<div id=\"resrows\"></div>",
-    "<p id=\"resline\"></p><div class=\"grid\" id=\"resgrid\">",
-    "<button id=\"bChat\">" + esc(tr("gui.openChat")) + "</button>",
-    "<button id=\"bFolder\">" + esc(tr("gui.openFolder")) + "</button>",
-    "<button id=\"bZip\">" + esc(tr("gui.openZip")) + "</button>",
-    "<span class=\"muted\" id=\"resmeta\"></span></div></section>",
+    // One line per room, each with its own three buttons. These lines are the only way to open a
+    // finished room, so a run of several rooms leaves none of them behind.
+    "<div id=\"resrows\"></div></section>",
 
     // The same steps the Start popup shows, still on the page while the login wait runs, so nobody
     // has to remember what the popup said after dismissing it.
@@ -440,17 +437,12 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "async function stop(){stopping=true;paintStop(true);try{await fetch(\"/api/stop\",{method:\"POST\"});}catch(err){stopping=false;}tick();}",
     "async function openRoom(slug,btn){if(!cool('room:'+slug,btn))return;await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:\"room\",slug:slug})});}",
     "async function setLang(v){await fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:v})});location.reload();}",
-    "async function openIt(w,btn){if(!cool(w,btn))return;await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:w})});}",
     "async function openItSlug(what,slug,btn){if(!cool(what,btn))return;await fetch(\"/api/open\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({what:what,slug:slug})});}",
-    // The Result panel used to describe the last room of the run only, so a run of several rooms left
-    // every earlier one with no way back to its page. One line per room now, in the order they ran.
+    // The Result panel used to describe the last room of the run only, with one set of buttons under
+    // it, so a run of several rooms left every earlier one without a way back to its page. Every room
+    // now gets its own line - in the order they ran, each line arriving as that room finishes.
     "function paintResults(rs){",
     "  var box=el(\"#resrows\");",
-    "  if(!rs.length){",
-    "    if(box.dataset.sig!==\"\"){box.dataset.sig=\"\";box.textContent=\"\";}",
-    "    el(\"#resline\").style.display=\"\";el(\"#resmeta\").style.display=\"\";return;",
-    "  }",
-    "  el(\"#resline\").style.display=\"none\";el(\"#resmeta\").style.display=\"none\";",
     "  var sig=rs.map(function(x){return (x.slug||\"\")+\"|\"+(x.ids||\"\")+\"|\"+(x.meta||\"\");}).join(\";\");",
     "  if(box.dataset.sig===sig)return;",
     "  box.dataset.sig=sig;box.textContent=\"\";",
@@ -637,10 +629,9 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  el(\"#bAuthed\").disabled=settling;",
     "  el(\"#loginNote\").style.display=(s.running&&s.phase===\"browser\")?\"\":\"none\";",
     "  var rr=s.results||[];",
-    "  el(\"#result\").style.display=(s.result||rr.length)?\"block\":\"none\";",
-    "  under(!!s.running||!!s.result||rr.length>0);",
+    "  el(\"#result\").style.display=rr.length?\"block\":\"none\";",
+    "  under(!!s.running||rr.length>0);",
     "  paintResults(rr);",
-    "  if(!rr.length&&s.result){ el(\"#resline\").textContent=s.result.line; el(\"#resmeta\").textContent=s.result.meta||\"\"; }",
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open||!!coolLeft('room:'+b.dataset.slug);b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
     "  lastRooms=s.rooms||[];lastShare=s.share||null;DBG=!!s.debug;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
@@ -676,9 +667,6 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "document.addEventListener(\"keydown\",function(e){if(e.key===\"Escape\"){hideModal();closeShare();hideCollect();}});",
     "el(\"#stop\").addEventListener(\"click\",stop);",
     "el(\"#bAuthed\").addEventListener(\"click\",function(){fetch(\"/api/hurry\",{method:\"POST\"});});",
-    "el(\"#bChat\").addEventListener(\"click\",function(){openIt('chat',el('#bChat'));});",
-    "el(\"#bFolder\").addEventListener(\"click\",function(){openIt('folder',el('#bFolder'));});",
-    "el(\"#bZip\").addEventListener(\"click\",function(){openIt('zip',el('#bZip'));});",
     "el(\"#resrows\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-what]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();openItSlug(b.dataset.what,b.dataset.slug,b);});",
     // The row is a label, so the click is stopped before it reaches the checkbox underneath.
     "el(\"#rooms\").addEventListener(\"click\",function(e){var b=(e.target&&e.target.closest)?e.target.closest(\"button[data-share]\"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();showShare(b.dataset.share);});",
