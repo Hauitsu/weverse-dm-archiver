@@ -14,7 +14,7 @@ import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor, pub
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
 import { canOffer, collectReady, driveUrl, eligibleRooms, memberName } from "./collect.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
-import { openExternal, listBrowsers } from "./browser.mjs";
+import { openExternal, listBrowsers, samePath } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
 import { artistLabel, tzOk } from "./rooms.mjs";
 
@@ -52,6 +52,7 @@ function cfgWatch() {
 }
 const state = {
   phase: "idle", running: false, slug: "", roomName: "", percent: 0, floor: 0, maxPages: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false, settleUntil: 0,
+  browserWish: null,
   log: [], result: null, results: [], error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -291,7 +292,9 @@ const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + 
     // busy instead of frozen. Both bars go back to a plain solid fill the moment their job ends.
     "@keyframes wdmCrawl{from{background-position:0 0}to{background-position:36px 0}}",
     "#fill.live,#shFill.live{background-color:#2f6feb;background-image:linear-gradient(45deg,#ffffff40 25%,transparent 25%,transparent 50%,#ffffff40 50%,#ffffff40 75%,transparent 75%,transparent);background-size:36px 36px;animation:wdmCrawl 1s linear infinite}",
-    ".grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.muted{opacity:.7;font-size:13px}",
+    // Every row is a positioned ancestor for the row-wide tooltips below: a tip that drops its own
+    // anchor (".tipwrap.flow") is measured against the row it belongs to, never against the page.
+    ".grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:relative}.muted{opacity:.7;font-size:13px}",
     // One line per finished room. A run can cover several rooms and each ends with its own export, so
     // the three buttons sit in the row they belong to instead of on whichever room finished last.
     ".resrow{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:7px 0;border-bottom:1px solid #8882}",
@@ -303,6 +306,10 @@ const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + 
     ".tipwrap{position:relative;display:inline-block;cursor:help}",
     ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;min-width:460px;margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003;translate:var(--tipdx,0) var(--tipdy,0);max-height:calc(100vh - 20px);overflow:auto}",
     ".tipwrap:hover .tip{display:block}",
+    // A tip that belongs to a whole row, not to one word in it: it gives up its own anchor so it can
+    // start at the left edge of the row and run the row's width. The row it sits in is then its
+    // containing block, which is why every row carries "position:relative" (see the .grid rule above) -
+    // without that the tip is measured against the page and lands nowhere near its own (i).
     ".tipwrap.flow{position:static}",
     ".tipwrap.flow .tip{min-width:min(460px,100%)}",
     // A tooltip at the end of a line has nowhere to grow to the right, so it grows left instead of
@@ -316,7 +323,11 @@ const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + 
 ".tip.shot img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid #8884}",
 ".tip.shot .cap{display:block;margin-top:6px;font-size:12px;line-height:1.4;opacity:.85}",
     ".info{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border:1px solid #8888;border-radius:50%;font-size:11px;font-weight:700;font-style:italic;line-height:1;opacity:.75}",
-    "input[type=text],select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #8886;background:transparent}",
+    // The fields follow the page's own color scheme. Leaving the box transparent let the browser
+    // paint it on its own, and in dark mode a select came out white on white - the value was
+    // invisible until the pointer hovered it. System colors keep the text and its box in one scheme.
+    "input[type=text],select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #8886;background:Canvas;color:CanvasText}",
+    "select:disabled,input[type=text]:disabled{opacity:.55;cursor:default}",
     "details.adv summary{cursor:pointer;font-size:13px;opacity:.75}details.adv[open] summary{margin-bottom:2px}",
     "em{font-style:italic}em strong,strong em{font-style:normal;font-weight:700}",
     "</style></head><body>",
@@ -348,7 +359,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "<div class=\"grid\"><label>" + esc(tr("gui.shareQuality")) + " <select id=\"shQ\">",
 "<option value=\"full\">" + esc(tr("gui.shareFull")) + "</option>",
 "<option value=\"low\">" + esc(tr("gui.shareLowQ")) + "</option>",
-"</select></label><span class=\"tipwrap\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
+"</select></label><span class=\"tipwrap\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
 "<div class=\"grid\" style=\"margin-top:14px\"><button id=\"shGo\" class=\"primary\">" + esc(tr("gui.shareGenerate")) + "</button>",
 "<button id=\"shFolder\" style=\"display:none\">" + esc(tr("gui.openFolder")) + "</button>",
 "<button id=\"shTo\" style=\"display:none\">" + esc(tr("gui.shareTo", { name: cfg.collectName })) + "</button>",
@@ -369,19 +380,19 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
 "<button id=\"toClose\">" + esc(tr("gui.toClose")) + "</button></div></div></div>",
     "<div id=\"under\" style=\"display:none\">",
     "<section>",
-    "<div class=\"grid\" style=\"margin-top:8px;position:relative\"><span id=\"total\" class=\"muted\"></span>",
-    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.estHint", { v: fmtSize(Number(cfg.estimateGb || 3) * GIB) })) + "</span></span></div>",
-    "<div class=\"grid\" style=\"margin-top:8px;position:relative\"><label>" + esc(tr("gui.share")) + " <select id=\"share\">" + shareOpts + "</select></label>",
-    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><span id=\"total\" class=\"muted\"></span>",
+    "<span class=\"tipwrap flow\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.estHint", { v: fmtSize(Number(cfg.estimateGb || 3) * GIB) })) + "</span></span></div>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.share")) + " <select id=\"share\">" + shareOpts + "</select></label>",
+    "<span class=\"tipwrap flow\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.shareHint")) + "</span></span></div>",
     "<details class=\"adv\" style=\"margin-top:20px\"><summary>" + esc(tr("gui.advanced")) + "</summary>",
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.tz")) + " <select id=\"tz\">" + opts + "</select></label>",
     "<span class=\"muted\">" + esc(tr("gui.tzHint", { v: machine })) + "</span></div>",
     // Small copies of the media, so the page and the gallery open quickly. On by default: it is built
     // beside the download and cached, and it is the difference between reading 29 MB and 2 GB.
     "<div class=\"grid\" style=\"margin-top:8px\"><label><input type=\"checkbox\" id=\"thumbs\"" + (String(cfg.thumbs || "auto") === "off" ? "" : " checked") + "> " + esc(tr("gui.thumbs")) + "</label>",
-    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.thumbsHint")) + "</span></span></div>",
+    "<span class=\"tipwrap flow\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.thumbsHint")) + "</span></span></div>",
     "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.browser")) + " <select id=\"browser\">" + browserOpts + "</select></label>",
-    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.browserPickHint")) + "</span></span></div></details>",
+    "<span class=\"tipwrap flow\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.browserPickHint")) + "</span></span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><span class=\"tipwrap\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<span class=\"tip\">" + esc(tr("gui.browserHint")) + "</span></span>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
@@ -659,6 +670,13 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open||!!coolLeft('room:'+b.dataset.slug);b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
     "  lastRooms=s.rooms||[];lastShare=s.share||null;DBG=!!s.debug;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
+    "  var sAllowPick=false;",
+    // Open in the two moments a change means something: while the page sits idle it is simply the
+    // setting for the next run, and during the sign-in wait the pick is carried straight into the run
+    // that is waiting (see /api/config). While a run is actually harvesting the picker is shut,
+    // because the browser of that run cannot be changed under it.
+    "  sAllowPick=!sbusy||!!(s.running&&s.phase===\"browser\");",
+    "  el(\"#browser\").disabled=!sAllowPick;",
     "  el(\"#start\").disabled=sbusy;",
     "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=DBG||!!(h&&h.open);b.disabled=sbusy;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
 // The rows own numbers are the one thing the page cannot work out for itself: they need the room
@@ -706,7 +724,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
     "el(\"#thumbs\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({thumbs:e.target.checked?\"on\":\"off\"})});});",
-    "el(\"#browser\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({browserPath:e.target.value})});});",
+    "el(\"#browser\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({browserPath:e.target.value})}).then(function(r){return r.json();}).then(function(j){if(j&&j.applied)tick();});});",
     "total();",
     "setInterval(tick,1000); tick(); setInterval(paintCool,200);",
     "</script></body></html>",
@@ -821,6 +839,9 @@ async function startJob(body) {
     // The press on that button is what begins the hand-over, so the page offers it as soon as the
     // sign-in window is up; the delayed mode below only ever covers the silent re-check.
     state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0; state.plainWait = false; state.settleUntil = 0;
+    // Nothing picked yet, and the window that is up is whatever the config says: both are read back by
+    // /api/config while the run waits, which is how a change from the page reaches this run.
+    state.browserWish = null;
     const session = await openSession({
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
@@ -834,6 +855,13 @@ async function startJob(body) {
       // The cooldown the page puts on that button, started the moment the hand-over begins: the
       // browser is already opening again while it runs, so nothing here waits for it.
       onSettle: (on, ms) => { state.settleUntil = on ? Date.now() + (ms || 0) : 0; },
+      // A browser picked on the page while this run waits for its sign-in. The wish is read here, one
+      // wait at a time, and the run is told which window it ended up with so it can name it.
+      pickBrowser: {
+        cfg: () => cfg,
+        get: () => state.browserWish,
+        clear: () => { state.browserWish = null; },
+      },
     });
     state.loginWait = false;
     if (session.error === "stopped" || stopFlag) { setPhase("stopped"); running(false); return; }
@@ -1015,13 +1043,18 @@ async function handle(req, res) {
     // The browser the tool starts. Only one that really exists on this machine, or "" for the
     // built-in order: a hand-typed path with a typo would otherwise stop every later run from
     // starting, and the picker only offers what was detected anyway.
+    let applied = false;
     if (typeof b.browserPath === "string") {
       const wish = b.browserPath.trim();
-      const norm = (s) => String(s || "").replace(/\\/g, "/").toLowerCase();
-      const known = wish === "" || listBrowsers(cfg).some((x) => norm(x.path) === norm(wish));
+      const known = wish === "" || listBrowsers(cfg).some((x) => samePath(x.path, wish));
+      // Picked while a sign-in is waited on, the answer is not "next run" but "this one": the run is
+      // told which window to use right now and opens it in place of the one in front of the person.
+      if (known && state.running && state.phase === "browser") { state.browserWish = wish; applied = true; }
+      // Remembered either way, including mid-run: a browser that got past the sign-in page is the one
+      // the next run should start, and the person has already made that choice once.
       if (known && wish !== String(cfg.browserPath || "")) { try { cfg = saveConfig({ browserPath: wish }); } catch (e) {} }
     }
-    json(200, { ok: true, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs, browserPath: cfg.browserPath || "" });
+    json(200, { ok: true, applied: applied, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs, browserPath: cfg.browserPath || "" });
     return;
   }
   if (req.method === "POST" && url === "/api/open") {

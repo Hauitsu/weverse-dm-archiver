@@ -151,7 +151,7 @@
   "gui.thumbsHint": "salinan kecil foto dan video supaya halaman dan galeri media terbuka cepat - dibuat sambil unduhan menunggu jaringan, setelah itu di-cache, sekitar 2% ukuran asli; dilewati kalau ffmpeg tidak ada",
   "gui.browser": "Browser yang dipakai alat ini",
   "gui.browserAuto": "Otomatis (yang pertama ditemukan)",
-  "gui.browserPickHint": "Kalau login ditolak, pilih browser Chromium lain di sini - sebagian build ditolak halaman login. Perubahan berlaku di proses berikutnya.",
+  "gui.browserPickHint": "Kalau login ditolak, pilih browser Chromium lain di sini - sebagian build ditolak halaman login. Kalau ada proses yang sedang menunggu login, gantinya langsung dipakai; kalau tidak, berlaku di proses berikutnya.",
   "gui.langHint": "halaman ini dan obrolan hasil ekspor memakai bahasa ini",
   "gui.tz": "Zona waktu",
   "gui.tzHint": "tanggal di arsip mengikuti {v} kecuali kamu memilih zona di sini - pilihan baru berlaku pada jalannya berikutnya",

@@ -76,6 +76,12 @@ export function listBrowsers(cfg) {
   return found;
 }
 
+// Same install, written two ways: Windows does not care about separators or letter case, and the
+// picker hands back the path it found while config.json may hold the same one capitalised differently.
+export function samePath(a, b) {
+  return String(a || "").replace(/\\/g, "/").toLowerCase() === String(b || "").replace(/\\/g, "/").toLowerCase();
+}
+
 // The archiver profile. Deliberately outside the repo: it is machine state, not content.
 export function profileDir() {
   const base = process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");

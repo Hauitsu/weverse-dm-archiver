@@ -19,7 +19,7 @@ import { downloadMedia } from "./media.mjs";
 import { buildThumbs, makeQueue, modeOf } from "./thumbs.mjs";
 import { findFfmpeg } from "./quality.mjs";
 import { bundle } from "./bundle.mjs";
-import { findBrowser, launch, killBrowser, closeBrowser, waitExit, profileDir } from "./browser.mjs";
+import { findBrowser, listBrowsers, samePath, launch, killBrowser, closeBrowser, waitExit, profileDir } from "./browser.mjs";
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
 import { loadRooms, SLUG } from "./rooms.mjs";
 
@@ -342,7 +342,7 @@ export async function clearLeftovers(profile, onLog) {
 // cooldown that stops a second press from racing the check it just started.
 export const SETTLE_AFTER_CLICK_MS = 15000;
 
-async function waitForGo(proc, opts, log) {
+async function waitForGo(proc, opts, log, swap) {
   const o = opts || {};
   const stop = o.shouldStop || (() => false);
   const said = o.saidDone;
@@ -360,6 +360,9 @@ async function waitForGo(proc, opts, log) {
   try {
     for (;;) {
       if (stop()) return "stopped";
+      // Checked on the same beat as Stop: the person picks another browser because this window was
+      // refused, and while they are still signing in the swap costs them nothing but the window.
+      if (swap && swap()) return "switch";
       if (said && said()) return "done";
       if (typed) return "done";
       if (!proc || proc.exitCode !== null) return "closed";
@@ -373,6 +376,18 @@ async function waitForGo(proc, opts, log) {
   }
 }
 
+// The browser picked on the page while a sign-in is being waited on. A refused sign-in is the whole
+// reason the picker exists, and stopping the run to change browsers would throw away everything the
+// run has done so far. "" is Automatic: the first browser found, the one a fresh run would start.
+export function browserSwap(cfg, currentPath, wish) {
+  // null means nobody has picked anything yet, which is not the same as Automatic: reading it as
+  // Automatic would send every untouched run looking for the first browser and swapping back to it.
+  if (wish == null) return null;
+  const w = String(wish).trim();
+  const hit = w ? listBrowsers(cfg).find((x) => samePath(x.path, w)) : findBrowser(cfg);
+  return hit && !samePath(hit.path, currentPath) ? hit : null;
+}
+
 export async function openSession(o) {
   const opts = o || {};
   const log = opts.onLog || (() => {});
@@ -380,7 +395,6 @@ export async function openSession(o) {
   const found = findBrowser(cfg);
   if (!found) return { error: "no-browser" };
   const prof = opts.profile || profileDir();
-  const open = () => launch({ browserPath: found.path, profile: prof, url: "https://weverse.io/", onLog: log });
   const use = async (started, ms) => {
     if (!started.port) return { error: "no-port" };
     const target = await waitPage(started.port, "weverse.io", 30000);
@@ -398,7 +412,7 @@ export async function openSession(o) {
       onLog: log, shouldStop: opts.shouldStop, timeoutMs: ms,
       hurry: opts.hurry, hurryLog: opts.hurryLog,
     });
-    return { cdp: cdp, browser: started, name: found.name, auth: ok };
+    return { cdp: cdp, browser: started, auth: ok };
   };
   // One window, start to finish. The sign-in tokens Weverse hands out are session cookies: they live
   // and die with the browser process. Every earlier design typed into a second, debug-free window and
@@ -408,17 +422,57 @@ export async function openSession(o) {
   // the window that is typed into is the window that reads the page: it is launched with the debugging
   // port from the start, but nothing attaches while the person types - the check that refuses a driven
   // browser is about a client being attached, not about a port being open. The session never has to
-  // survive anything, because nothing is restarted.
+  // survive a restart: the browser is only swapped during the wait below, before any page is read,
+  // and the profile folder carries the sign-in from one window of it to the next.
   await clearLeftovers(prof, log);
+  // Whatever window is up right now: which executable it is, so a swap that shows up in the picker can
+  // be told apart from the window already on screen.
+  let curPath = found.path;
+  const startWindow = () => launch({ browserPath: curPath, profile: prof, url: "https://weverse.io/", onLog: log });
+  const swapHook = () => {
+    const pb = opts.pickBrowser;
+    if (!pb || !pb.get || !pb.cfg) return false;
+    const wish = pb.get();
+    if (wish == null) return false;
+    // Once read, the wish is spent - even when it turns out to be the window already on screen. Left
+    // standing, it would be read again on every tick of the wait below and a pick that meant "this one
+    // is fine" would keep asking the same question for as long as the person takes to sign in.
+    if (pb.clear) pb.clear();
+    const next = browserSwap(pb.cfg(), curPath, wish);
+    if (!next) return false;
+    curPath = next.path;
+    return true;
+  };
   log("browser: opening the window you sign in with (the session stays inside this browser)");
   const authMs = Math.min(opts.authTimeoutMs || 45000, 60000);
-  let current = await open();
+  let current = await startWindow();
   if (!current.port) return { error: "no-port" };
   for (;;) {
     if (opts.shouldStop && opts.shouldStop()) return { error: "stopped", cdp: null, browser: current };
     if (opts.onPlainWait) opts.onPlainWait(true);
-    const why = await waitForGo(current.proc, opts, log);
+    const why = await waitForGo(current.proc, opts, log, swapHook);
     if (opts.onPlainWait) opts.onPlainWait(false);
+    if (why === "switch") {
+      // Same profile, different browser: the profile folder is what carries a sign-in from one window
+      // to the next, so this costs the window, never the session. Only reachable while the person is
+      // signing in - the wait above is the only caller - which is why nothing here is reading the page.
+      // Named by its file, the same way launch() names it in the log: a picker entry carries an internal
+      // label ("config" for a hand-written path), which means nothing to the person reading the log.
+      log("browser: switching to " + path.basename(curPath) + " - opening it now, sign in there instead");
+      // Forced on purpose: nothing in that window is worth saving - the person is signing in for the
+      // first time, which is exactly why they are changing browsers - and a polite close would make
+      // them wait through a shutdown they did not ask for. The profile on disk is untouched, so the
+      // new window finds whatever the old one had already written and nothing else is lost.
+      killBrowser(current.proc);
+      // The profile is the one thing the next launch needs free: a launch while the old process still
+      // holds it hands its arguments to that process instead of opening a window, and the run then
+      // dies with no port at all. The kill above is enough on a normal machine; this is the belt for
+      // the one time it is not.
+      if (!(await waitExit(current.proc, 5000))) await clearLeftovers(prof, log);
+      current = await startWindow();
+      if (!current.port) return { error: "no-port" };
+      continue;
+    }
     if (why === "stopped") return { error: "stopped", cdp: null, browser: current };
     // The click is the starting gun, not a pause: the check below starts right now, and the button on
     // the page stays busy for this long, so a second press cannot race the check it just started.
@@ -431,13 +485,19 @@ export async function openSession(o) {
       // that window is gone with it, which is exactly why the window is asked to stay open above.
       log("browser: that window was closed - opening a fresh one");
       await waitExit(current.proc, 5000);
-      current = await open();
+      current = await startWindow();
       if (!current.port) return { error: "no-port" };
       continue;
     }
     const got = await use(current, authMs);
     if (got.error) return got;
-    if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
+    if (got.auth) {
+      // The session turned out to be in the window after all, so the waiting is over and a pick that
+      // arrived late has nothing left to swap for. Closing a signed-in window would throw that sign-in
+      // away, so the pick is simply dropped - the run has what it came for.
+      if (opts.pickBrowser && opts.pickBrowser.clear) opts.pickBrowser.clear();
+      return { cdp: got.cdp, browser: got.browser };
+    }
     // Signed out. Nothing is closed, so the session cookies are still where the browser keeps them:
     // the person signs in again in the same window and the same check runs on the same browser. The
     // socket is dropped first, because a password is about to be typed in there and a sign-in provider
