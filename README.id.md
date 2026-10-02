@@ -6,6 +6,12 @@
 > update ke 1.8.0.** Dan kalau Weverse menampilkan bar cookie, tolong klik **Accept** di situ: tanpa
 > klik itu, login bisa hilang lagi di sebagian browser.
 
+> **Kabar baik: media masih bisa diunduh setelah 2 Oktober 2026, 15.00 KST.** Foto, video, dan voice
+> note tetap turun - tenggat itu tidak menghentikannya.
+>
+> **Pengecualiannya bookmark: cadangkan manual.** Tidak ada otomasi untuk itu, jadi tandai yang mau kamu
+> simpan lalu simpan ekspor JSON dari tab bookmark sebelum room-nya tutup.
+
 ![Weverse DM Archiver - DM Weverse-mu, disimpan sebagai halaman yang bisa dibuka offline](assets/01-hero.svg)
 
 DM Weverse-mu hanya hidup di aplikasi dan tidak di tempat lain. Alat ini menyimpannya ke komputer
