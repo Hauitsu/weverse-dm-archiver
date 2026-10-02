@@ -66,6 +66,10 @@ export function readConfig(file) {
     throw new Error(f + " is not valid JSON: " + e.message);
   }
   const cfg = Object.assign({}, DEFAULTS, raw);
+  // A hand-edited file can hold anything: a number where a path belongs used to take the whole page
+  // down with a TypeError on every request.
+  if (typeof cfg.output !== "string" || !cfg.output.trim()) cfg.output = DEFAULTS.output;
+  if (typeof cfg.roomsFile !== "string" || !cfg.roomsFile.trim()) cfg.roomsFile = DEFAULTS.roomsFile;
   cfg.pacing = Object.assign({}, DEFAULTS.pacing, raw.pacing || {});
   if (SHARE_MODES.indexOf(String(cfg.shareMode)) < 0) cfg.shareMode = DEFAULTS.shareMode;
   if (THUMB_MODES.indexOf(String(cfg.thumbs)) < 0) cfg.thumbs = DEFAULTS.thumbs;

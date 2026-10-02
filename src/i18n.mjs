@@ -22,14 +22,20 @@ export function osLang() {
   return LANGS.includes(two) ? two : FALLBACK;
 }
 
-// Resolve the language code. An unknown value warns once and falls back to English.
+// Resolve the language code. An unknown value warns once per value and falls back to English.
+const WARNED = new Set();
 export function pickLang(explicit) {
   const arg = String(explicit == null ? "" : explicit).trim().toLowerCase();
   const env = String(process.env.WDM_LANG || process.env.DM_LANG || "").trim().toLowerCase();
   const want = arg || env;
   if (!want || want === "auto") return osLang();
   if (LANGS.includes(want)) return want;
-  console.log('WARNING: language "' + want + '" is not available; using ' + FALLBACK + " (options: " + LANGS.join(", ") + ").");
+  // The GUI builds a translator for every room on every poll, so the same unknown value would print
+  // the same warning hundreds of times. Once per value is enough for a person to notice it.
+  if (!WARNED.has(want)) {
+    WARNED.add(want);
+    console.log('WARNING: language "' + want + '" is not available; using ' + FALLBACK + " (options: " + LANGS.join(", ") + ").");
+  }
   return FALLBACK;
 }
 

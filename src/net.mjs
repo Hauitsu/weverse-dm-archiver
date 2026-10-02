@@ -144,6 +144,9 @@ export function fetchExpr(url) {
 // Parse one page. Throws on anything that is not the documented shape.
 export function parsePage(text) {
   const j = JSON.parse(text);
+  // A real empty page still carries paging (checked against every page in a real archive), so a body
+  // with neither data nor paging is an error dressed as an empty page -- not the start of the room.
+  if (!j || typeof j !== "object" || (!Array.isArray(j.data) && !j.paging)) throw new Error("unexpected response body (no data, no paging)");
   const data = Array.isArray(j.data) ? j.data : [];
   const pp = j.paging && j.paging.previousParams ? j.paging.previousParams.prev : null;
   const ap = j.paging && j.paging.nextParams ? j.paging.nextParams.after : null;
@@ -231,6 +234,25 @@ if (isMain && process.argv.includes("--check")) {
     if (!ok) bad++;
     console.log((ok ? "ok   " : "FAIL ") + "shape " + want);
   }
+  // An answer with neither data nor paging is not a page: it used to read as an empty room, which
+  // ended the walk and looked like success.
+  const parseCases = [
+    ['{"data":[],"paging":{"previousParams":null,"nextParams":null}}', "ok", "an empty page with paging"],
+    ['{"data":[{"messageId":"A","createDate":1000}],"paging":{"previousParams":{"prev":"1000"},"nextParams":null}}', "ok", "one message"],
+    ['{"paging":{"previousParams":{"prev":"1000"},"nextParams":null}}', "ok", "paging without data"],
+    ['{}', "throw", "neither data nor paging"],
+    ['{"data":{}}', "throw", "data that is not a list"],
+  ];
+  for (const [body, want, label] of parseCases) {
+    let got = "ok", p = null;
+    try { p = parsePage(body); } catch (e) { got = "throw"; }
+    const ok = got === want;
+    if (!ok) bad++;
+    console.log((ok ? "ok   " : "FAIL ") + "parsePage " + label + " -> " + got + (p ? " (data " + p.data.length + ", oldest " + p.oldest + ")" : ""));
+  }
+  const empty = parsePage('{"data":[],"paging":{"previousParams":null,"nextParams":null}}');
+  const empties = [["nextCursor(empty) === null", nextCursor(empty, "1000") === null], ["wentBack(empty) === false", wentBack(empty, 1000) === false]];
+  for (const [label, ok] of empties) { if (!ok) bad++; console.log((ok ? "ok   " : "FAIL ") + label); }
   console.log("status 429 -> " + statusAction(429) + " | 403 -> " + statusAction(403) + " | 401 -> " + statusAction(401) + " | 500 -> " + statusAction(500) + " | 200 -> " + statusAction(200));
   console.log("gap range -> " + gap(() => 0) + ".." + gap(() => 1));
   console.log(bad ? "FAIL: " + bad + " problem(s)" : "OK: " + KAT.length + " signature vectors, " + shapes.length + " request shapes");

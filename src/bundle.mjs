@@ -303,6 +303,8 @@ export async function bundle(opts) {
   catch (e) {
     // A half-written zip is worse than no zip at all: it looks finished until somebody opens it.
     try { fs.rmSync(zipPath, { force: true }); } catch (e2) {}
+    // The stage holds a whole copy of the media, so a failed zip must not leave it behind either.
+    try { fs.rmSync(stageParent, { recursive: true, force: true }); } catch (e2) {}
     throw e;
   }
   const sum = sha256File(zipPath);

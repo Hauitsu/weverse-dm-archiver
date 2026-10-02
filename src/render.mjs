@@ -50,8 +50,12 @@ const TZ_ZONA = (() => {
   // With no env set we use the machine zone ("auto"). An explicitly set DM_TZ_OFFSET still wins,
   // so the older fixed-offset way keeps its meaning.
   let isi = String(process.env.DM_TZ || process.env.WDM_TZ || "").trim();  // WDM_TZ is kept as an alias for the launcher
+  if (/^auto$/i.test(isi)) isi = "";
+  // An explicitly set DM_TZ_OFFSET wins over "auto". The header promises IANA > offset > machine,
+  // and the config file always writes "auto" for the machine zone, so testing for the literal
+  // "auto" here would make that promise impossible to keep. Leaving DM_TZ_OFFSET unset - the
+  // normal case - still means the machine zone.
   if (!isi && String(process.env.DM_TZ_OFFSET || "").trim()) return "";
-  if (isi && /^auto$/i.test(isi)) isi = "";
   if (isi && !tzAda(isi)) { console.log(t("warn.tzUnknown", { v: isi })); isi = ""; }
   if (isi) return isi;
   const zMesin = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -165,7 +169,13 @@ const giftAda = Object.keys(giftAset).length > 0;
 const stamp = (ms, offMin) => new Date(ms + offMin * 60000).toISOString().replace('T', ' ').slice(0, 19);
 const wib = (ms) => stamp(ms, TZ_MIN(ms));  // local time according to DM_TZ / DM_TZ_OFFSET
 const utc = (ms) => stamp(ms, 0);
-const esc = (s) => String(s == null ? '' : s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;');
+// Every value that comes out of the archive - message text, urls, nicknames, media markup - ends up in
+// an attribute or in text, and a quote left alone closes the attribute and starts an event handler.
+// So the quotes are escaped as well.
+const esc = (s) => String(s == null ? '' : s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;').split("'").join('&#39;');
+// JSON that goes inside a <script> block: a "</script>" sitting in a string would end the block there.
+// "\u003c" means the same thing to the JS parser and nothing at all to the HTML one.
+const jsin = (v) => JSON.stringify(v).split('<').join('\\u003c');
 
 // ---- parser markup media: <dm:photo imageUrl="..." width="960" height="1280" /> ----
 const parseTag = (tag) => {
@@ -495,7 +505,7 @@ h.push('<meta name="viewport" content="width=device-width,initial-scale=1">');
 h.push('<title>' + esc(ROOM_NAME) + ' DM</title>');
 // Runs before the first paint: a remembered theme is on the page before anything is drawn, so
 // nobody sees a dark flash on the way to light.
-h.push('<script>var WD=' + JSON.stringify(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);if(WD.TR){var g=localStorage.getItem("wdm-tr");if(g==="both"||g==="orig"||g==="en")d.setAttribute("data-tr",g);}var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
+h.push('<script>var WD=' + jsin(uiData) + ';(function(){var d=document.documentElement;try{var m=localStorage.getItem("wdm-tema");if(m==="light"||m==="dark")d.setAttribute("data-tema",m);if(WD.TR){var g=localStorage.getItem("wdm-tr");if(g==="both"||g==="orig"||g==="en")d.setAttribute("data-tr",g);}var b=((JSON.parse(localStorage.getItem("wdm-bub")||"{}")||{})[WD.room])||{},c=(typeof b.c==="number"&&WD.P[b.c])?b.c:0,p=WD.P[c],v=(d.getAttribute("data-tema")==="light")?p.lt:p.dk;d.setAttribute("data-bub",p.n);d.style.setProperty("--ab",v[0]);d.style.setProperty("--abd",v[1]);d.style.setProperty("--at",v[2]);d.style.setProperty("--atl",v[3]);}catch(e){}})();</script>');
 h.push('<style>');
 if (extApple) h.push('@font-face{font-family:NotoEmojiWeb;font-style:normal;font-weight:400;font-display:swap;src:url(' + FONT_REL + '/apple-emoji.' + extApple + ')' + ';unicode-range:' + rangeApple + '}');
 if (fontSiap && !extApple) { h.push(cssFont.trim()); h.push(t("html.fontComment", { file: FONT_REL + '/LICENSE-NotoColorEmoji.txt' })); }
@@ -629,7 +639,9 @@ h.push('.gf{color:#e0b341;font-size:12px;margin-top:3px}');
 if (giftAda) {
   const dasar = giftAset.NORMAL || Object.values(giftAset)[0];
   const giftPakai = new Set();
-  for (const x of norm) for (const g of (x.gift || [])) giftPakai.add(String(g).toUpperCase());
+  // Gift codes land in a CSS selector and in an attribute, so only the characters a real code is made
+  // of survive; anything else could close the <style> block or the attribute.
+  for (const x of norm) for (const g of (x.gift || [])) { const k = String(g).toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 32); if (k) giftPakai.add(k); }
   h.push('.bub.gift{position:relative}');
   h.push('.bub.gift.txt-only{min-width:150px;min-height:76px}');
   h.push('.m .bub.gift{background:#fc54af;border-color:#ff7fc4}');
@@ -828,7 +840,9 @@ h.push('html[data-tema="light"] .chip input.hari{color:#17181c;background:#fff;b
 h.push('html[data-tema="light"] #wpal{background:#fff;border-color:#e2e6eb;box-shadow:0 14px 32px rgba(15,20,30,.22)}');
 h.push('html[data-tema="light"] #wpal button.w[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #2f9bff}');
 h.push('html{color-scheme:dark}');
-h.push('</style></head><body' + (BM_ON ? ' class="has-icons"' : '') + '><div class="wrap">');
+// The corner buttons are printed in both exports, so both exports get the class that keeps the chip
+// out from under them.
+h.push('</style></head><body class="has-icons"><div class="wrap">');
 // One button in the top-right corner opens the panel (src/panel.js): the date jump in both exports,
 // the translation switch whenever the room has one, and your bookmarks in the room's own export.
 // The theme switch keeps its own pill in the bottom-right.
@@ -844,7 +858,7 @@ h.push('</style></head><body' + (BM_ON ? ' class="has-icons"' : '') + '><div cla
 }
 h.push('<button class="tt" id="tema" type="button" aria-label="' + esc(t("html.themeLight")) + '">&#9728;&#65039; ' + esc(t("html.themeLight")) + '</button>');
 // Sits next to the button so the right label is there before the message list is parsed.
-h.push('<script>var TE=' + JSON.stringify({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
+h.push('<script>var TE=' + jsin({ light: t("html.themeLight"), dark: t("html.themeDark") }) + ';(function(){var d=document.documentElement,b=document.getElementById("tema");if(!b)return;function p(){var l=d.getAttribute("data-tema")==="light";var s=l?TE.dark:TE.light;b.textContent=(l?"\uD83C\uDF19 ":"\u2600\uFE0F ")+s;b.setAttribute("aria-label",s);b.title=s;}b.addEventListener("click",function(){var l=d.getAttribute("data-tema")==="light";d.setAttribute("data-tema",l?"dark":"light");try{localStorage.setItem("wdm-tema",l?"dark":"light");}catch(e){}p();});p();})();</script>');
 h.push('<h1>' + esc(t("html.title")) + ' <span class="oleh">' + esc(t("html.titleBy")) + '</span></h1>');
 // The room summary line is not printed in the reading column any more: it is handed to the panel
 // footer further down, so it stays on screen whichever tab is showing.
@@ -884,7 +898,7 @@ for (const x of norm) {
   h.push(av && !cont ? '<img class="av" src="' + esc(av) + '" alt="">' : '<div class="av" style="background:transparent"></div>');
   h.push('<div class="col">');
   if (!cont) h.push('<div class="who">' + esc(me ? (x.nickname || t("html.whoMe")) : ARTIST_NAME) + '</div>');
-  const gKode = (giftAda && x.gift && x.gift.length) ? String(x.gift[0]).toUpperCase() : '';
+  const gKode = (giftAda && x.gift && x.gift.length) ? String(x.gift[0]).toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 32) : '';
   // A photo or a video is the message itself, so the bubble would only be an empty frame around
   // it: those get no chrome at all and the rounded media is the whole thing. Voice notes keep
   // their bubble (the player needs a body) and so do gifts (the cover is the bubble).
@@ -903,14 +917,15 @@ for (const x of norm) {
     if (ph.length) {
       h.push('<div class="media' + (ph.length > 1 ? ' two' : '') + '">');
       for (const o of ph) {
-        if (o.f.ada) { const tb = thumbWeb(o); h.push('<a class="ph" href="' + esc(o.f.web) + '" target="_blank"' + (tb ? ' title="' + t("html.photoOpen") + '"' : '') + '><img src="' + esc(tb || o.f.web) + '" loading="lazy" decoding="async" alt="' + t("html.photoAlt") + '"></a>'); }
+        if (o.f.ada) { const tb = thumbWeb(o); h.push('<a class="ph" href="' + esc(o.f.web) + '" target="_blank"' + (tb ? ' title="' + esc(t("html.photoOpen")) + '"' : '') + '><img src="' + esc(tb || o.f.web) + '" loading="lazy" decoding="async" alt="' + esc(t("html.photoAlt")) + '"></a>'); }
         else h.push('<span class="miss">[<a href="' + esc(o.im.url) + '" target="_blank" rel="noreferrer">' + t("html.photoMissing", { w: esc(o.im.width || '?'), h: esc(o.im.height || '?') }) + '</a>]</span>');
       }
       h.push('</div>');
     }
     for (const o of vd) {
-      const d = o.im.attrs && o.im.attrs.duration ? String(o.im.attrs.duration) : '';
-      const badge = d ? '<span class="vdur">0:' + (d.length < 2 ? '0' + d : d) + '</span>' : '';
+      const d = o.im.attrs && o.im.attrs.duration ? Math.max(0, Math.round(Number(o.im.attrs.duration) || 0)) : 0;
+      // Same seconds as the gallery shows, so the badge and the overlay never disagree about a clip.
+      const badge = d ? '<span class="vdur">' + Math.floor(d / 60) + ':' + String(d % 60).padStart(2, '0') + '</span>' : '';
       if (o.f.ada) { const po = videoPoster(o); const as = videoAsli(o); h.push('<div class="media"><span class="vwrap"><video src="' + esc(o.f.web) + '"' + (po ? ' poster="' + esc(po) + '"' : '') + ' controls preload="metadata" playsinline></video>' + badge + (as ? '<a class="vfull" href="' + esc(as) + '" target="_blank" rel="noreferrer">' + t("html.original") + '</a>' : '') + '</span></div>'); }
       else h.push('<span class="miss">[<a href="' + esc(o.im.url) + '" target="_blank" rel="noreferrer">' + t("html.videoMissing") + '</a>]</span>');
     }
@@ -946,7 +961,7 @@ const bulanAda = [];
 for (const g of galeri) { const mo2 = g[2].slice(0, 7); if (bulanAda.indexOf(mo2) < 0) bulanAda.push(mo2); }
 const wgm = {};
 for (const mo2 of bulanAda) wgm[mo2] = labelBulan(mo2);
-h.push('<script>var WG=' + JSON.stringify(galeri) + ';var WGM=' + JSON.stringify(wgm) + ';var WDT=' + JSON.stringify({
+h.push('<script>var WG=' + jsin(galeri) + ';var WGM=' + jsin(wgm) + ';var WDT=' + jsin({
   empty: t("html.galEmpty"), p: t("html.galPhoto"), v: t("html.galVideo"), a: t("html.galVoice"),
   orig: t("html.lbOriginal"), small: t("html.lbSmall"),
 }) + ';</script>');
@@ -975,7 +990,7 @@ if (giftAda) h.push('<script>var gfc=[].slice.call(document.querySelectorAll(".b
   h.push('</div>');
 }
 if (BM_ON) h.push('<div class="mx" id="mx" role="menu" hidden></div>');
-if (BM_ON) h.push('<script>' + BMSKRIP.split('{{BK}}').join(JSON.stringify(bkData)) + '</script>');
+if (BM_ON) h.push('<script>' + BMSKRIP.split('{{BK}}').join(jsin(bkData)) + '</script>');
 // Always on, in both exports: the chip is a reader-side preference, not personal chat data.
 h.push('<script>' + UISKRIP + '</script>');
 // The corner button and the panel it opens: the same script in both exports.

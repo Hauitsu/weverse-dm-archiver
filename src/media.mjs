@@ -95,7 +95,13 @@ export async function downloadMedia(opts) {
   const manifestPath = path.join(dir, "media-manifest.json");
   let manifest = {};
   try { manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")); } catch (e) { manifest = {}; }
-  const saveManifest = () => { try { fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 1)); } catch (e) {} };
+  // Written to a temporary file and renamed into place: a reader (the GUI, or a second run) sees the
+  // old list or the new one, never a half-written one.
+  const saveManifest = () => {
+    const tmp = manifestPath + ".tmp" + process.pid;
+    try { fs.writeFileSync(tmp, JSON.stringify(manifest, null, 1)); fs.renameSync(tmp, manifestPath); }
+    catch (e) { try { fs.rmSync(tmp, { force: true }); } catch (e2) {} }
+  };
 
   let todo = readItems(o.jsonl);
   const found = todo.length;

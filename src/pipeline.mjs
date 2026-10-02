@@ -12,16 +12,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { loadConfig } from "./config.mjs";
 import { harvest, readArchive, saveArtistPhoto } from "./harvest.mjs";
 import { downloadMedia } from "./media.mjs";
 import { buildThumbs, makeQueue, modeOf } from "./thumbs.mjs";
 import { findFfmpeg } from "./quality.mjs";
 import { bundle } from "./bundle.mjs";
-import { findBrowser, launch, launchPlain, killBrowser, waitExit, profileDir } from "./browser.mjs";
+import { findBrowser, launch, launchPlain, killBrowser, closeBrowser, waitExit, profileDir } from "./browser.mjs";
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
-import { loadRooms } from "./rooms.mjs";
+import { loadRooms, SLUG } from "./rooms.mjs";
 
 // Small pause helper - used by the login wait and the browser hand-over.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,7 +42,13 @@ export function dirs(cfg) {
   };
 }
 
-export const srcFor = (slug) => path.join(REPO, "downloads", slug);
+// The slug comes out of rooms.unis.json, a file people edit by hand: a value like "../x" would put the
+// downloads outside the folder, so it is refused here rather than resolved.
+export const srcFor = (slug) => {
+  const s = String(slug == null ? "" : slug);
+  if (!SLUG.test(s)) throw new Error("room slug is not usable: " + JSON.stringify(slug));
+  return path.join(REPO, "downloads", s);
+};
 
 // The public export is the one that leaves the house, so it never shows the fan nickname: that name
 // is already in the archive - every message the fan sent carries it - so nothing has to be typed or
@@ -256,11 +262,11 @@ export async function renderBoth(o) {
   // Bookmarks are made in the browser and kept there (see src/bm.js). A bookmarks.json sitting next
   // to the room is baked in as the starting list; the public export never carries any.
   const priv = await renderRoom(Object.assign({}, base, { only: o.only || "", rename: "", bookmarks: o.bookmarks || "", outDir: d.rooms, warn: true }));
-  keepSummary(o.slug, d.rooms);
+  if (!keepSummary(o.slug, d.rooms)) log("warning: the per-room summary could not be written - an older summary stays in place");
   if (priv !== 0) return { private: priv, public: null };
   log("render: public export (artist only" + (o.rename ? ", nickname hidden" : "") + ") -> " + path.join(pub, o.slug + ".html"));
   const p = await renderRoom(Object.assign({}, base, { only: "artist", rename: o.rename || "", bookmarks: "off", outDir: pub, warn: false }));
-  keepSummary(o.slug, pub);
+  if (!keepSummary(o.slug, pub)) log("warning: the public room summary could not be written - an older summary stays in place");
   if (p === 0) auditPublic(o, pub, log);
   return { private: priv, public: p };
 }
@@ -293,21 +299,41 @@ export async function clearLeftovers(profile, onLog) {
   const log = onLog || (() => {});
   const needle = String(profile || "");
   if (!needle) return 0;
-  const outFile = path.join(os.tmpdir(), "wdm-leftovers.txt");
+  // One file per run: a fixed name in the shared temp folder is a name two runs can collide on.
+  const outFile = path.join(os.tmpdir(), "wdm-leftovers-" + process.pid + ".txt");
   const win = process.platform === "win32";
+  // The profile travels through the environment, never inside the command text: a path may hold
+  // quotes or spaces, and a path pasted into a script is a path that can break the script. The
+  // pattern then matches the whole --user-data-dir argument, so a profile ending in "browser" no
+  // longer claims the processes of a profile ending in "browser2".
+  const profileRe = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[\\/]+$/, "");
   const script = win
-    ? "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('chrome.exe','msedge.exe','brave.exe','vivaldi.exe') -and $_.CommandLine -like '*" + needle.replace(/'/g, "''") + "*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; \"gone\" } | Out-File -Encoding utf8 '" + outFile.replace(/'/g, "''") + "'"
+    ? "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('chrome.exe','msedge.exe','brave.exe','vivaldi.exe') -and $_.CommandLine -match ('--user-data-dir=\"?' + $env:WDM_PROFILE_RE + '\"?(\\s|$)') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; \"gone\" } | Out-File -Encoding utf8 '" + outFile.replace(/'/g, "''") + "'"
     : null;
+  let n = 0;
+  let unknownCount = false;   // POSIX only: pkill ran but there was no way to count what it found
   try {
     if (win) {
-      await new Promise((done) => { const c = spawn("powershell", ["-NoProfile", "-Command", script], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
+      await new Promise((done) => { const c = spawn("powershell", ["-NoProfile", "-Command", script], { stdio: "ignore", env: Object.assign({}, process.env, { WDM_PROFILE_RE: profileRe }) }); c.on("exit", done); c.on("error", done); });
     } else {
-      await new Promise((done) => { const c = spawn("pkill", ["-f", needle], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
+      // pkill reports nothing on its own, and asking it afterwards would only count the survivors:
+      // count the matches first, then kill them, so the caller still gets its number and its pause.
+      try {
+        const r = spawnSync("pgrep", ["-cf", "--", needle], { encoding: "utf8", timeout: 10000 });
+        // 0 matches (status 1) is still a count; anything else means pgrep could not answer.
+        n = Number(String((r && r.stdout) || "").trim()) || 0;
+        unknownCount = !(r && !r.error && (r.status === 0 || r.status === 1));
+      } catch (e) { unknownCount = true; }
+      // The kill happens whether or not the count worked: a machine without pgrep would otherwise
+      // stop clearing the profile, which is the one thing this function is for.
+      await new Promise((done) => { const c = spawn("pkill", ["-f", "--", needle], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
     }
   } catch (e) {}
-  let n = 0;
-  try { n = fs.readFileSync(outFile, "utf8").split("\n").filter((x) => x.indexOf("gone") >= 0).length; fs.rmSync(outFile, { force: true }); } catch (e) {}
+  if (win) { try { n = fs.readFileSync(outFile, "utf8").split("\n").filter((x) => x.indexOf("gone") >= 0).length; fs.rmSync(outFile, { force: true }); } catch (e) {} }
   if (n) { log("browser: closed " + n + " browser process(es) left over from an earlier run"); await sleep(600); }
+  // Nothing could be counted, so nothing can be reported, but the profile still gets the same
+  // moment to settle before the next launch tries to lock it.
+  else if (unknownCount) await sleep(600);
   return n;
 }
 // How long the page keeps that button busy after the press. The hand-over itself starts on the
@@ -320,22 +346,29 @@ async function waitForGo(proc, opts, log) {
   const stop = o.shouldStop || (() => false);
   const said = o.saidDone;
   let typed = false;
+  let onData = null;
   if (!said) {
     try {
-      if (process.stdin.isTTY) { process.stdin.setEncoding("utf8"); process.stdin.on("data", () => { typed = true; }); process.stdin.resume(); }
+      if (process.stdin.isTTY) { process.stdin.setEncoding("utf8"); onData = () => { typed = true; }; process.stdin.on("data", onData); process.stdin.resume(); }
     } catch (e) {}
   }
   log("browser: sign in there, then " + (said ? "press the button on the page" : "close that window (or press Enter here)"));
   // No deadline: the window is open, the page has a button, and only the person in front of it knows
   // whether the signing in is done. Stop is the way out, so this can afford to wait.
   let seen = Date.now();
-  for (;;) {
-    if (stop()) return "stopped";
-    if (said && said()) return "done";
-    if (typed) return "done";
-    if (!proc || proc.exitCode !== null) return "closed";
-    if (Date.now() - seen > 300000) { seen = Date.now(); log("browser: still waiting for that sign-in window"); }
-    await sleep(400);
+  try {
+    for (;;) {
+      if (stop()) return "stopped";
+      if (said && said()) return "done";
+      if (typed) return "done";
+      if (!proc || proc.exitCode !== null) return "closed";
+      if (Date.now() - seen > 300000) { seen = Date.now(); log("browser: still waiting for that sign-in window"); }
+      await sleep(400);
+    }
+  } finally {
+    // One listener per call, removed again: a run that goes round this loop a dozen times must not
+    // leave a dozen of them behind.
+    if (onData) { try { process.stdin.off("data", onData); } catch (e) {} }
   }
 }
 
@@ -351,7 +384,15 @@ export async function openSession(o) {
     if (!started.port) return { error: "no-port" };
     const target = await waitPage(started.port, "weverse.io", 30000);
     if (!target) return { error: "no-page" };
-    const cdp = await attach(target.webSocketDebuggerUrl);
+    let cdp = null;
+    try { cdp = await attach(target.webSocketDebuggerUrl); }
+    // Its own code: the page was there, the socket was not, and saying "no page" here sends the
+    // person looking in the wrong place. The browser is handed back so the caller can close it.
+    catch (e) { log("browser: could not open the debugger socket (" + String((e && e.message) || e) + ")"); return { error: "no-socket", cdp: null, browser: started }; }
+    // A tab restored from the previous session is also weverse.io, and the login check below would
+    // read whatever state that old page is in. Start the hand-over from a fresh load.
+    try { await cdp.send("Page.navigate", { url: "https://weverse.io/" }, 30000); }
+    catch (e) { log("browser: could not reload the page (" + String((e && e.message) || e) + ")"); }
     const ok = await ensureAuth(cdp, {
       onLog: log, shouldStop: opts.shouldStop, timeoutMs: ms,
       hurry: opts.hurry, hurryLog: opts.hurryLog,
@@ -374,7 +415,7 @@ export async function openSession(o) {
     // The automated window holds the profile lock, and a second launch would only hand its arguments
     // to that running instance - so it has to be gone before the sign-in window opens, or the window
     // meant to be plain would inherit the very debug port Google refuses.
-    if (current) { killBrowser(current.proc); await waitExit(current.proc, 15000); current = null; }
+    if (current) { await closeBrowser(current.proc, { onLog: log }); current = null; }
     log("browser: opening a normal window to sign in - Google refuses a browser that is driven over DevTools");
     const plain = await launchPlain({ browserPath: found.path, profile: prof, url: "https://weverse.io/", onLog: log });
     if (opts.onPlainWait) opts.onPlainWait(true);
@@ -386,8 +427,9 @@ export async function openSession(o) {
       opts.onSettle(true, opts.settleMs == null ? SETTLE_AFTER_CLICK_MS : Number(opts.settleMs));
     }
     if (opts.onPlainWait) opts.onPlainWait(false);
-    killBrowser(plain.proc);
-    await waitExit(plain.proc, 15000);
+    // The person just signed in: this window has to leave the profile with the session still in it,
+    // so it is asked to quit instead of being forced down (see closeBrowser).
+    await closeBrowser(plain.proc, { onLog: log });
     if (why === "stopped") return { error: "stopped", cdp: null, browser: plain };
     log("browser: taking over the session the sign-in window left behind");
     const again = await open();
@@ -398,7 +440,7 @@ export async function openSession(o) {
     const got = await use(again, Math.min(opts.authTimeoutMs || 45000, 60000));
     if (got.error) return got;
     if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
-    log("browser: still no session after that sign-in - the normal window comes back, press the button when you are done");
+    log("browser: still no session after that sign-in - the normal window comes back. Accept the Weverse cookie banner in it before pressing the button (a session that was never accepted does not survive the window closing), then press it again");
     await sleep(1500);
   }
 }

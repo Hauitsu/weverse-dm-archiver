@@ -102,7 +102,14 @@ export async function targets(port) {
   return [];
 }
 
+// Chromium only writes session cookies to the profile - the kind a fresh Weverse sign-in leaves
+// behind before its cookie banner is accepted - when the profile is set to restore the last session.
+// Without this the sign-in window quits, the cookie never reaches the disk, and the window that takes
+// over opens logged out no matter how many times the person signs in again.
+const SESSION_KEEP_ARG = "--restore-last-session";
+
 const BASE_ARGS = [
+  SESSION_KEEP_ARG,
   "--no-first-run",
   "--no-default-browser-check",
   "--disable-sync",
@@ -135,12 +142,22 @@ export async function launch(opts) {
   let port = await waitPortFile(portFile, o.portWaitMs || 15000);
   if (!port || !(await ready(port, 8000))) {
     log("browser: the automatic port did not answer, retrying on a port we picked");
-    try { proc.kill(); } catch (e) {}
-    await sleep(800);
-    const fixed = (await freePort()) || 9333;
+    // The whole tree has to be gone before the retry: a renderer left behind keeps the profile locked,
+    // and a second launch on a locked profile only hands its arguments to the instance that is still
+    // there -- no fresh port opens and the run dies later pointing at the wrong thing.
+    killBrowser(proc);
+    await waitExit(proc, 15000);
+    const fixed = await freePort();
+    if (!fixed) {
+      // A hard-coded fallback is worse than saying so: 9333 sits inside a port range Windows keeps
+      // for itself on some machines, so the retry would fail the same way and blame the browser.
+      log("browser: no free debug port could be found for the retry");
+      return { proc: proc, port: 0, profile: profile };
+    }
     proc = await start(fixed);
-    port = (await waitPortFile(portFile, o.portWaitMs || 15000)) || fixed;
-    await ready(port, 10000);
+    const again = (await waitPortFile(portFile, o.portWaitMs || 15000)) || fixed;
+    if (!(await ready(again, 10000))) { log("browser: the second debug port did not answer either"); return { proc: proc, port: 0, profile: profile }; }
+    port = again;
   }
   return { proc: proc, port: port, profile: profile };
 }
@@ -150,6 +167,7 @@ export async function launch(opts) {
 // user types into therefore starts without the debugging port, on the very same profile, and the
 // session it leaves behind is what the automated launch picks up a moment later.
 const PLAIN_ARGS = [
+  SESSION_KEEP_ARG,
   "--no-first-run",
   "--no-default-browser-check",
   "--disable-features=Translate,OptimizationHints",
@@ -177,6 +195,27 @@ export function killBrowser(proc) {
     if (process.platform === "win32") { spawn("taskkill", ["/PID", String(proc.pid), "/T", "/F"], { stdio: "ignore" }); return; }
   } catch (e) {}
   try { proc.kill(); } catch (e) {}
+}
+
+// Close a browser we started the way a person would: ask it to quit and give the cookie store time to
+// reach the disk, and only force the tree down when it refuses. taskkill /F throws away every cookie
+// written since the last commit (Chromium commits on a timer and on a clean exit), which is exactly
+// the state a fresh sign-in leaves behind: the next window opens logged out and the person is asked to
+// sign in again for nothing. Measured on this machine: force-kill -> session and persistent cookie both
+// gone; this path -> both still there.
+export async function closeBrowser(proc, opts) {
+  const o = opts || {};
+  const log = o.onLog || (() => {});
+  if (!proc || proc.exitCode !== null || proc.signalCode) return true;
+  if (process.platform === "win32") {
+    try { spawn("taskkill", ["/PID", String(proc.pid)], { stdio: "ignore" }); } catch (e) { killBrowser(proc); }
+  } else {
+    try { proc.kill("SIGTERM"); } catch (e) {}
+  }
+  if (await waitExit(proc, o.gracefulMs == null ? 10000 : Number(o.gracefulMs))) return true;
+  log("browser: the window would not quit on its own - closing it the hard way");
+  killBrowser(proc);
+  return await waitExit(proc, 15000);
 }
 
 // Wait until a browser we started is really gone, so the profile is free for the next launch.

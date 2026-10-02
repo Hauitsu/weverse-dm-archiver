@@ -7,16 +7,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
-import { spawn } from "node:child_process";
-import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES, THUMB_MODES } from "./config.mjs";
-import { makeT, pickLang } from "./i18n.mjs";
+import { spawn, spawnSync } from "node:child_process";
+import { loadConfig, saveConfig, CONFIG_FILE, SHARE_MODES, THUMB_MODES, DEFAULTS } from "./config.mjs";
+import { makeT, pickLang, LANGS } from "./i18n.mjs";
 import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor, publicRenameFor, publicDirFor, hurryMode, GIB } from "./pipeline.mjs";
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
 import { canOffer, collectReady, driveUrl, eligibleRooms, memberName } from "./collect.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
 import { openExternal } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
-import { artistLabel } from "./rooms.mjs";
+import { artistLabel, tzOk } from "./rooms.mjs";
 
 const NL = String.fromCharCode(10);
 const argv = process.argv.slice(2);
@@ -27,7 +27,17 @@ function flag(name, fallback) {
   return v && v.indexOf("--") !== 0 ? v : true;
 }
 
-let cfg = loadConfig();
+// A config.json that stopped parsing must not cost the user the window (a stray comma is easy to
+// leave behind). Start on the built-in defaults, leave the file untouched, and pick it up again as
+// soon as it parses -- cfgWatch below retries on every request.
+let cfg;
+try { cfg = loadConfig(); }
+catch (e) {
+  console.error("gui: " + String((e && e.message) || e));
+  console.error("gui: starting on the built-in defaults; fix or delete " + CONFIG_FILE + " when you can");
+  cfg = Object.assign({}, DEFAULTS);
+  cfg.pacing = Object.assign({}, DEFAULTS.pacing);
+}
 // config.json can be edited while the page is open - the collector link, the debug switch. Rather than
 // holding a stale copy until the next restart, notice the change on the next request and re-read it. A
 // file that stopped parsing is left alone, so a stray comma cannot take the page down.
@@ -411,11 +421,13 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  if(saved>0)t+=em(MSG.savedNote).replace(\"{s}\",\"<strong>\"+fmtSize(saved)+\"</strong>\");",
     "  var mode=el(\"#share\").value;",
     "  if(mode!==\"no\"){",
-    "    t+=mode===\"low\"?em(MSG.zipLow):em(MSG.zipNote).replace(\"{z}\",\"<strong>\"+fmtSize(full)+\"</strong>\");",
+    // A re-compressed zip is a choice inside the Share popup (and in wdm share --low), so this line
+    // is only ever reached with "yes": no mode of #share can be "low" any more.
+    "    t+=em(MSG.zipNote).replace(\"{z}\",\"<strong>\"+fmtSize(full)+\"</strong>\");",
     // What ends up on disk: the conversation, plus the zip beside it when one is written. A
     // re-compressed zip is a fraction of the conversation and guessing that fraction would be
     // worse than saying "much smaller", so in low mode only the conversation is counted.
-    "    t+=em(MSG.allNote).replace(\"{t}\",\"<strong>\"+fmtSize(mode===\"low\"?full:full*2)+\"</strong>\");",
+    "    t+=em(MSG.allNote).replace(\"{t}\",\"<strong>\"+fmtSize(full*2)+\"</strong>\");",
     "  }",
     "  el(\"#total\").innerHTML=t;",
     "}",
@@ -712,6 +724,7 @@ if (state.phase === "browser" && state.plainWait) text = tr("gui.plainHint");
   if (state.phase === "idle") { state.percent = 0; state.floor = 0; }
   const list = rooms(cfg);
   return {
+    pid: process.pid,
     phase: state.phase, phaseText: text, running: state.running, percent: state.percent, hurryMode: hurryMode(state),
     settle: settling(),
     // The once-per-install popup: a finished run that left them holding a complete room puts the
@@ -733,6 +746,10 @@ function readBody(req) {
   return new Promise((resolve) => {
     let all = "";
     req.on("data", (c) => { all += c; if (all.length > 1e6) req.destroy(); });
+    // A body that never finishes (client gone, or cut off above) must not leave the handler waiting on
+    // this promise for good.
+    req.on("aborted", () => resolve({}));
+    req.on("error", () => resolve({}));
     req.on("end", () => { try { resolve(JSON.parse(all || "{}")); } catch (e) { resolve({}); } });
   });
 }
@@ -770,17 +787,17 @@ function pct(v) { state.floor = Math.min(99, Math.max(state.floor || 0, Math.rou
 
 async function startJob(body) {
   if (state.running) return;
-  const wanted = Array.isArray(body.rooms) ? body.rooms : [];
+  const wanted = Array.isArray(body.rooms) ? body.rooms.filter((x) => typeof x === "string") : [];
   const list = rooms(cfg).filter((r) => wanted.indexOf(r.slug) >= 0);
   if (!list.length) return;
   // The page sends "yes" | "low" | "no"; true/false are still accepted so an older page or a script
   // keeps working.
-  const asked = body.share === true ? "yes" : body.share === false ? "no" : String(body.share || cfg.shareMode || "yes");
+  const asked = body.share === true ? "yes" : body.share === false ? "no" : typeof body.share === "string" ? body.share : String(cfg.shareMode || "yes");
   const shareMode = SHARE_MODES.indexOf(asked) >= 0 ? asked : "yes";
   const share = shareMode !== "no";
   const shareLow = shareMode === "low";
   if (shareMode !== cfg.shareMode) { try { cfg = saveConfig({ shareMode: shareMode }); } catch (e) {} }
-  if (body.tz && body.tz !== cfg.tz) { try { cfg = saveConfig({ tz: String(body.tz) }); } catch (e) {} }
+  if (typeof body.tz === "string" && body.tz !== cfg.tz && tzOk(body.tz)) { try { cfg = saveConfig({ tz: body.tz }); } catch (e) {} }
       running(true);
   state.result = null; state.results = []; state.error = ""; state.log = []; state.percent = 0; state.floor = 0; state.maxPages = 0; state.progress = null; state.startedAt = Date.now();
   const tr = t();
@@ -808,7 +825,10 @@ async function startJob(body) {
     state.loginWait = false;
     if (session.error === "stopped" || stopFlag) { setPhase("stopped"); running(false); return; }
     if (session.error) {
-      state.error = session.error === "no-browser" ? tr("gui.noBrowser") : session.error;
+      // The failures a person can actually hit get a sentence in their own language; anything else is
+    // shown as it is, because it is a bug report and hiding it helps nobody.
+    const emap = { "no-browser": "gui.noBrowser", "no-page": "gui.noPage", "no-port": "gui.noPort", "no-socket": "gui.noSocket" };
+    state.error = emap[session.error] ? tr(emap[session.error]) : session.error;
       setPhase("error");
       running(false);
       return;
@@ -891,9 +911,26 @@ async function startJob(body) {
 
 async function handle(req, res) {
   cfgWatch();
+  const json = (code, obj) => { res.writeHead(code, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
+  // The page is served from 127.0.0.1, so a request carrying another Host header is a DNS-rebinding
+  // attempt, and a request carrying an Origin that is not this page was sent by some other site -- a
+  // form post or a text/plain fetch needs no CORS preflight, so the browser does deliver it. Anything
+  // that can change state is refused here, before a single route can act on it.
+  const host = String(req.headers.host || "");
+  if (!/^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(host)) { json(403, { error: "bad host" }); return; }
+  if (req.method !== "GET") {
+    const origin = String(req.headers.origin || "");
+    if (origin && origin !== "http://" + host) { json(403, { error: "bad origin" }); return; }
+    const site = String(req.headers["sec-fetch-site"] || "");
+    if (site && site !== "same-origin") { json(403, { error: "cross-site request" }); return; }
+    // Our own page sends JSON, and a body that is not JSON cannot even be sent cross-site without a
+    // preflight, so no body-carrying post gets past this. Posts without a body (stop, hurry) still go
+    // through, protected by the Origin and Sec-Fetch-Site checks above.
+    const hasBody = Number(req.headers["content-length"] || 0) > 0 || !!req.headers["transfer-encoding"];
+    if (hasBody && !/^application\/json\b/i.test(String(req.headers["content-type"] || ""))) { json(415, { error: "expected application/json" }); return; }
+  }
   const url = String(req.url || "/").split("?")[0];
   const q = new URL(String(req.url || "/"), "http://127.0.0.1").searchParams;
-  const json = (code, obj) => { res.writeHead(code, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
   if (req.method === "GET" && (url === "/" || url === "/index.html")) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
     res.end(page());
@@ -936,7 +973,14 @@ async function handle(req, res) {
   }
   // The page has shown the author own message, so it will not appear again in this session.
   if (req.method === "POST" && url === "/api/collect-seen") { state.surprise = null; json(200, { ok: true }); return; }
-  if (req.method === "POST" && url === "/api/start") { const b = await readBody(req); startJob(b); json(200, { ok: true }); return; }
+  if (req.method === "POST" && url === "/api/start") {
+    const b = await readBody(req);
+    // A body that is not a list of slugs is answered honestly instead of starting something.
+    if (!Array.isArray(b.rooms) || !b.rooms.every((x) => typeof x === "string")) { json(400, { ok: false, error: "rooms must be a list of slugs" }); return; }
+    startJob(b);
+    json(200, { ok: true, running: state.running });
+    return;
+  }
   if (req.method === "POST" && url === "/api/share") { const b = await readBody(req); startShare(b); json(200, { ok: true, running: shareJob.running, slug: shareJob.slug }); return; }
   if (req.method === "POST" && url === "/api/share/stop") {
     // Only asks: the job notices at its next checkpoint, kills the encoder it is running and
@@ -949,8 +993,10 @@ async function handle(req, res) {
   if (req.method === "POST" && url === "/api/hurry") { state.hurry = true; if (!state.hurryFirstAt) state.hurryFirstAt = Date.now(); json(200, { ok: true }); return; }
   if (req.method === "POST" && url === "/api/config") {
     const b = await readBody(req);
-    if (b.language) { try { cfg = saveConfig({ language: String(b.language) }); } catch (e) {} }
-    if (b.tz) { try { cfg = saveConfig({ tz: String(b.tz) }); } catch (e) {} }
+    // Only a language we ship and a zone the runtime accepts: anything else would be written to
+    // config.json for good and then passed on to every render.
+    if (typeof b.language === "string" && LANGS.indexOf(b.language) >= 0 && b.language !== cfg.language) { try { cfg = saveConfig({ language: b.language }); } catch (e) {} }
+    if (typeof b.tz === "string" && tzOk(b.tz) && b.tz !== cfg.tz) { try { cfg = saveConfig({ tz: b.tz }); } catch (e) {} }
     if (b.shareMode && SHARE_MODES.indexOf(String(b.shareMode)) >= 0) { try { cfg = saveConfig({ shareMode: String(b.shareMode) }); } catch (e) {} }
     if (b.thumbs && THUMB_MODES.indexOf(String(b.thumbs)) >= 0) { try { cfg = saveConfig({ thumbs: String(b.thumbs) }); } catch (e) {} }
     json(200, { ok: true, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs });
@@ -969,7 +1015,11 @@ async function handle(req, res) {
       json(200, { ok: ok, target: ok ? u : "" });
       return;
     }
-    const target = b.what === "zip" ? r.share : b.what === "folder" ? r.folder : b.what === "room" ? roomPage(b.slug) : r.html;
+    // Only the three names the page sends (plus the old no-name call) may open anything: an unknown
+    // value must not quietly open the last run's files instead.
+    const key = typeof b.what === "string" ? b.what : "";
+    const known = { zip: r.share, folder: r.folder, room: roomPage(b.slug), html: r.html, "": r.html };
+    const target = Object.prototype.hasOwnProperty.call(known, key) ? known[key] : "";
     const ok = target ? openExternal(target) : false;
     json(200, { ok: ok, target: target || "" });
     return;
@@ -988,6 +1038,26 @@ async function handle(req, res) {
 // An explicit --port (what the tests use) skips this entirely.
 const APP_DIR = path.join(process.env.LOCALAPPDATA || process.env.HOME || ".", "weverse-dm-archiver");
 const GUI_FILE = path.join(APP_DIR, "gui.json");
+// A stale gui.json can name a pid that Windows has since handed to some other program, and
+// taskkill /T /F would take that program and its children down with it. So "is this pid ours?" is
+// answered by the window itself when it can answer, and by the process command line when it cannot.
+function cmdlineOf(pid) {
+  const n = Number(pid);
+  try {
+    if (process.platform === "win32") {
+      const r = spawnSync("powershell", ["-NoProfile", "-NonInteractive", "-Command", "(Get-CimInstance Win32_Process -Filter \"ProcessId=" + n + "\").CommandLine"], { encoding: "utf8", timeout: 8000, windowsHide: true });
+      return r && r.status === 0 && r.stdout ? String(r.stdout).trim() : "";
+    }
+    return String(fs.readFileSync("/proc/" + n + "/cmdline", "utf8")).split("\u0000").join(" ");
+  } catch (e) {
+    if (process.platform === "win32") return "";
+    try { const r = spawnSync("ps", ["-p", String(n), "-o", "command="], { encoding: "utf8", timeout: 8000 }); return r && r.status === 0 ? String(r.stdout).trim() : ""; } catch (e2) { return ""; }
+  }
+}
+function looksLikeOurs(pid) {
+  const cl = cmdlineOf(pid);
+  return !!cl && /gui\.mjs/i.test(cl) && /node/i.test(cl);
+}
 function liveGui() {
   try {
     // A BOM in there (anything written by PowerShell, say) would kill JSON.parse for no good reason.
@@ -1017,16 +1087,27 @@ if (!argv.includes("--port")) {
       if (!argv.includes("--no-open")) openExternal(prev.url);
       process.exit(0);
     }
-    console.log("gui: closing the previous window at " + prev.url + " (" + (st ? "idle" : "not answering") + ")");
-    killTree(prev.pid);
-    try { fs.rmSync(GUI_FILE, { force: true }); } catch (e) {}
-    await new Promise((r) => setTimeout(r, 1200));   // let the port go before we claim it
+    // The answer decides first: a window that reports the pid gui.json names is this program. Without
+    // an answer, only a command line that reads like this script counts. Anything else is left alone.
+    const ours = st ? Number(st.pid) === Number(prev.pid) : looksLikeOurs(prev.pid);
+    if (!ours) {
+      console.log("gui: " + prev.url + " is not answering and pid " + prev.pid + " does not look like this program");
+      console.log("gui: leaving it alone; starting on another port");
+    } else {
+      console.log("gui: closing the previous window at " + prev.url + " (" + (st ? "idle" : "not answering") + ")");
+      killTree(prev.pid);
+      try { fs.rmSync(GUI_FILE, { force: true }); } catch (e) {}
+      await new Promise((r) => setTimeout(r, 1200));   // let the port go before we claim it
+    }
   }
 }
 const wantPort = Number(flag("port", cfg.guiPort || 8787)) || 8787;
 const server = http.createServer((req, res) => {
   handle(req, res).catch((e) => { try { res.writeHead(500, { "content-type": "text/plain" }); res.end(String((e && e.message) || e)); } catch (err) {} });
 });
+// Receiving a request must not be able to hold a socket open forever.
+server.headersTimeout = 10000;
+server.requestTimeout = 30000;
 
 // Windows with Hyper-V, WSL or Docker installed reserves whole port ranges (8572-9871 is a common
 // one), and a reserved port refuses the connection instead of reporting itself as busy. So walk a
@@ -1048,15 +1129,25 @@ server.listen(ladder[0], "127.0.0.1", () => {
   console.log("gui: config " + CONFIG_FILE);
   console.log("gui: repo " + REPO);
   if (cfg.collectDebug) console.log("gui: collectDebug is on - every room offers the Share to button");
-if (/\{[A-Za-z0-9_.-]+\}/.test(String(cfg.collectUrl || "")) && !driveUrl(cfg)) {
-  console.log("gui: collectUrl has an unresolved {name} placeholder; the Share to button stays hidden");
-}
+  if (/\{[A-Za-z0-9_.-]+\}/.test(String(cfg.collectUrl || "")) && !driveUrl(cfg)) {
+    console.log("gui: collectUrl has an unresolved {name} placeholder; the Share to button stays hidden");
+  }
   if (!argv.includes("--no-open")) openExternal(url);
   // Remember where this one listens, so the next double-click opens this page instead of a new server.
-  try { fs.mkdirSync(APP_DIR, { recursive: true }); fs.writeFileSync(GUI_FILE, JSON.stringify({ pid: process.pid, port: port, url: url, at: Date.now() })); } catch (e) {}
+  // A run with an explicit --port is a test or a second window: it must not overwrite the entry of the
+  // window the user is actually looking at. The write itself goes through a rename so a reader never
+  // sees half a file.
+  if (!argv.includes("--port")) {
+    try {
+      fs.mkdirSync(APP_DIR, { recursive: true });
+      const tmp = GUI_FILE + ".tmp";
+      fs.writeFileSync(tmp, JSON.stringify({ pid: process.pid, port: port, url: url, at: Date.now() }));
+      fs.renameSync(tmp, GUI_FILE);
+    } catch (e) {}
+  }
 });
 
 // Leave no stale note behind: a pid that is gone is ignored anyway, but a clean exit is cheaper.
-function forgetGui() { try { const j = JSON.parse(fs.readFileSync(GUI_FILE, "utf8")); if (j && Number(j.pid) === process.pid) fs.rmSync(GUI_FILE, { force: true }); } catch (e) {} }
+function forgetGui() { if (argv.includes("--port")) return; try { const j = JSON.parse(fs.readFileSync(GUI_FILE, "utf8")); if (j && Number(j.pid) === process.pid) fs.rmSync(GUI_FILE, { force: true }); } catch (e) {} }
 process.on("exit", forgetGui);
 process.on("SIGINT", () => { push("closing"); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 800); });

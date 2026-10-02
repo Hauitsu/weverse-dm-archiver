@@ -21,6 +21,23 @@ const take = (name) => { const i = argv.indexOf(name); if (i >= 0 && argv[i + 1]
 const ROOT = path.resolve(take("--root") || path.resolve(HERE, ".."));
 const FIX = argv.indexOf("--fix") >= 0;
 const SHOW = argv.indexOf("--show") >= 0;
+// A misspelled flag would otherwise be ignored, and the answer would be about the wrong tree.
+const unknown = [];
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === "--fix" || a === "--show") continue;
+  if (a === "--root") {
+    if (argv[i + 1] && !argv[i + 1].startsWith("--")) { i++; continue; }
+    unknown.push("--root (needs a folder)");
+    continue;
+  }
+  unknown.push(a);
+}
+if (unknown.length) {
+  console.log("blob   : unknown argument(s): " + unknown.join(", "));
+  console.log("usage  : node tools/check-blob.mjs [--root <dir>] [--fix] [--show]");
+  process.exit(2);
+}
 
 function say(text) { console.log("blob   : " + text); }
 

@@ -41,11 +41,16 @@ export function writeZip(zipPath, entries, opts) {
   const central = [];
   let offset = 0;
   let bytes = 0;
+  let cdStart = 0, cdSize = 0;   // kept outside the try so the finished file can be checked after it
+  const seenName = new Set();
   const buf = Buffer.allocUnsafe(1 << 20);
   const now = dosTime(Date.now());
   try {
     for (const e of entries) {
-      const name = Buffer.from(String(e.name).replace(/\\/g, "/"), "utf8");
+      const nameText = String(e.name).replace(/\\/g, "/");
+      // Two entries with one name unpack over each other and the reader has no way to choose.
+      if (!e.dir) { if (seenName.has(nameText)) throw new Error("zip: two files want the same name: " + nameText); seenName.add(nameText); }
+      const name = Buffer.from(nameText, "utf8");
       let size = 0;
       let crc = 0;
       const stamp = e.dir ? now : dosTime(fs.statSync(e.abs).mtimeMs);
@@ -95,7 +100,7 @@ export function writeZip(zipPath, entries, opts) {
       offset += 30 + name.length + size;
       bytes += size;
     }
-    const cdStart = offset;
+    cdStart = offset;
     for (const c of central) {
       const h = Buffer.alloc(46);
       h.writeUInt32LE(0x02014b50, 0);
@@ -115,7 +120,7 @@ export function writeZip(zipPath, entries, opts) {
       fs.writeSync(fd, c.name);
       offset += 46 + c.name.length;
     }
-    const cdSize = offset - cdStart;
+    cdSize = offset - cdStart;
     const end = Buffer.alloc(22);
     end.writeUInt32LE(0x06054b50, 0);
     end.writeUInt16LE(central.length, 8);
@@ -125,6 +130,16 @@ export function writeZip(zipPath, entries, opts) {
     fs.writeSync(fd, end);
   } finally { fs.closeSync(fd); }
   const total = fs.statSync(zipPath).size;
+  // The file has to match the layout just described. A zip whose last record is missing or short
+  // still looks like a zip until somebody opens it, and then the whole share is wasted.
+  const want = cdStart + cdSize + 22;
+  if (total !== want) throw new Error("zip: wrote " + total + " bytes but the layout says " + want);
+  const tail = Buffer.alloc(22);
+  const tailFd = fs.openSync(zipPath, "r");
+  try { fs.readSync(tailFd, tail, 0, 22, total - 22); } finally { fs.closeSync(tailFd); }
+  if (tail.readUInt32LE(0) !== 0x06054b50) throw new Error("zip: the end-of-archive record is missing");
+  if (tail.readUInt16LE(10) !== central.length) throw new Error("zip: " + central.length + " entries were written but the index says " + tail.readUInt16LE(10));
+  if (tail.readUInt32LE(12) !== cdSize || tail.readUInt32LE(16) !== cdStart) throw new Error("zip: the index does not point at the entries it describes");
   log("zip: " + central.length + " entries, " + fmtSize(total));
   return { path: zipPath, entries: central.length, bytes: bytes, zipBytes: total };
 }

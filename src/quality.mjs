@@ -62,7 +62,10 @@ export function argsFor(src, dest, kind) {
   const head = ["-y", "-nostdin", "-loglevel", "error", "-i", src, "-map_metadata", "-1"];
   if (kind === "image") return head.concat(["-vf", SCALE, "-frames:v", "1"], IMAGE[ext] || [], [dest]);
   if (kind === "video") {
-    const v = ["-vf", SCALE, "-c:a", "aac", "-b:a", AUDIO_KBPS];
+    // The audio codec has to fit the container: aac inside a .webm is not a thing, and opus inside an
+    // .mp4 is not played everywhere. The destination file decides.
+    const ac = path.extname(dest).toLowerCase() === ".webm" ? "libopus" : "aac";
+    const v = ["-vf", SCALE, "-c:a", ac, "-b:a", AUDIO_KBPS];
     if (VIDEO[ext] === "vp9") return head.concat(v, ["-c:v", "libvpx-vp9", "-crf", "40", "-b:v", "0", "-deadline", "realtime", "-cpu-used", "5", dest]);
     return head.concat(v, ["-c:v", "libx264", "-crf", String(VIDEO_CRF), "-preset", "veryfast", "-movflags", "+faststart", dest]);
   }

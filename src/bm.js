@@ -35,7 +35,9 @@
       var s = JSON.parse(localStorage.getItem(KUNCI) || "{}") || {};
       var v = s[ROOM];
       if (!v || typeof v !== "object") return { a: [], h: [] };
-      return { a: v.a || [], h: v.h || [] };
+      // A hand-edited or older bookmarks file must not take the whole panel down: the two lists are
+      // only used through forEach below, so anything that is not an array becomes an empty list.
+      return { a: Array.isArray(v.a) ? v.a : [], h: Array.isArray(v.h) ? v.h : [] };
     } catch (e) { return { a: [], h: [] }; }
   }
   function simpan(v) {
@@ -71,7 +73,7 @@
   }
   function daftar() {
     var keluar = [], ada = {};
-    BK.k0.forEach(function (x) {
+    (BK.k0 || []).forEach(function (x) {
       if (st.h.indexOf(x.m) >= 0) return;
       ada[x.m] = 1;
       keluar.push({ m: x.m, s: x.s || iso(x.m), p: x.p || ringkas(x.m), d: 0 });

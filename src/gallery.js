@@ -11,7 +11,14 @@
   var gal = document.getElementById('gal');
   var ALL = window.WG || [];
   if (!gal) return;
-  if (!ALL.length) { if (gal.parentNode) gal.parentNode.removeChild(gal); return; }
+  if (!ALL.length) {
+    // Nothing to show: the overlay is dropped, and so is the corner button that would have opened it -
+    // a button that does nothing at all is worse than no button.
+    if (gal.parentNode) gal.parentNode.removeChild(gal);
+    var gb = document.getElementById('gbtn');
+    if (gb && gb.parentNode) gb.parentNode.removeChild(gb);
+    return;
+  }
 
   var WDT = window.WDT || {};
   var WGM = window.WGM || {};

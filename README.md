@@ -87,6 +87,11 @@ A short popup repeats what comes next. Read it, confirm it, and the next window 
 A separate browser window opens on a fresh Weverse page. Log in, the way you usually do, and leave
 that window open.
 
+**If Weverse shows a cookie banner, click Accept before you continue.** Some Weverse sessions live in
+a cookie that a browser normally drops when it closes, and an unaccepted banner is the most common way
+to end up signed out in the window the tool opens next. The tool now asks the browser to keep that
+cookie, and accepting the banner is the sure way.
+
 Then come back to the tool's page and press **I'm logged in - continue**. It asks for that press on
 every run, even when you are still signed in from last time - a saved login can go stale, and only
 you can see whether that window really is signed in.
@@ -224,7 +229,8 @@ A run is five phases (`gui.phase.*` in `src/lang/*.json`):
 
 | rule | why |
 | --- | --- |
-| GET only - `/dm/v2.0/messages` and the video `download-info` endpoint | no write reaches your account, ever |
+| GET only - this tool requests the DM list API, the video `download-info` endpoint and the media/avatar CDN | nothing sent by this tool writes to your account, ever |
+| the DM list page itself is opened in the browser window, the way any visit opens it | that page load is your browser's own, not a request this tool signs |
 | pacing 1.5-3 s apart with jitter, one room at a time | it looks like a human scrolling |
 | stop on HTTP 429/403, no forced retry | never hammer the API |
 | the API token is read in memory to sign its own GETs | nothing token-shaped is written to disk or logged |

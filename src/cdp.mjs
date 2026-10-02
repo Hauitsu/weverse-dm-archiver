@@ -16,7 +16,9 @@ export async function waitPage(port, match, ms) {
     const pages = list.filter((t) => t && t.type === "page" && t.webSocketDebuggerUrl);
     const hit = pages.filter((t) => String(t.url || "").indexOf(match || "weverse.io") >= 0);
     if (hit.length) return hit[0];
-    if (pages.length && Date.now() > until - (ms || 20000) / 2) return pages[0];
+    // The fallback is for a target whose url is not filled in yet, not for one that simply does not
+    // match: attaching to the wrong page only turns a clear "no-page" into a long, misleading wait.
+    if (pages.length && !String(pages[0].url || "").trim() && Date.now() > until - (ms || 20000) / 2) return pages[0];
     if (Date.now() > until) return null;
     await sleep(400);
   }
@@ -43,6 +45,10 @@ export async function attach(wsUrl, opts) {
   ws.addEventListener("close", () => { for (const slot of waiting.values()) slot.no(new Error("cdp: socket closed")); waiting.clear(); });
 
   const send = (method, params, ms) => new Promise((ok, no) => {
+    // ws.send() on a closing or closed socket is dropped without a word, so without this every request
+    // would sit until its own timeout -- a minute each, and a harvest that looks frozen for a quarter of
+    // an hour before it gives up with "no usable answer".
+    if (ws.readyState !== 1) { no(new Error("cdp: socket is not open")); return; }
     const n = ++id;
     const t = setTimeout(() => { if (waiting.has(n)) { waiting.delete(n); no(new Error("cdp: timeout " + method)); } }, ms || 60000);
     const wrap = (f) => (x) => { clearTimeout(t); f(x); };
