@@ -12,7 +12,8 @@ file, or type a command - but every command is listed too, in case you prefer th
   it in `runtime\ffmpeg\`, and `START.bat`/`wdm.bat` run those copies. Only a source copy falls back
   to the `node` on your `PATH` - and then `START.bat` opens the Node download page and stops until
   you install it.
-- Chrome, Edge, Brave or Vivaldi. The tool starts its own window of whichever it finds first.
+- Any mainstream Chromium browser - Chrome, Edge, Brave, Vivaldi, Opera and the rest. The tool starts
+  its own window of whichever it finds first.
 - Disk space: about 3 GB per room, plus the same again if you also make the share zip (a
   re-compressed one is a fraction of that).
 
@@ -44,15 +45,18 @@ you type, the window looks and behaves like any ordinary browser window.
 Log in to Weverse there, then press **I'm logged in - continue** on the local page. That press also
 starts a short cooldown (about fifteen seconds, counted down on the page), so a second press cannot
 race the hand-over. Leave that window open: it is the one the tool reads your messages from, and the
-tool never closes it and opens another one behind your back.
+tool does not swap it while it is working: if you close it, a fresh window opens and the sign-in that
+was in it does not come with it.
 It asks for that press on **every** run, even when the profile still has a session from last time: a
 stored login can be stale, and only you can see whether the window really is signed in. If the session
 is still not there after a press, the tool does not give up and it does not fail: that same window
 stays open with the button still there, so sign in again in it and press again, as often as you like.
 A login that never arrives is your call, never an error.
 
-You only sign in once - the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` - and
-later runs only need that button press.
+You sign in once **per browser** - the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile`, and
+later runs on the same browser only need that button press. Picking a different browser is the one thing
+that asks for a fresh sign-in: a login made in one browser is not read by another (your Google account
+itself stays signed in; only Weverse asks again).
 
 The tool never sees or stores your password. It does use the session you signed in with: the API
 token is read in memory to sign its own GET requests, never written to disk and never logged.
@@ -81,8 +85,11 @@ Options:
   **Retry** - nothing retries on its own, you decide when it is worth another look.
 - **Signing in with Google** - the button above is also the "done" signal for the sign-in window;
   the moment you press it the tool reads the session out of that same window, and if the session still
-  is not there the button comes back instead of the run ending. If the sign-in page refuses this
-  browser, open **Advanced** and pick another Chromium browser from the list it found.
+  is not there the button comes back instead of the run ending. If you have trouble signing in,
+  press **Stop** first, then open the **Advanced** section and pick another Chromium browser from
+  the list it found - the picker is locked while a run is going, because that run already started with
+  the browser it was given. Expect to sign in again in the new window: a login made in one browser is
+  not read by another.
 - **Also make a shareable zip** - two choices, remembered in `config.json`. **Yes** (the default)
   writes `share/weverse-dm-<room>.zip` with the public chat, its media and a README in three
   languages; only artist messages and media are inside, your own messages are left out. **No** skips
@@ -169,8 +176,9 @@ does not work.
 - **"Node.js 20 or newer is required"** - you are running the source copy: the portable download
   carries Node.js in `runtime\node\` and never shows this. Install it from the link that just
   opened, then start `START.bat` again.
-- **"No Chrome or Edge found"** - install one, or add `"browserPath": "C:/path/to/browser.exe"`
-  to `config.json` (copy `config.example.json` to `config.json` first).
+- **"No Chromium browser found"** - install any of them, or add
+  `"browserPath": "C:/path/to/browser.exe"` to `config.json` (copy `config.example.json` to
+  `config.json` first).
 - **The page did not open, or the address looks different** - Windows reserves whole port ranges when
   Hyper-V, WSL or Docker is installed (8572-9871 is a common one). The tool walks past a busy or
   reserved port and prints the address it settled on in the console window; that is the page to use.

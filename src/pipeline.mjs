@@ -19,7 +19,7 @@ import { downloadMedia } from "./media.mjs";
 import { buildThumbs, makeQueue, modeOf } from "./thumbs.mjs";
 import { findFfmpeg } from "./quality.mjs";
 import { bundle } from "./bundle.mjs";
-import { findBrowser, listBrowsers, samePath, launch, killBrowser, closeBrowser, waitExit, profileDir } from "./browser.mjs";
+import { findBrowser, launch, closeBrowser, waitExit, profileDir, PROCESS_NAMES } from "./browser.mjs";
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
 import { loadRooms, SLUG } from "./rooms.mjs";
 
@@ -296,6 +296,11 @@ function auditPublic(o, dir, log) {
 // A browser left behind by an earlier run still holds the profile, and a launch on a locked
 // profile just hands its arguments to that old instance: no fresh port opens, no page appears, and
 // the run dies with "no-page". Clear the way before the first launch of a session.
+//
+// That leftover window is not just a lock: it is where the person signed in, and it is the one thing
+// on this machine that would carry that sign-in into this run. So it is closed the way a person
+// closes a window - asked to quit, given a moment, forced only if it will not go (see closeBrowser
+// for what the difference costs). Nothing else in the tool closes a window on its own.
 export async function clearLeftovers(profile, onLog) {
   const log = onLog || (() => {});
   const needle = String(profile || "");
@@ -309,28 +314,47 @@ export async function clearLeftovers(profile, onLog) {
   // longer claims the processes of a profile ending in "browser2".
   const profileRe = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[\\/]+$/, "");
   const script = win
-    ? "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('chrome.exe','msedge.exe','brave.exe','vivaldi.exe') -and $_.CommandLine -match ('--user-data-dir=\"?' + $env:WDM_PROFILE_RE + '\"?(\\s|$)') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; \"gone\" } | Out-File -Encoding utf8 '" + outFile.replace(/'/g, "''") + "'"
+    ? "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @($env:WDM_PROC_NAMES -split ',') -and $_.CommandLine -match ('--user-data-dir=\"?' + $env:WDM_PROFILE_RE + '\"?(\\s|$)') } | ForEach-Object { [string]$_.ProcessId } | Out-File -Encoding utf8 '" + outFile.replace(/'/g, "''") + "'"
     : null;
+  let pids = [];
   let n = 0;
   let unknownCount = false;   // POSIX only: pkill ran but there was no way to count what it found
   try {
     if (win) {
-      await new Promise((done) => { const c = spawn("powershell", ["-NoProfile", "-Command", script], { stdio: "ignore", env: Object.assign({}, process.env, { WDM_PROFILE_RE: profileRe }) }); c.on("exit", done); c.on("error", done); });
+      await new Promise((done) => { const c = spawn("powershell", ["-NoProfile", "-Command", script], { stdio: "ignore", env: Object.assign({}, process.env, { WDM_PROFILE_RE: profileRe, WDM_PROC_NAMES: PROCESS_NAMES.join(",") }) }); c.on("exit", done); c.on("error", done); });
     } else {
-      // pkill reports nothing on its own, and asking it afterwards would only count the survivors:
-      // count the matches first, then kill them, so the caller still gets its number and its pause.
+      // The same shape as the Windows branch: find the matches first, then hand each one to the same
+      // polite close. pgrep reports nothing on its own, so the count comes from the list itself.
       try {
-        const r = spawnSync("pgrep", ["-cf", "--", needle], { encoding: "utf8", timeout: 10000 });
-        // 0 matches (status 1) is still a count; anything else means pgrep could not answer.
-        n = Number(String((r && r.stdout) || "").trim()) || 0;
-        unknownCount = !(r && !r.error && (r.status === 0 || r.status === 1));
+        const r = spawnSync("pgrep", ["-f", "--", needle], { encoding: "utf8", timeout: 10000 });
+        // 0 matches (status 1) is still an answer - an empty list; anything else means no answer at all.
+        if (r && !r.error && (r.status === 0 || r.status === 1)) {
+          pids = String(r.stdout || "").split("\n").map((x) => Number(x.trim())).filter((x) => x > 0);
+        } else unknownCount = true;
       } catch (e) { unknownCount = true; }
-      // The kill happens whether or not the count worked: a machine without pgrep would otherwise
-      // stop clearing the profile, which is the one thing this function is for.
-      await new Promise((done) => { const c = spawn("pkill", ["-f", "--", needle], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
+      // A machine without pgrep has said nothing about what it is holding, and this function exists to
+      // clear the profile - so the blunt sweep still runs. It is the fallback, not the normal path.
+      if (unknownCount) {
+        await new Promise((done) => { const c = spawn("pkill", ["-f", "--", needle], { stdio: "ignore" }); c.on("exit", done); c.on("error", done); });
+        pids = [];
+      }
     }
   } catch (e) {}
-  if (win) { try { n = fs.readFileSync(outFile, "utf8").split("\n").filter((x) => x.indexOf("gone") >= 0).length; fs.rmSync(outFile, { force: true }); } catch (e) {} }
+  // The list the system handed back is the whole answer: one browser process per leftover window
+  // carries the profile argument, so there is no tree to walk and no parent to check.
+  if (win) {
+    // A BOM rides along with anything PowerShell writes, and it turns a plain number into NaN.
+    try {
+      pids = fs.readFileSync(outFile, "utf8").split("\n")
+        .map((x) => Number(String(x).replace(/^\uFEFF/, "").trim()))
+        .filter((x) => x > 0);
+    } catch (e) {}
+    try { fs.rmSync(outFile, { force: true }); } catch (e) {}
+  }
+  // One at a time: every close waits for its own window, because the next launch needs the profile
+  // free, and a browser that quits on its own leaves no wreck for that launch to trip over.
+  for (const pid of pids) await closeBrowser({ pid: pid }, { onLog: log });
+  n = pids.length;
   if (n) { log("browser: closed " + n + " browser process(es) left over from an earlier run"); await sleep(600); }
   // Nothing could be counted, so nothing can be reported, but the profile still gets the same
   // moment to settle before the next launch tries to lock it.
@@ -342,7 +366,7 @@ export async function clearLeftovers(profile, onLog) {
 // cooldown that stops a second press from racing the check it just started.
 export const SETTLE_AFTER_CLICK_MS = 15000;
 
-async function waitForGo(proc, opts, log, swap) {
+async function waitForGo(proc, opts, log) {
   const o = opts || {};
   const stop = o.shouldStop || (() => false);
   const said = o.saidDone;
@@ -359,13 +383,13 @@ async function waitForGo(proc, opts, log, swap) {
   let seen = Date.now();
   try {
     for (;;) {
+      // Before the press: a window that is already gone must not be read as a press that landed. The
+      // person can close that window and press the button on the page in the same moment, and "done"
+      // here would send the run at a window that no longer exists (it ends as "no page").
+      if (!proc || proc.exitCode !== null) return "closed";
       if (stop()) return "stopped";
-      // Checked on the same beat as Stop: the person picks another browser because this window was
-      // refused, and while they are still signing in the swap costs them nothing but the window.
-      if (swap && swap()) return "switch";
       if (said && said()) return "done";
       if (typed) return "done";
-      if (!proc || proc.exitCode !== null) return "closed";
       if (Date.now() - seen > 300000) { seen = Date.now(); log("browser: still waiting for that sign-in window"); }
       await sleep(400);
     }
@@ -374,18 +398,6 @@ async function waitForGo(proc, opts, log, swap) {
     // leave a dozen of them behind.
     if (onData) { try { process.stdin.off("data", onData); } catch (e) {} }
   }
-}
-
-// The browser picked on the page while a sign-in is being waited on. A refused sign-in is the whole
-// reason the picker exists, and stopping the run to change browsers would throw away everything the
-// run has done so far. "" is Automatic: the first browser found, the one a fresh run would start.
-export function browserSwap(cfg, currentPath, wish) {
-  // null means nobody has picked anything yet, which is not the same as Automatic: reading it as
-  // Automatic would send every untouched run looking for the first browser and swapping back to it.
-  if (wish == null) return null;
-  const w = String(wish).trim();
-  const hit = w ? listBrowsers(cfg).find((x) => samePath(x.path, w)) : findBrowser(cfg);
-  return hit && !samePath(hit.path, currentPath) ? hit : null;
 }
 
 export async function openSession(o) {
@@ -398,7 +410,8 @@ export async function openSession(o) {
   const use = async (started, ms) => {
     if (!started.port) return { error: "no-port" };
     const target = await waitPage(started.port, "weverse.io", 30000);
-    if (!target) return { error: "no-page" };
+    // No page on a port whose window has already exited is not a broken browser: the person closed it.
+    if (!target) return { error: (!started.proc || started.proc.exitCode !== null) ? "closed" : "no-page" };
     let cdp = null;
     try { cdp = await attach(target.webSocketDebuggerUrl); }
     // Its own code: the page was there, the socket was not, and saying "no page" here sends the
@@ -410,6 +423,9 @@ export async function openSession(o) {
     catch (e) { log("browser: could not reload the page (" + String((e && e.message) || e) + ")"); }
     const ok = await ensureAuth(cdp, {
       onLog: log, shouldStop: opts.shouldStop, timeoutMs: ms,
+      // A window that died mid-check says so, so the caller opens a fresh one instead of probing a dead
+      // socket: started.proc is the process launch() spawned, and exitCode is set the moment it ends.
+      gone: () => !started.proc || started.proc.exitCode !== null,
       hurry: opts.hurry, hurryLog: opts.hurryLog,
     });
     return { cdp: cdp, browser: started, auth: ok };
@@ -422,26 +438,22 @@ export async function openSession(o) {
   // the window that is typed into is the window that reads the page: it is launched with the debugging
   // port from the start, but nothing attaches while the person types - the check that refuses a driven
   // browser is about a client being attached, not about a port being open. The session never has to
-  // survive a restart: the browser is only swapped during the wait below, before any page is read,
-  // and the profile folder carries the sign-in from one window of it to the next.
+  // survive a restart: the window that is signed in is the window that is read, and the profile folder
+  // is what carries that sign-in to the next run.
   await clearLeftovers(prof, log);
-  // Whatever window is up right now: which executable it is, so a swap that shows up in the picker can
-  // be told apart from the window already on screen.
-  let curPath = found.path;
+  // The browser this session runs on, fixed for the whole run: chosen before Start, and never changed
+  // under a window that has already been typed into. Switching is a Stop-and-Start, which is why the
+  // picker is shut while a run is going (see the launcher page).
+  const curPath = found.path;
   const startWindow = () => launch({ browserPath: curPath, profile: prof, url: "https://weverse.io/", onLog: log });
-  const swapHook = () => {
-    const pb = opts.pickBrowser;
-    if (!pb || !pb.get || !pb.cfg) return false;
-    const wish = pb.get();
-    if (wish == null) return false;
-    // Once read, the wish is spent - even when it turns out to be the window already on screen. Left
-    // standing, it would be read again on every tick of the wait below and a pick that meant "this one
-    // is fine" would keep asking the same question for as long as the person takes to sign in.
-    if (pb.clear) pb.clear();
-    const next = browserSwap(pb.cfg(), curPath, wish);
-    if (!next) return false;
-    curPath = next.path;
-    return true;
+  // The window went away with the sign-in inside it - closed by the person while the button was being
+  // waited for, or during the session check itself. Nothing else can be done with it, so a fresh window
+  // opens on the same browser and the same profile: this restarts a window, it does not change the
+  // choice of browser. Returns the new window, or null when no port came up - the caller then fails.
+  const reopenWindow = async (win) => {
+    await waitExit(win.proc, 5000);
+    const again = await startWindow();
+    return again.port ? again : null;
   };
   log("browser: opening the window you sign in with (the session stays inside this browser)");
   const authMs = Math.min(opts.authTimeoutMs || 45000, 60000);
@@ -450,29 +462,8 @@ export async function openSession(o) {
   for (;;) {
     if (opts.shouldStop && opts.shouldStop()) return { error: "stopped", cdp: null, browser: current };
     if (opts.onPlainWait) opts.onPlainWait(true);
-    const why = await waitForGo(current.proc, opts, log, swapHook);
+    const why = await waitForGo(current.proc, opts, log);
     if (opts.onPlainWait) opts.onPlainWait(false);
-    if (why === "switch") {
-      // Same profile, different browser: the profile folder is what carries a sign-in from one window
-      // to the next, so this costs the window, never the session. Only reachable while the person is
-      // signing in - the wait above is the only caller - which is why nothing here is reading the page.
-      // Named by its file, the same way launch() names it in the log: a picker entry carries an internal
-      // label ("config" for a hand-written path), which means nothing to the person reading the log.
-      log("browser: switching to " + path.basename(curPath) + " - opening it now, sign in there instead");
-      // Forced on purpose: nothing in that window is worth saving - the person is signing in for the
-      // first time, which is exactly why they are changing browsers - and a polite close would make
-      // them wait through a shutdown they did not ask for. The profile on disk is untouched, so the
-      // new window finds whatever the old one had already written and nothing else is lost.
-      killBrowser(current.proc);
-      // The profile is the one thing the next launch needs free: a launch while the old process still
-      // holds it hands its arguments to that process instead of opening a window, and the run then
-      // dies with no port at all. The kill above is enough on a normal machine; this is the belt for
-      // the one time it is not.
-      if (!(await waitExit(current.proc, 5000))) await clearLeftovers(prof, log);
-      current = await startWindow();
-      if (!current.port) return { error: "no-port" };
-      continue;
-    }
     if (why === "stopped") return { error: "stopped", cdp: null, browser: current };
     // The click is the starting gun, not a pause: the check below starts right now, and the button on
     // the page stays busy for this long, so a second press cannot race the check it just started.
@@ -480,26 +471,38 @@ export async function openSession(o) {
       opts.onSettle(true, opts.settleMs == null ? SETTLE_AFTER_CLICK_MS : Number(opts.settleMs));
     }
     if (why === "closed") {
-      // The window went away instead of being used, so there is nothing left to read. This is the only
-      // path that starts a browser again, and it is the person's own doing - the sign-in that was in
-      // that window is gone with it, which is exactly why the window is asked to stay open above.
       log("browser: that window was closed - opening a fresh one");
-      await waitExit(current.proc, 5000);
-      current = await startWindow();
-      if (!current.port) return { error: "no-port" };
+      const again = await reopenWindow(current);
+      if (!again) return { error: "no-port" };
+      current = again;
       continue;
     }
     const got = await use(current, authMs);
+    // A page missing because its window is gone is not a broken browser: a dead window cannot be signed
+    // into, and it does not need the person either - it needs a fresh window on the same browser.
+    if (got.error === "closed") {
+      log("browser: that window was closed - opening a fresh one");
+      const again = await reopenWindow(current);
+      if (!again) return { error: "no-port" };
+      current = again;
+      continue;
+    }
     if (got.error) return got;
     if (got.auth) {
-      // The session turned out to be in the window after all, so the waiting is over and a pick that
-      // arrived late has nothing left to swap for. Closing a signed-in window would throw that sign-in
-      // away, so the pick is simply dropped - the run has what it came for.
-      if (opts.pickBrowser && opts.pickBrowser.clear) opts.pickBrowser.clear();
       return { cdp: got.cdp, browser: got.browser };
     }
+    // The window can also die during the check, which lands here as a signed-out answer. A dead window
+    // cannot be signed into, and liveness is the one thing worth testing before asking for another try.
+    if (!current.proc || current.proc.exitCode !== null) {
+      log("browser: that window went away during the check - opening a fresh one");
+      try { got.cdp.close(); } catch (e) {}
+      const again = await reopenWindow(current);
+      if (!again) return { error: "no-port" };
+      current = again;
+      continue;
+    }
     // Signed out. Nothing is closed, so the session cookies are still where the browser keeps them:
-    // the person signs in again in the same window and the same check runs on the same browser. The
+    // the person signs in again in the same window, and the check runs again on the same browser. The
     // socket is dropped first, because a password is about to be typed in there and a sign-in provider
     // refuses a window that is being driven over DevTools.
     log("browser: still no session in that window. It stays open: accept Weverse's cookie banner in it"

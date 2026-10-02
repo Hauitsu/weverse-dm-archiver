@@ -13,21 +13,71 @@ import { spawn } from "node:child_process";
 const NL = String.fromCharCode(10);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Known install locations, best first. A bare name is looked up in PATH further down.
+// Known install locations, best first: a brand's stable build, then that brand's side-by-side
+// channels, then the next brand - and the bare executable names looked up in PATH last of all. This
+// order is what "Automatic" means, so a machine that has Chrome installed still starts Chrome and
+// nothing about an existing setup moves. Every entry costs one existence check, so listing channels of
+// a browser nobody here installed is free: a path that is not there never shows up anywhere.
 const CANDIDATES = [
-  ["chrome", "C:/Program Files/Google/Chrome/Application/chrome.exe"],
-  ["chrome", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"],
-  ["chrome", "%LOCALAPPDATA%/Google/Chrome/Application/chrome.exe"],
-  ["edge", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"],
-  ["edge", "C:/Program Files/Microsoft/Edge/Application/msedge.exe"],
-  ["brave", "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe"],
-  ["vivaldi", "%LOCALAPPDATA%/Vivaldi/Application/vivaldi.exe"],
-  ["chromium", "C:/Program Files/Chromium/Application/chrome.exe"],
-  ["chrome", "chrome.exe"],
-  ["edge", "msedge.exe"],
+  ["Chrome", "C:/Program Files/Google/Chrome/Application/chrome.exe"],
+  ["Chrome", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"],
+  ["Chrome", "%LOCALAPPDATA%/Google/Chrome/Application/chrome.exe"],
+  ["Chrome Beta", "C:/Program Files/Google/Chrome Beta/Application/chrome.exe"],
+  ["Chrome Dev", "%LOCALAPPDATA%/Google/Chrome Dev/Application/chrome.exe"],
+  ["Chrome Canary", "%LOCALAPPDATA%/Google/Chrome SxS/Application/chrome.exe"],
+  ["Edge", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"],
+  ["Edge", "C:/Program Files/Microsoft/Edge/Application/msedge.exe"],
+  ["Edge Beta", "C:/Program Files (x86)/Microsoft/Edge Beta/Application/msedge.exe"],
+  ["Edge Dev", "C:/Program Files (x86)/Microsoft/Edge Dev/Application/msedge.exe"],
+  ["Edge Canary", "%LOCALAPPDATA%/Microsoft/Edge SxS/Application/msedge.exe"],
+  ["Brave", "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe"],
+  ["Brave Beta", "C:/Program Files/BraveSoftware/Brave-Browser-Beta/Application/brave.exe"],
+  ["Brave Nightly", "C:/Program Files/BraveSoftware/Brave-Browser-Nightly/Application/brave.exe"],
+  ["Vivaldi", "%LOCALAPPDATA%/Vivaldi/Application/vivaldi.exe"],
+  ["Chromium", "C:/Program Files/Chromium/Application/chrome.exe"],
+  ["Opera", "%LOCALAPPDATA%/Programs/Opera/opera.exe"],
+  ["Opera", "C:/Program Files/Opera/opera.exe"],
+  ["Opera GX", "%LOCALAPPDATA%/Programs/Opera GX/opera.exe"],
+  ["Opera GX", "C:/Program Files/Opera GX/opera.exe"],
+  ["Opera Beta", "%LOCALAPPDATA%/Programs/Opera beta/opera.exe"],
+  ["Whale", "C:/Program Files/Naver/Naver Whale/Application/whale.exe"],
+  ["Whale", "%LOCALAPPDATA%/Naver/Naver Whale/Application/whale.exe"],
+  ["Yandex", "%LOCALAPPDATA%/Yandex/YandexBrowser/Application/browser.exe"],
+  ["Coc Coc", "%LOCALAPPDATA%/CocCoc/Browser/Application/browser.exe"],
+  ["Chrome", "chrome.exe"],
+  ["Edge", "msedge.exe"],
+  ["Opera", "opera.exe"],
+  ["Brave", "brave.exe"],
+  ["Vivaldi", "vivaldi.exe"],
 ];
 
+// Every process name the list above can launch, for the callers that have to recognise a window of
+// one of these browsers later (a leftover process still holding the profile). It is derived from the
+// CANDIDATES themselves, so adding a browser up there can never leave a caller with a stale list.
+export const PROCESS_NAMES = [...new Set(CANDIDATES.map((x) => String(x[1]).split(/[\\/]/).pop().toLowerCase()))].sort();
+
 const expand = (p) => String(p).replace(/%([A-Za-z_]+)%/g, (m, k) => process.env[k] || m);
+
+// One spelling for one install: Windows treats "C:/x/y.exe" and "c:\x\y.exe" as the same file, so
+// everything that compares paths - or counts them as one - goes through here first.
+export const pathKey = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
+
+// One separator style for one path, so the picker shows "C:\\...\\opera.exe" and not a mix of both.
+const cleanPath = (p) => (process.platform === "win32" ? path.win32.normalize(p) : path.normalize(p));
+
+// What the dropdown calls a browser. A path matching a known install is named after its brand, so the
+// picker never has to show a bare "config"; anything else (a portable copy, a build nobody listed)
+// keeps its own file name, which at least says which executable is about to start.
+export function browserLabel(p) {
+  const want = pathKey(p);
+  for (const pair of CANDIDATES) {
+    if (pair[1].indexOf("/") < 0) continue;
+    if (pathKey(expand(pair[1])) === want) return pair[0];
+  }
+  let base = path.basename(String(p || ""));
+  if (path.extname(base).toLowerCase() === ".exe") base = base.slice(0, -4);
+  return base ? base.charAt(0).toUpperCase() + base.slice(1) : "custom";
+}
 
 // Look a bare executable name up in PATH without starting a subprocess.
 function fromPath(name) {
@@ -45,12 +95,12 @@ function fromPath(name) {
 function browserCandidates(cfg) {
   const out = [];
   const explicit = cfg && cfg.browserPath ? String(cfg.browserPath) : "";
-  if (explicit) out.push({ name: "config", path: path.resolve(expand(explicit)) });
+  if (explicit) out.push({ name: browserLabel(explicit), path: path.resolve(expand(explicit)) });
   for (const pair of CANDIDATES) {
     const name = pair[0];
     const p = expand(pair[1]);
     if (p.indexOf("/") < 0 && p.indexOf(String.fromCharCode(92)) < 0) { const hit = fromPath(p); if (hit) out.push({ name: name, path: hit }); }
-    else out.push({ name: name, path: p });
+    else out.push({ name: name, path: cleanPath(p) });
   }
   return out;
 }
@@ -68,7 +118,7 @@ export function listBrowsers(cfg) {
   const seen = new Set();
   const found = [];
   for (const c of browserCandidates(cfg)) {
-    const key = String(c.path).toLowerCase();
+    const key = pathKey(c.path);
     if (seen.has(key)) continue;
     seen.add(key);
     try { if (fs.existsSync(c.path)) found.push({ name: c.name, path: c.path }); } catch (e) {}
@@ -79,7 +129,7 @@ export function listBrowsers(cfg) {
 // Same install, written two ways: Windows does not care about separators or letter case, and the
 // picker hands back the path it found while config.json may hold the same one capitalised differently.
 export function samePath(a, b) {
-  return String(a || "").replace(/\\/g, "/").toLowerCase() === String(b || "").replace(/\\/g, "/").toLowerCase();
+  return pathKey(a) === pathKey(b);
 }
 
 // The archiver profile. Deliberately outside the repo: it is machine state, not content.
@@ -130,12 +180,14 @@ export async function targets(port) {
   return [];
 }
 
-// Chromium only writes session cookies to the profile when the profile is set to restore the last
-// session, and Weverse keeps its sign-in in cookies of exactly that kind (measured 2026-10-02: the
-// sign-in cookies sit on disk marked is_persistent=0). The hand-over no longer restarts the browser at
-// all - that is what fixed the signed-out window - so this flag is not carrying the hand-over any more:
-// it is here for the close at the end of a run, so a browser that is started again later still has the
-// session it was left.
+// Weverse keeps its sign-in in session cookies - cookies with no expiry, written to the profile marked
+// is_persistent=0 (measured on the owner's profile 2026-10-02) - and Chromium only writes cookies of
+// that kind into the profile when the profile is set to restore the last session. That is why this
+// flag is here at all. What it does NOT do is carry the sign-in across an orderly close: measured on
+// this machine 2026-10-02 with the flag confirmed on the command line, a window that quits by itself
+// leaves the persistent cookie on disk and drops the session one, while a window that is killed before
+// it can tidy up leaves both. No hand-over restarts the browser any more, so this flag is not carrying
+// a hand-over - it is here so a run that ends abruptly still finds its sign-in in the profile folder.
 const SESSION_KEEP_ARG = "--restore-last-session";
 const BASE_ARGS = [
   SESSION_KEEP_ARG,
@@ -181,7 +233,9 @@ export async function launch(opts) {
     log("browser: the automatic port did not answer, retrying on a port we picked");
     // The whole tree has to be gone before the retry: a renderer left behind keeps the profile locked,
     // and a second launch on a locked profile only hands its arguments to the instance that is still
-    // there -- no fresh port opens and the run dies later pointing at the wrong thing.
+    // there -- no fresh port opens and the run dies later pointing at the wrong thing. Not asked to
+    // quit first, on purpose: nothing has been typed into this window yet, and the polite path is the
+    // one that drops session cookies (see closeBrowser) - there is nothing here to be gentle about.
     killBrowser(proc);
     await waitExit(proc, 15000);
     const fixed = await freePort();
@@ -200,35 +254,82 @@ export async function launch(opts) {
 }
 
 
-// Close a browser we started. taskkill takes the whole tree with it: killing only the process we
-// spawned can leave renderers behind, and they hold the profile lock the next launch needs.
+// Take a browser tree down by force. taskkill takes the whole tree with it: killing only the top
+// process can leave renderers behind, and they hold the profile the next launch needs.
 export function killBrowser(proc) {
   if (!proc || proc.exitCode !== null || proc.signalCode) return;
-  try {
-    if (process.platform === "win32") { spawn("taskkill", ["/PID", String(proc.pid), "/T", "/F"], { stdio: "ignore" }); return; }
-  } catch (e) {}
-  try { proc.kill(); } catch (e) {}
+  killPid(proc.pid);
 }
 
-// Close a browser we started the way a person would: ask it to quit and give the cookie store time to
-// reach the disk, and only force the tree down when it refuses. taskkill /F throws away every cookie
-// written since the last commit (Chromium commits on a timer and on a clean exit), and Weverse's
-// sign-in cookies are session cookies that never reach the disk at all: force-killing here means the
-// next run starts logged out and the person signs in again for nothing. Measured on this machine:
-// force-kill -> session and persistent cookie both gone; this path -> both still there.
-export async function closeBrowser(proc, opts) {
+// The same, for a pid we do not hold a handle to - a browser window left behind by an earlier run.
+function killPid(pid) {
+  const n = Number(pid);
+  if (!n) return;
+  try {
+    if (process.platform === "win32") { spawn("taskkill", ["/PID", String(n), "/T", "/F"], { stdio: "ignore" }); return; }
+  } catch (e) {}
+  try { process.kill(n, "SIGKILL"); } catch (e) {}
+}
+
+// Ask one browser process to quit, the way a person closing the window would.
+function politeQuit(pid) {
+  const n = Number(pid);
+  if (!n) return;
+  try {
+    // taskkill without /F posts a close to the window: the browser runs its own shutdown, and a
+    // browser that runs its own shutdown takes its renderers with it.
+    if (process.platform === "win32") { spawn("taskkill", ["/PID", String(n)], { stdio: "ignore" }); return; }
+  } catch (e) {}
+  try { process.kill(n, "SIGTERM"); } catch (e) {}
+}
+
+// Is that process still there? A pid we did not spawn has no exit event to read, so the system has
+// to be asked. EPERM means it exists and belongs to somebody else, which is not ours to close.
+function alive(pid) {
+  const n = Number(pid);
+  if (!n) return false;
+  try { process.kill(n, 0); return true; } catch (e) { return !!(e && e.code === "EPERM"); }
+}
+
+async function waitGone(pid, ms) {
+  const until = Date.now() + (ms || 15000);
+  for (;;) {
+    if (!alive(pid)) return true;
+    if (Date.now() > until) return false;
+    await sleep(200);
+  }
+}
+
+// Close a browser we started the way a person would: ask it to quit, give it a moment to tidy up, and
+// force the tree down only when it refuses. taskkill /F takes the whole tree with it, and killing just
+// the process we spawned can leave renderers behind holding the profile lock the next launch needs.
+//
+// Be clear about what this buys, because an earlier version of this comment got it backwards: it does
+// not save a sign-in. Measured on this machine 2026-10-02, a profile holding one persistent and one
+// session cookie, every window left idle long enough to flush before either close:
+//   force kill  -> persistent + session cookie on disk, the next window on that profile is signed in
+//   this path   -> persistent cookie only, the next window is signed out
+// Chromium writes those session cookies to disk while it runs and a tidy exit is what deletes them:
+// the session is over, so they go. What keeps a sign-in from one run to the next is that no run closes
+// and restarts the window it signed in on (see openSession). Use this path for a tidy, polite shutdown
+// - not as a way of carrying a session.
+export async function closeBrowser(target, opts) {
   const o = opts || {};
   const log = o.onLog || (() => {});
-  if (!proc || proc.exitCode !== null || proc.signalCode) return true;
-  if (process.platform === "win32") {
-    try { spawn("taskkill", ["/PID", String(proc.pid)], { stdio: "ignore" }); } catch (e) { killBrowser(proc); }
-  } else {
-    try { proc.kill("SIGTERM"); } catch (e) {}
-  }
-  if (await waitExit(proc, o.gracefulMs == null ? 10000 : Number(o.gracefulMs))) return true;
+  // Two shapes arrive here. A ChildProcess we spawned: its exit is an event we can wait on. Or a bare
+  // { pid } - a window an earlier run of the tool left behind, ours only by its command line, so
+  // liveness has to be asked of the system instead. Everything below treats them the same way.
+  const child = !!(target && typeof target.kill === "function");
+  const pid = Number(target && target.pid);
+  if (!pid) return true;
+  if (child && (target.exitCode !== null || target.signalCode)) return true;
+  if (!child && !alive(pid)) return true;
+  const gone = (ms) => (child ? waitExit(target, ms) : waitGone(pid, ms));
+  politeQuit(pid);
+  if (await gone(o.gracefulMs == null ? 10000 : Number(o.gracefulMs))) return true;
   log("browser: the window would not quit on its own - closing it the hard way");
-  killBrowser(proc);
-  return await waitExit(proc, 15000);
+  killPid(pid);
+  return await gone(15000);
 }
 
 // Wait until a browser we started is really gone, so the profile is free for the next launch.

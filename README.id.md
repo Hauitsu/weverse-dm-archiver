@@ -107,10 +107,11 @@ proses, bahkan saat kamu masih login dari sebelumnya - sesi yang tersimpan bisa 
 kamu yang bisa melihat apakah jendela itu benar-benar sudah login.
 
 Jendela itu juga browser yang dipakai alat ini untuk membaca, dan jendela itulah yang kamu pakai login:
-alat ini tidak menutupnya lalu membuka jendela baru di belakangmu. Jadi kalau alat ini bilang jendelanya
-belum login, login lagi di jendela yang sama - jangan ditutup - lalu tekan tombolnya lagi.
+alat ini tidak menukarnya selama bekerja. Kalau jendela itu kamu tutup, jendela baru akan terbuka -
+dan login yang tadi kamu lakukan tidak ikut pindah ke sana. Jadi kalau alat ini bilang
+jendelanya belum login, login lagi di jendela yang sama - jangan ditutup - lalu tekan tombolnya lagi.
 
-Kalau login ditolak, buka bagian **Lanjutan** dan pilih browser lain.
+Kalau kamu kesulitan login, tekan **Stop** dulu, lalu buka bagian **Lanjutan** dan pilih browser lain. Selama proses berjalan pilihan itu terkunci: proses yang sedang jalan sudah dimulai dengan browser yang tadi dipilih. Ganti browser berarti login lagi di jendela barunya - login yang dibuat di satu browser tidak dibaca browser lain. Akun Google-mu sendiri tidak ikut keluar; hanya Weverse yang minta login lagi.
 
 ### 5. Tunggu sampai selesai
 
@@ -176,16 +177,18 @@ apa yang harus dilakukan kalau kamu ragu.
   yang menjalankannya di macOS atau Linux, dan unduhan portable-nya memang khusus Windows: Node.js
   dan ffmpeg di dalamnya adalah `node.exe` dan `ffmpeg.exe`. Modul JavaScript-nya ditulis untuk
   berjalan di mana pun Node berjalan - browser dibuka dengan `open` di macOS dan `xdg-open` di sistem
-  lain, sisa proses dibersihkan dengan `pkill` bukan PowerShell, dan folder state jatuh ke
-  `~/weverse-dm-archiver` dengan profil browser di `~/AppData/Local/` - tapi di dua sistem itu browser
+  lain, jendela browser yang tersisa diminta berhenti lebih dulu dan dipaksa hanya kalau menolak
+  (dicari dengan `pgrep`, ditutup dengan `pkill`, bukan pemeriksaan PowerShell), dan folder state jatuh
+  ke `~/weverse-dm-archiver` dengan profil browser di `~/AppData/Local/` - tapi di dua sistem itu browser
   tetap hanya dicari di lokasi pemasangan Windows, jadi `browserPath` harus kamu isi sendiri (di Mac:
   `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`), Node.js 20 dan `ffmpeg` kamu
   sediakan dari Homebrew atau distribusi kamu, dan yang dijalankan adalah salinan source. Diharapkan
   jalan di sana; belum diketahui jalan.
-- **Tidak ada yang perlu di-install**, dan satu browser Chromium (Chrome, Edge, Brave atau Vivaldi;
-  `browserPath` di `config.json` bisa diarahkan ke apa pun yang tidak biasa). Unduhan portable
-  membawa Node.js 20 di `runtime\node\` dan ffmpeg di `runtime\ffmpeg\`, dan launcher-nya
-  menjalankan salinan itu; hanya salinan source yang membutuhkan Node.js sendiri di `PATH` (atau
+- **Tidak ada yang perlu di-install**, dan satu browser Chromium: Chrome, Edge, Brave, Vivaldi,
+  Opera dan merek mainstream lain dicari di lokasi pemasangannya masing-masing, jadi punya salah satu
+  saja sudah cukup (`browserPath` di `config.json` bisa diarahkan ke apa pun yang tidak biasa).
+  Unduhan portable membawa Node.js 20 di `runtime\node\` dan ffmpeg di `runtime\ffmpeg\`, dan
+  launcher-nya menjalankan salinan itu; hanya salinan source yang membutuhkan Node.js sendiri di `PATH` (atau
   `node.exe` yang ditaruh di `runtime\node\`).
 - **Hanya room yang akunmu sendiri sudah bisa baca.** Ini tidak menembus keanggotaan atau paywall
   apa pun.

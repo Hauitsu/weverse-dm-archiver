@@ -14,7 +14,7 @@ import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor, pub
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
 import { canOffer, collectReady, driveUrl, eligibleRooms, memberName } from "./collect.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
-import { openExternal, listBrowsers, samePath } from "./browser.mjs";
+import { openExternal, listBrowsers, browserLabel, pathKey, samePath } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
 import { artistLabel, tzOk } from "./rooms.mjs";
 
@@ -52,7 +52,6 @@ function cfgWatch() {
 }
 const state = {
   phase: "idle", running: false, slug: "", roomName: "", percent: 0, floor: 0, maxPages: 0, progress: null, hurry: false, loginWait: false, loginAt: 0, hurryFirstAt: 0, plainWait: false, settleUntil: 0,
-  browserWish: null,
   log: [], result: null, results: [], error: "", startedAt: 0,
 };
 const push = (m) => {
@@ -228,12 +227,11 @@ function page() {
 // built-in order; a path that only exists in config.json (hand-written, an unusual install) gets its
 // own entry, so what the dropdown shows is always what the next run will actually start.
 const detected = listBrowsers(cfg);
-const orig = (s) => String(s || "").replace(/\\/g, "/").toLowerCase();
-const picked = cfg.browserPath ? orig(cfg.browserPath) : "";
+const picked = cfg.browserPath ? pathKey(cfg.browserPath) : "";
 const browserList = detected.slice();
-if (picked && !browserList.some((b) => orig(b.path) === picked)) browserList.unshift({ name: "config", path: String(cfg.browserPath) });
+if (picked && !browserList.some((b) => pathKey(b.path) === picked)) browserList.unshift({ name: browserLabel(cfg.browserPath), path: String(cfg.browserPath) });
 const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + esc(tr("gui.browserAuto")) + "</option>"]
-  .concat(browserList.map((b) => "<option value=\"" + esc(b.path) + "\"" + (picked && orig(b.path) === picked ? " selected" : "") + ">" + esc(b.name + " - " + b.path) + "</option>")).join("");
+  .concat(browserList.map((b) => "<option value=\"" + esc(b.path) + "\"" + (picked && pathKey(b.path) === picked ? " selected" : "") + ">" + esc(b.name + " - " + b.path) + "</option>")).join("");
   // The (i) beside "Home page": one look at what that page should look like once the signing in went
   // through, so nobody has to guess whether they are standing in the right place. The {i} token sits
   // in each translation, because where it belongs in the sentence is not the same in every language.
@@ -304,7 +302,10 @@ const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + 
     // itself. That nudge rides its own "translate", so the centring a screenshot tip does with
     // "transform" is left alone, and a tip taller than the window scrolls instead of being cut off.
     ".tipwrap{position:relative;display:inline-block;cursor:help}",
-    ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;min-width:460px;margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003;translate:var(--tipdx,0) var(--tipdy,0);max-height:calc(100vh - 20px);overflow:auto}",
+    // A tip is a child of its wrapper, so it used to take the pointer: once it was open it sat over
+    // Start and Stop and caught the clicks itself. Every tip is only words or a picture, so the
+    // pointer is told to pass straight through it and the buttons underneath keep working.
+    ".tip{display:none;position:absolute;left:0;top:100%;z-index:5;pointer-events:none;min-width:460px;margin-top:8px;padding:10px 12px;border:1px solid #8886;border-radius:8px;background:Canvas;color:CanvasText;font-size:13px;line-height:1.45;box-shadow:0 6px 18px #0003;translate:var(--tipdx,0) var(--tipdy,0);max-height:calc(100vh - 20px);overflow:auto}",
     ".tipwrap:hover .tip{display:block}",
     // A tip that belongs to a whole row, not to one word in it: it gives up its own anchor so it can
     // start at the left edge of the row and run the row's width. The row it sits in is then its
@@ -318,7 +319,13 @@ const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + 
     // floor would show up as dead space beside the words, so this one is exactly as wide as its sentence
     // (and wraps once that would pass 460px, or 86vw on a narrow window).
     ".tipwrap.end .tip{left:auto;right:0;min-width:0;width:max-content;max-width:min(460px,86vw)}",
-".tipwrap:focus-within .tip{display:block}",
+    // The tip opens for the keyboard too, but only for a real keyboard focus on the (i) itself. It used
+    // to be ":focus-within", which asked the whole row: the browser row wraps its own <select>, so
+    // picking an entry left the dropdown focused and its tip pinned open - over Start and Stop - with
+    // the mouse nowhere near it. ":focus" alone would still pin it for anyone who clicks the (i) and
+    // walks away, so this is ":focus-visible": Tab reaches the tip, a mouse click does not. Every (i)
+    // is written as icon-then-tip, so the sibling rule below is exact.
+    ".tipwrap > .info:focus-visible + .tip{display:block}",
 ".tip.shot{left:50%;transform:translateX(-50%);min-width:0;width:min(620px,86vw);padding:8px}",
 ".tip.shot img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid #8884}",
 ".tip.shot .cap{display:block;margin-top:6px;font-size:12px;line-height:1.4;opacity:.85}",
@@ -391,8 +398,8 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     // beside the download and cached, and it is the difference between reading 29 MB and 2 GB.
     "<div class=\"grid\" style=\"margin-top:8px\"><label><input type=\"checkbox\" id=\"thumbs\"" + (String(cfg.thumbs || "auto") === "off" ? "" : " checked") + "> " + esc(tr("gui.thumbs")) + "</label>",
     "<span class=\"tipwrap flow\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.thumbsHint")) + "</span></span></div>",
-    "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.browser")) + " <select id=\"browser\">" + browserOpts + "</select></label>",
-    "<span class=\"tipwrap flow\"><span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\">" + esc(tr("gui.browserPickHint")) + "</span></span></div></details>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><span class=\"tipwrap flow\" id=\"browserWrap\"><label>" + esc(tr("gui.browser")) + " <select id=\"browser\">" + browserOpts + "</select></label>",
+    "<span class=\"info\" tabindex=\"0\">i</span><span class=\"tip\"><span id=\"browserTip\">" + esc(tr("gui.browserPickHint")) + "</span></span></span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><span class=\"tipwrap\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<span class=\"tip\">" + esc(tr("gui.browserHint")) + "</span></span>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
@@ -413,7 +420,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "</div>",
     "<div class=\"banner\"><img src=\"/assets/milky-way.png?v=" + bannerV + "\" alt=\"\"></div>",
     "<script>",
-    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",self:" + JSON.stringify(tr("gui.totalSelf")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + ",shTitle:" + JSON.stringify(tr("gui.sharePopup")) + ",shHave:" + JSON.stringify(tr("gui.shareHas")) + ",shNone:" + JSON.stringify(tr("gui.shareNone")) + ",shNeedPub:" + JSON.stringify(tr("gui.shareNeedPub")) + ",shEst:" + JSON.stringify(tr("gui.shareEst")) + ",shEstLow:" + JSON.stringify(tr("gui.shareEstLow")) + ",shWorking:" + JSON.stringify(tr("gui.phase.bundle")) + ",shGenerate:" + JSON.stringify(tr("gui.shareGenerate")) + ",shDone:" + JSON.stringify(tr("gui.shareDone")) + ",shFail:" + JSON.stringify(tr("gui.shareFail")) + ",shGoTip:" + JSON.stringify(tr("gui.shareHint")) + "};",
+    "var MSG={pick:" + JSON.stringify(tr("gui.pickRoom")) + ",total:" + JSON.stringify(tr("gui.totalSel")) + ",none:" + JSON.stringify(tr("gui.totalNone")) + ",self:" + JSON.stringify(tr("gui.totalSelf")) + ",savedNote:" + JSON.stringify(tr("gui.totalSaved")) + ",zipNote:" + JSON.stringify(tr("gui.totalZip")) + ",zipLow:" + JSON.stringify(tr("gui.totalZipLow")) + ",allNote:" + JSON.stringify(tr("gui.totalAll")) + ",authed:" + JSON.stringify(tr("gui.authed")) + ",retry:" + JSON.stringify(tr("gui.retry")) + ",shTitle:" + JSON.stringify(tr("gui.sharePopup")) + ",shHave:" + JSON.stringify(tr("gui.shareHas")) + ",shNone:" + JSON.stringify(tr("gui.shareNone")) + ",shNeedPub:" + JSON.stringify(tr("gui.shareNeedPub")) + ",shEst:" + JSON.stringify(tr("gui.shareEst")) + ",shEstLow:" + JSON.stringify(tr("gui.shareEstLow")) + ",shWorking:" + JSON.stringify(tr("gui.phase.bundle")) + ",shGenerate:" + JSON.stringify(tr("gui.shareGenerate")) + ",shDone:" + JSON.stringify(tr("gui.shareDone")) + ",shFail:" + JSON.stringify(tr("gui.shareFail")) + ",shGoTip:" + JSON.stringify(tr("gui.shareHint")) + ",browserPick:" + JSON.stringify(tr("gui.browserPickHint")) + ",browserLock:" + JSON.stringify(tr("gui.browserLock")) + "};",
     "function el(s){return document.querySelector(s);}",
     // The page script is plain text sent to the browser, so every helper it calls has to travel with
     // it. em() below calls esc(), so esc() is inlined here the same way fmtSize() is further down -
@@ -670,12 +677,12 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "  document.querySelectorAll(\"#rooms button[data-slug]\").forEach(function(b){var hit=null;(s.rooms||[]).forEach(function(x){if(x.slug===b.dataset.slug)hit=x;});if(!hit)return;b.disabled=!hit.open||!!coolLeft('room:'+b.dataset.slug);b.parentNode.style.visibility=hit.open?\"\":\"hidden\";});",
     "  lastRooms=s.rooms||[];lastShare=s.share||null;DBG=!!s.debug;",
     "  var sbusy=!!s.running||!!(s.share&&s.share.running);",
-    "  var sAllowPick=false;",
-    // Open in the two moments a change means something: while the page sits idle it is simply the
-    // setting for the next run, and during the sign-in wait the pick is carried straight into the run
-    // that is waiting (see /api/config). While a run is actually harvesting the picker is shut,
-    // because the browser of that run cannot be changed under it.
-    "  sAllowPick=!sbusy||!!(s.running&&s.phase===\"browser\");",
+    "// The picker is the setting for the next run and nothing else: a run reads it as it starts, so a",
+    "// change made while one is in flight would either be ignored or, worse, open a second window under",
+    "// somebody already typing a password into the first one. Locked for as long as anything runs - a run",
+    "// or the share build - and the tip inside the control says how to get it back (see gui.browserLock).",
+    "  var sAllowPick=!sbusy;",
+    "  var btip=el(\"#browserTip\");if(btip)btip.textContent=sAllowPick?MSG.browserPick:MSG.browserLock;",
     "  el(\"#browser\").disabled=!sAllowPick;",
     "  el(\"#start\").disabled=sbusy;",
     "  document.querySelectorAll(\"#rooms button[data-share]\").forEach(function(b){var h=roomInfo(b.dataset.share);var can=DBG||!!(h&&h.open);b.disabled=sbusy;b.parentNode.style.visibility=can?\"\":\"hidden\";if(h)b.title=h.zip?MSG.shHave.replace(\"{v}\",h.zip.name+\" (\"+fmtSize(h.zip.bytes)+\")\"):MSG.shGoTip;});",
@@ -724,7 +731,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
     "el(\"#thumbs\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({thumbs:e.target.checked?\"on\":\"off\"})});});",
-    "el(\"#browser\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({browserPath:e.target.value})}).then(function(r){return r.json();}).then(function(j){if(j&&j.applied)tick();});});",
+    "el(\"#browser\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({browserPath:e.target.value})});});",
     "total();",
     "setInterval(tick,1000); tick(); setInterval(paintCool,200);",
     "</script></body></html>",
@@ -839,9 +846,6 @@ async function startJob(body) {
     // The press on that button is what begins the hand-over, so the page offers it as soon as the
     // sign-in window is up; the delayed mode below only ever covers the silent re-check.
     state.hurry = false; state.loginWait = true; state.loginAt = Date.now(); state.hurryFirstAt = 0; state.plainWait = false; state.settleUntil = 0;
-    // Nothing picked yet, and the window that is up is whatever the config says: both are read back by
-    // /api/config while the run waits, which is how a change from the page reaches this run.
-    state.browserWish = null;
     const session = await openSession({
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
@@ -855,13 +859,6 @@ async function startJob(body) {
       // The cooldown the page puts on that button, started the moment the hand-over begins: the
       // browser is already opening again while it runs, so nothing here waits for it.
       onSettle: (on, ms) => { state.settleUntil = on ? Date.now() + (ms || 0) : 0; },
-      // A browser picked on the page while this run waits for its sign-in. The wish is read here, one
-      // wait at a time, and the run is told which window it ended up with so it can name it.
-      pickBrowser: {
-        cfg: () => cfg,
-        get: () => state.browserWish,
-        clear: () => { state.browserWish = null; },
-      },
     });
     state.loginWait = false;
     if (session.error === "stopped" || stopFlag) { setPhase("stopped"); running(false); return; }
@@ -1043,18 +1040,15 @@ async function handle(req, res) {
     // The browser the tool starts. Only one that really exists on this machine, or "" for the
     // built-in order: a hand-typed path with a typo would otherwise stop every later run from
     // starting, and the picker only offers what was detected anyway.
-    let applied = false;
     if (typeof b.browserPath === "string") {
       const wish = b.browserPath.trim();
       const known = wish === "" || listBrowsers(cfg).some((x) => samePath(x.path, wish));
-      // Picked while a sign-in is waited on, the answer is not "next run" but "this one": the run is
-      // told which window to use right now and opens it in place of the one in front of the person.
-      if (known && state.running && state.phase === "browser") { state.browserWish = wish; applied = true; }
-      // Remembered either way, including mid-run: a browser that got past the sign-in page is the one
-      // the next run should start, and the person has already made that choice once.
+      // Remembered for the next run and nothing else. The picker is locked while a run is going, so
+      // the only way a choice could arrive mid-run is a hand-made request - and opening a second
+      // window under somebody busy typing a password into the first one is what this refuses to do.
       if (known && wish !== String(cfg.browserPath || "")) { try { cfg = saveConfig({ browserPath: wish }); } catch (e) {} }
     }
-    json(200, { ok: true, applied: applied, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs, browserPath: cfg.browserPath || "" });
+    json(200, { ok: true, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs, browserPath: cfg.browserPath || "" });
     return;
   }
   if (req.method === "POST" && url === "/api/open") {

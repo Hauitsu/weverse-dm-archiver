@@ -41,16 +41,16 @@ protocol, which is exactly how the tool reads the page. No flag talks it out of 
 splits the job in two. Every run opens one ordinary-looking window and nothing attaches to it until
 you say the signing in is done - Google is happy with a window that nothing is driving, even though
 the window was launched with a debugging port. You sign in **there**, and once you press the button
-on the page (or close that window) the tool reads the session out of that same window and starts
-writing.
+on the page the tool reads the session out of that same window and starts writing. Closing that window
+instead opens a fresh one to sign in again - the sign-in does not carry over.
 The archive itself is unchanged: same session, still
 kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` for next time. It asks for that click even when
 the profile already holds a session from an earlier run: a stored login can be stale, and only you
 can see whether the window really is signed in.
 If the session is still not there when you press the button, that same window stays open and the button
 comes back: sign in again there and press again. The tool keeps asking instead of failing, and only
-**Stop** ends it, so a login that never arrives is never reported as an error. If the sign-in page
-refuses the browser itself, open **Advanced** in the window and pick another one from the list.
+**Stop** ends it, so a login that never arrives is never reported as an error. If you have trouble
+signing in, press **Stop**, then open the **Advanced** section and pick another one from the list - the picker stays locked while a run is going. Whichever way you get there, a different browser means signing in again in its window: a login made in one browser is not read by another. Your Google account itself is not signed out by that.
 
 ## Can I keep using Weverse while it runs?
 

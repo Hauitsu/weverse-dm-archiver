@@ -49,7 +49,7 @@ async function withSession(fn) {
   log("starting the private browser window (its own profile, not the one you browse with)");
   const s = await openSession({ cfg: cfg, onLog: log, authTimeoutMs: Number(flag("auth-timeout", 300000)) });
   if (s.error) {
-    log(s.error === "no-browser" ? "no Chrome, Edge or Brave found; set browserPath in config.json" : "could not start a session (" + s.error + ")");
+    log(s.error === "no-browser" ? "no Chromium browser found; set browserPath in config.json" : "could not start a session (" + s.error + ")");
     process.exit(1);
   }
   return await fn(s);
@@ -168,7 +168,7 @@ const commands = {
   doctor: async () => {
     log("node       " + process.version + (Number(process.versions.node.split(".")[0]) >= 20 ? "  ok" : "  too old, need 20 or newer"));
     const b = findBrowser(cfg);
-    log("browser    " + (b ? b.name + " at " + b.path : "none found - install Chrome or Edge, or set browserPath"));
+    log("browser    " + (b ? b.name + " at " + b.path : "none found - install any Chromium browser (Chrome, Edge, Brave, Vivaldi, Opera, ...), or set browserPath"));
     log("repo       " + REPO);
     log("rooms      " + d.rooms + (fs.existsSync(d.rooms) ? "" : "  (will be created)"));
     log("media      " + d.media + (fs.existsSync(d.media) ? "" : "  (will be created)"));

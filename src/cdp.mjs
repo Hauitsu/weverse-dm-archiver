@@ -84,10 +84,14 @@ export async function ensureAuth(cdp, opts) {
   // The page shows an "I'm logged in" button while this waits. It cannot sign anyone in and cannot
   // skip the token check below - it only asks for the next look right now, so someone who just
   // finished signing in does not sit through the rest of a 2.5 s pause wondering if it noticed.
+  // A caller whose window can disappear under it (the sign-in window: the person may close it) says so
+  // here. Without this the loop below would keep probing a dead socket until its whole timeout ran out,
+  // which for the GUI is ten minutes of nothing before a fresh window is opened.
+  const gone = o.gone || (() => false);
   const hurry = o.hurry || (() => false);
   let round = 0;
   for (;;) {
-    if (stop()) return false;
+    if (stop() || gone()) return false;
     try { if (await cdp.evaluate(AUTH_READY, 15000) === true) return true; } catch (e) {}
     try { await cdp.evaluate(AUTH_HOOK, 15000); } catch (e) {}
     round++;

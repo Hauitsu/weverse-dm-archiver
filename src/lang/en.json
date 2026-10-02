@@ -109,7 +109,7 @@
   "gui.totalAll": " - total size estimated is {t}",
   "gui.estHint": "The estimate is a ceiling, not a promise: if you subscribed to the artist since this group's conversation began in April 2025, a room that has never been saved is quoted as up to {v}, and a saved room is projected from its own measured rate. The share zip adds its own size on top when it is included.",
   "gui.sizeGuess": "up to {v}",
-  "gui.browserHint": "Starting opens a separate browser window that uses its own profile. Login to Weverse there once; the browser you normally use is never touched.",
+  "gui.browserHint": "Starting opens a separate browser window that uses its own profile. Login to Weverse there once; the browser you normally use is never touched. Each browser keeps that login to itself: switching browsers means signing in again in the new window.",
   "gui.share": "Also make a shareable zip",
   "gui.shareYes": "Yes",
   "gui.shareNo": "No",
@@ -143,7 +143,7 @@
   "gui.shareNeedPub": "This room was never run, so there is no public export to pack yet. Run it once with Start first.",
   "gui.shareDone": "Done: {v}",
   "gui.shareFail": "Failed: {v}",
-"gui.startNote": "Click **Start**, then a **separate browser window** opens a fresh **Weverse page**.\n**Login** to **Weverse** in that window.{login}\nAfter **login success**, make sure you are on the **Home page**{i} and **do not close it**, then **come back here and click I'm logged in - continue**.\nThat window is the one the tool reads from, and it stays open: nothing closes it and opens a second one behind your back. If signing in is refused, open **Advanced** below and pick another browser.",
+  "gui.startNote": "Click **Start**, then a **separate browser window** opens a fresh **Weverse page**.\n**Login** to **Weverse** in that window.{login}\nAfter **login success**, make sure you are on the **Home page**{i} and **do not close it**, then **come back here and click I'm logged in - continue**.\nThe process should start. If you have trouble, try to press **Stop**, open the **Advanced** section, pick another browser, then press **Start** again.",
   "gui.homeShot": "The Weverse home page - the login button is no longer showing - the window has to still be open when you click I'm logged in - continue button.",
   "gui.loginStays": "Your login info stays on this computer - it is never uploaded.",
   "gui.advanced": "Advanced: time zone, thumbnails, browser",
@@ -151,7 +151,7 @@
   "gui.thumbsHint": "small copies of the photos and video, so the page and the media gallery open quickly - built while the download waits on the network, cached after that, about 2% of the original size; skipped when ffmpeg is missing",
   "gui.browser": "Browser the tool starts",
   "gui.browserAuto": "Automatic (first one found)",
-  "gui.browserPickHint": "If signing in is refused, pick another Chromium browser here - some builds are turned away by the sign-in page. While a run is waiting for a sign-in it switches right away, otherwise it applies on the next run.",
+  "gui.browserPickHint": "If the Weverse sign-in page turns this browser away, pick another Chromium browser here. The choice is read when a run starts, so it applies to the next run - and while a run is going the picker stays locked (hover it to see why). A browser switch means signing in again in the new window, even if you were signed in a moment ago.",
   "gui.langHint": "the page and the exported chat are written in this language",
   "gui.tz": "Time zone",
   "gui.tzHint": "dates in the archive follow {v} unless you pick a zone here - a new choice applies to the next run",
@@ -177,7 +177,7 @@
   "gui.plainHint": "Waiting for you to sign in - the window that just opened is the only one, and it is the same browser the tool will read from. If Weverse shows its cookie bar, click Accept there first (a session that never accepted one does not last), sign in, then press the button below.",
   "gui.settleHint": "Taking the window over now - {s}s cooldown before the button comes back.",
   "gui.settling": "Opening the window…",
-  "gui.noBrowser": "No Chrome or Edge found. Install one of them, or set browserPath in config.json.",
+  "gui.noBrowser": "No Chromium browser found - Chrome, Edge, Brave, Vivaldi, Opera or any other Chromium build will do. Install one, or set browserPath in config.json.",
   "gui.noPage": "The browser opened but the room page never appeared. Close any browser window left over from an earlier run, then start again.",
   "gui.noPort": "The browser did not open a debugging port. Close any browser window left over from an earlier run, then start again.",
   "gui.noSocket": "The browser opened, but its debugger socket could not be reached. Close any browser window left over from an earlier run, then start again.",
@@ -206,5 +206,6 @@
   "html.trEn": "English",
   "html.panelTr": "Date jump and translation",
   "gui.shareBuildPub": "No public export for this room yet - building it first",
-  "gui.stopping": "Stopping…"
+  "gui.stopping": "Stopping…",
+  "gui.browserLock": "Locked while a run is going: this run already started with the browser picked above and cannot change it under a window you are typing a password into. Press Stop first, then pick another browser and press Start again - a browser switch means signing in again in the new window."
 }

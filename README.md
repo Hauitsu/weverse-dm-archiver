@@ -106,10 +106,11 @@ every run, even when you are still signed in from last time - a saved login can 
 can see whether that window really is signed in.
 
 That window is the browser the tool reads from, and it stays the one you typed into: the tool does not
-close it and open a new one behind your back. So if it says the window is not signed in, sign in again
+swap it while it is working. If you close it, a fresh window opens - and the sign-in you did in the old
+one does not come with it. So if the tool says the window is not signed in, sign in again
 in that same window - do not close it - and press the button again.
 
-If signing in is refused, open **Advanced** section and pick another browser.
+If you have trouble signing in, press **Stop** first, then open the **Advanced** section and pick another browser. The picker stays locked while a run is going: that run already started with the browser it was given. Either way, a new browser means signing in again in the new window - a login made in one browser is not read by another. Your Google account itself is untouched by that; only Weverse asks again.
 
 ### 5. Wait for it to finish
 
@@ -173,16 +174,18 @@ below. [`docs/FAQ.md`](docs/FAQ.md) has the honest version, including what to do
 - **Windows 10 or 11 is the only tested path** (`START.bat`, `wdm.bat`). Nobody has run this on macOS
   or Linux yet, and the portable download is Windows-only by nature: the Node.js and ffmpeg inside it
   are `node.exe` and `ffmpeg.exe`. The JavaScript modules are written to run wherever Node runs - the
-  browser is opened with `open` on macOS and `xdg-open` elsewhere, leftover processes are cleared
-  with `pkill` instead of PowerShell, and the state folder falls back to `~/weverse-dm-archiver` with
-  the browser profile in `~/AppData/Local/` - but on those two systems the browser is still looked for
+  browser is opened with `open` on macOS and `xdg-open` elsewhere, a leftover browser window is asked to quit and
+  forced only if it refuses (found with `pgrep`, closed with `pkill`, instead of the PowerShell sweep
+  Windows uses), and the state folder falls back to `~/weverse-dm-archiver` with the browser profile in
+  `~/AppData/Local/` - but on those two systems the browser is still looked for
   in Windows install locations only, so `browserPath` has to point at it yourself (on a Mac:
   `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`), Node.js 20 and `ffmpeg` come from
   Homebrew or your distribution, and what you run is the source copy. It is expected to work there; it
   is not known to.
-- **Nothing to install**, and a Chromium browser (Chrome, Edge, Brave or Vivaldi; `browserPath`
-  in `config.json` points at anything unusual). The portable download carries Node.js 20 in
-  `runtime\node\` and ffmpeg in `runtime\ffmpeg\`, and the launchers run those copies; only a source
+- **Nothing to install**, and a Chromium browser: Chrome, Edge, Brave, Vivaldi, Opera and the other
+  mainstream ones are looked for where they usually install, so any one of them is enough
+  (`browserPath` in `config.json` points at anything unusual). The portable download carries Node.js
+  20 in `runtime\node\` and ffmpeg in `runtime\ffmpeg\`, and the launchers run those copies; only a source
   copy needs a Node.js of its own on `PATH` (or a `node.exe` dropped into `runtime\node\`).
 - **Only rooms your own account can already read.** This bypasses no membership and no paywall.
 - **One room is around 2.5 GB** at full quality (the selected-rooms line quotes a 3 GB ceiling
