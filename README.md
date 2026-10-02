@@ -4,17 +4,17 @@ English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
 > update to 1.8.0.** And when Weverse shows its cookie bar, please click **Accept** on it: without
 > that click, your sign-in can vanish again in some browsers.
 
-> **Good news: media still downloads after 2 October 2026, 3:00 PM KST.** Photos, videos and voice
-> notes keep coming down - that deadline did not stop them.
->
-> **Bookmarks are the exception: back them up by hand.** There is no automation for them, so star what
-> you want to keep and save the bookmark tab's JSON export before the room closes.
-
 > **Heads up: UNIS Weverse DM ends on Friday 2 October 2026, 3:00 PM KST (06:00 UTC).** Weverse posted an
 > [advance notice](https://weverse.io/unis/notice/39476); buying new DM already stopped on 28 September. After
 > that date you cannot send or receive new messages, and although the messages from before it stay readable,
 > **access to My Media and Favorites will be restricted**. If you want a room on your own disk - every
 > message, photo, video and voice note - archive it before then.
+
+> **Good news: media still downloads after 2 October 2026, 3:00 PM KST.** Photos, videos and voice
+> notes keep coming down - that deadline did not stop them.
+>
+> **Bookmarks are the exception: back them up by hand.** There is no automation for them, so star what
+> you want to keep and save the bookmark tab's JSON export before the room closes.
 
 # Weverse DM Archiver (UNIS Exclusive)
 
