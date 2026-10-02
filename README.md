@@ -1,10 +1,10 @@
 English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
 
-> **Using an older copy? Sign-in there may not stick.** In every release up to v1.5.0 the sign-in
-> window was closed so abruptly that the browser never wrote the new cookies to disk, so the window that
-> reads your messages could come up signed out even after you logged in - and Weverse only lets you log
-> in in the other window. Fixed in **v1.7.0**, which is the version this page hands you. If Weverse
-> shows its cookie banner, accepting it is the surest route.
+> **The tool says that window is not signed in? Please click Accept on Weverse's cookie bar first, then
+> sign in again in the same window.** In some browsers a sign-in that never accepted that bar does not
+> last, so it is gone again by the time the tool looks. Click **Accept** on the bar Weverse shows at the
+> bottom of the page, sign in again, and press the button again. Leave that window open: it is the
+> browser the tool reads your messages from, and it is never closed and reopened behind your back.
 
 > **Heads up: UNIS Weverse DM ends on Friday 2 October 2026, 3:00 PM KST (06:00 UTC).** Weverse posted an
 > [advance notice](https://weverse.io/unis/notice/39476); buying new DM already stopped on 28 September. After
@@ -90,17 +90,20 @@ A short popup repeats what comes next. Read it, confirm it, and the next window 
 
 ### 4. Login there
 
-A separate browser window opens on a fresh Weverse page. Log in, the way you usually do, and leave
-that window open.
+A separate browser window opens on a fresh Weverse page. Log in the way you usually do, and leave that
+window open.
 
-**If Weverse shows a cookie banner, click Accept before you continue.** Some Weverse sessions live in
-a cookie that a browser normally drops when it closes, and an unaccepted banner is the most common way
-to end up signed out in the window the tool opens next. The tool now asks the browser to keep that
-cookie, and accepting the banner is the sure way.
+**If Weverse shows a cookie bar, click Accept on it before you continue.** In some browsers a sign-in
+that never accepted that bar does not last, so the tool can find that window signed out. Accepting it
+is the sure way.
 
 Then come back to the tool's page and press **I'm logged in - continue**. It asks for that press on
-every run, even when you are still signed in from last time - a saved login can go stale, and only
-you can see whether that window really is signed in.
+every run, even when you are still signed in from last time - a saved login can go stale, and only you
+can see whether that window really is signed in.
+
+That window is the browser the tool reads from, and it stays the one you typed into: the tool does not
+close it and open a new one behind your back. So if it says the window is not signed in, sign in again
+in that same window - do not close it - and press the button again.
 
 ### 5. Wait for it to finish
 

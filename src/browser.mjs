@@ -102,14 +102,23 @@ export async function targets(port) {
   return [];
 }
 
-// Chromium only writes session cookies to the profile - the kind a fresh Weverse sign-in leaves
-// behind before its cookie banner is accepted - when the profile is set to restore the last session.
-// Without this the sign-in window quits, the cookie never reaches the disk, and the window that takes
-// over opens logged out no matter how many times the person signs in again.
+// Chromium only writes session cookies to the profile when the profile is set to restore the last
+// session, and Weverse keeps its sign-in in cookies of exactly that kind (measured 2026-10-02: the
+// sign-in cookies sit on disk marked is_persistent=0). The hand-over no longer restarts the browser at
+// all - that is what fixed the signed-out window - so this flag is not carrying the hand-over any more:
+// it is here for the close at the end of a run, so a browser that is started again later still has the
+// session it was left.
 const SESSION_KEEP_ARG = "--restore-last-session";
-
 const BASE_ARGS = [
   SESSION_KEEP_ARG,
+  // Chromium admits to being driven as soon as the debugging port is open: measured on this machine
+  // 2026-10-02, navigator.webdriver is "false" with no port, "true" with the port open and no
+  // client attached at all, and "false" again with the port open plus this switch. Sign-in
+  // providers read that value and turn a browser that admits it away ("this browser or app may not
+  // be secure"). The window the person types into is now the same window that carries the port, so
+  // the value has to stay quiet while they type. The switch only stops the browser from advertising
+  // the port: nothing here types, clicks or fills anything for anyone.
+  "--disable-blink-features=AutomationControlled",
   "--no-first-run",
   "--no-default-browser-check",
   "--disable-sync",
@@ -162,30 +171,6 @@ export async function launch(opts) {
   return { proc: proc, port: port, profile: profile };
 }
 
-// Sign-in providers refuse a browser that is being driven over DevTools: Google answers with "this
-// browser or app may not be secure" and there is no flag that talks it out of that. The window the
-// user types into therefore starts without the debugging port, on the very same profile, and the
-// session it leaves behind is what the automated launch picks up a moment later.
-const PLAIN_ARGS = [
-  SESSION_KEEP_ARG,
-  "--no-first-run",
-  "--no-default-browser-check",
-  "--disable-features=Translate,OptimizationHints",
-  "--window-size=1280,900",
-];
-
-// A normal browser window on the archiver profile: same cookies, no DevTools, nothing automated.
-export function launchPlain(opts) {
-  const o = opts || {};
-  const profile = o.profile || profileDir();
-  fs.mkdirSync(profile, { recursive: true });
-  const log = o.onLog || (() => {});
-  const url = o.url || "https://weverse.io/";
-  log("browser: " + path.basename(o.browserPath) + " (normal window, no debug port)");
-  const proc = spawn(o.browserPath, ["--user-data-dir=" + profile].concat(PLAIN_ARGS, [url]), { stdio: "ignore" });
-  proc.on("error", (e) => log("browser error: " + String(e.message || e)));
-  return { proc: proc, profile: profile };
-}
 
 // Close a browser we started. taskkill takes the whole tree with it: killing only the process we
 // spawned can leave renderers behind, and they hold the profile lock the next launch needs.

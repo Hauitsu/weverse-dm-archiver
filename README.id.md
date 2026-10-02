@@ -2,11 +2,11 @@
 
 [English](README.md) · [한국어](README.ko.md) · Bahasa Indonesia
 
-> **Masih pakai salinan lama? Login di situ bisa tidak lengket.** Di semua rilis sampai v1.5.0 jendela
-> login ditutup begitu mendadak sehingga browser belum sempat menulis cookie baru ke disk, jadi jendela yang
-> membaca pesanmu bisa terbuka dalam keadaan logout walau kamu sudah login - dan Weverse hanya mengizinkan login
-> di jendela satunya. Sudah diperbaiki di **v1.7.0**, versi yang diberikan halaman ini. Kalau Weverse menampilkan
-> banner cookie, menerimanya adalah cara paling pasti.
+> **Alat ini bilang jendelanya belum login? Klik Accept di bar cookie Weverse dulu, lalu login lagi di
+> jendela yang sama.** Di sebagian browser, login yang belum pernah menerima bar itu tidak bertahan, jadi
+> sudah hilang lagi saat alat ini memeriksa. Klik **Accept** di bar yang muncul di bagian bawah halaman
+> Weverse, login lagi, lalu tekan tombolnya lagi. Biarkan jendela itu tetap terbuka: browser itulah yang
+> dipakai alat ini untuk membaca pesanmu, dan alat ini tidak pernah menutup lalu membukanya lagi.
 
 ![Weverse DM Archiver - DM Weverse-mu, disimpan sebagai halaman yang bisa dibuka offline](assets/01-hero.svg)
 
@@ -94,9 +94,17 @@ Sebuah popup singkat mengulang langkah berikutnya. Baca, konfirmasi, dan jendela
 Jendela browser terpisah terbuka di halaman Weverse yang baru. Login seperti biasanya, dan biarkan
 jendela itu tetap terbuka.
 
+**Kalau Weverse menampilkan bar cookie, klik Accept di situ sebelum lanjut.** Di sebagian browser, login
+yang belum pernah menerima bar itu tidak bertahan, jadi alat ini bisa mendapati jendelanya masih belum
+login. Menerimanya adalah cara paling pasti.
+
 Lalu kembali ke halaman alat ini dan tekan **I'm logged in - continue**. Tombol itu diminta di setiap
-proses, bahkan saat kamu masih login dari sebelumnya - sesi yang tersimpan bisa kedaluwarsa, dan
-hanya kamu yang bisa melihat apakah jendela itu benar-benar sudah login.
+proses, bahkan saat kamu masih login dari sebelumnya - sesi yang tersimpan bisa kedaluwarsa, dan hanya
+kamu yang bisa melihat apakah jendela itu benar-benar sudah login.
+
+Jendela itu juga browser yang dipakai alat ini untuk membaca, dan jendela itulah yang kamu pakai login:
+alat ini tidak menutupnya lalu membuka jendela baru di belakangmu. Jadi kalau alat ini bilang jendelanya
+belum login, login lagi di jendela yang sama - jangan ditutup - lalu tekan tombolnya lagi.
 
 ### 5. Tunggu sampai selesai
 

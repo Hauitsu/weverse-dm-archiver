@@ -19,7 +19,7 @@ import { downloadMedia } from "./media.mjs";
 import { buildThumbs, makeQueue, modeOf } from "./thumbs.mjs";
 import { findFfmpeg } from "./quality.mjs";
 import { bundle } from "./bundle.mjs";
-import { findBrowser, launch, launchPlain, killBrowser, closeBrowser, waitExit, profileDir } from "./browser.mjs";
+import { findBrowser, launch, killBrowser, closeBrowser, waitExit, profileDir } from "./browser.mjs";
 import { waitPage, attach, ensureAuth } from "./cdp.mjs";
 import { loadRooms, SLUG } from "./rooms.mjs";
 
@@ -336,9 +336,9 @@ export async function clearLeftovers(profile, onLog) {
   else if (unknownCount) await sleep(600);
   return n;
 }
-// How long the page keeps that button busy after the press. The hand-over itself starts on the
-// click - the window closes and the browser opens again immediately - so this is only the cooldown
-// that stops a second press from racing the hand-over it just started.
+// How long the page keeps that button busy after the press. The check starts on the click, and this
+// window is not going anywhere - it is the same browser that was just typed into - so this is only the
+// cooldown that stops a second press from racing the check it just started.
 export const SETTLE_AFTER_CLICK_MS = 15000;
 
 async function waitForGo(proc, opts, log) {
@@ -352,7 +352,7 @@ async function waitForGo(proc, opts, log) {
       if (process.stdin.isTTY) { process.stdin.setEncoding("utf8"); onData = () => { typed = true; }; process.stdin.on("data", onData); process.stdin.resume(); }
     } catch (e) {}
   }
-  log("browser: sign in there, then " + (said ? "press the button on the page" : "close that window (or press Enter here)"));
+  log("browser: sign in in that window, then " + (said ? "press the button on the page" : "press Enter here"));
   // No deadline: the window is open, the page has a button, and only the person in front of it knows
   // whether the signing in is done. Stop is the way out, so this can afford to wait.
   let seen = Date.now();
@@ -399,48 +399,51 @@ export async function openSession(o) {
     });
     return { cdp: cdp, browser: started, name: found.name, auth: ok };
   };
-  // Every run starts by hand: open the window Google accepts, let the person sign in, and wait for
-  // them to say the signing in is done. Nothing here decides on its own that the session already in
-  // the profile still works - the person in front of the window is the only one who can see that.
+  // One window, start to finish. The sign-in tokens Weverse hands out are session cookies: they live
+  // and die with the browser process. Every earlier design typed into a second, debug-free window and
+  // then closed it, and the window that took over was sent only the anonymous cookies - measured on
+  // this machine 2026-10-02: the sign-in cookies were on disk marked is_persistent=0, and the next
+  // window did not get them, which is why --restore-last-session and a tidy close were not enough. So
+  // the window that is typed into is the window that reads the page: it is launched with the debugging
+  // port from the start, but nothing attaches while the person types - the check that refuses a driven
+  // browser is about a client being attached, not about a port being open. The session never has to
+  // survive anything, because nothing is restarted.
   await clearLeftovers(prof, log);
-  let current = null;   // the automated browser we are holding right now, if any
-  log("browser: opening the normal sign-in window first, even when this profile has signed in before");
-  // The browser that can read the page is exactly the one Google refuses, so from here it is a
-  // cycle, not a countdown: hand the typing to a normal window, take over the session it leaves
-  // behind, and if there is still nothing, open the sign-in window again. The button on the page is
-  // a real check because pressing it runs that whole hand-over, and a login that never arrives is
-  // nobody's error - Stop is the only way out, and the tool keeps the window open until then.
+  log("browser: opening the window you sign in with (the session stays inside this browser)");
+  const authMs = Math.min(opts.authTimeoutMs || 45000, 60000);
+  let current = await open();
+  if (!current.port) return { error: "no-port" };
   for (;;) {
-    if (opts.shouldStop && opts.shouldStop()) return { error: "stopped", cdp: null, browser: null };
-    // The automated window holds the profile lock, and a second launch would only hand its arguments
-    // to that running instance - so it has to be gone before the sign-in window opens, or the window
-    // meant to be plain would inherit the very debug port Google refuses.
-    if (current) { await closeBrowser(current.proc, { onLog: log }); current = null; }
-    log("browser: opening a normal window to sign in - Google refuses a browser that is driven over DevTools");
-    const plain = await launchPlain({ browserPath: found.path, profile: prof, url: "https://weverse.io/", onLog: log });
+    if (opts.shouldStop && opts.shouldStop()) return { error: "stopped", cdp: null, browser: current };
     if (opts.onPlainWait) opts.onPlainWait(true);
-    const why = await waitForGo(plain.proc, opts, log);
-    // The click is the starting gun, not a pause: this window goes away and the browser opens again
-    // right now. What the person gets instead is a cooldown on the page - the button stays busy for
-    // this long - so nothing can be pressed twice while that hand-over is still in flight.
+    const why = await waitForGo(current.proc, opts, log);
+    if (opts.onPlainWait) opts.onPlainWait(false);
+    if (why === "stopped") return { error: "stopped", cdp: null, browser: current };
+    // The click is the starting gun, not a pause: the check below starts right now, and the button on
+    // the page stays busy for this long, so a second press cannot race the check it just started.
     if (why === "done" && opts.onSettle) {
       opts.onSettle(true, opts.settleMs == null ? SETTLE_AFTER_CLICK_MS : Number(opts.settleMs));
     }
-    if (opts.onPlainWait) opts.onPlainWait(false);
-    // The person just signed in: this window has to leave the profile with the session still in it,
-    // so it is asked to quit instead of being forced down (see closeBrowser).
-    await closeBrowser(plain.proc, { onLog: log });
-    if (why === "stopped") return { error: "stopped", cdp: null, browser: plain };
-    log("browser: taking over the session the sign-in window left behind");
-    const again = await open();
-    current = again;
-    // Right after a sign-in the session is either there or it is not: a short look keeps the
-    // window from coming back with nothing to say. authTimeoutMs stays the ceiling, so a caller
-    // can shorten it but never stretch it past a minute.
-    const got = await use(again, Math.min(opts.authTimeoutMs || 45000, 60000));
+    if (why === "closed") {
+      // The window went away instead of being used, so there is nothing left to read. This is the only
+      // path that starts a browser again, and it is the person's own doing - the sign-in that was in
+      // that window is gone with it, which is exactly why the window is asked to stay open above.
+      log("browser: that window was closed - opening a fresh one");
+      await waitExit(current.proc, 5000);
+      current = await open();
+      if (!current.port) return { error: "no-port" };
+      continue;
+    }
+    const got = await use(current, authMs);
     if (got.error) return got;
     if (got.auth) return { cdp: got.cdp, browser: got.browser, name: got.name };
-    log("browser: still no session after that sign-in - the normal window comes back. Accept the Weverse cookie banner in it before pressing the button (a session that was never accepted does not survive the window closing), then press it again");
+    // Signed out. Nothing is closed, so the session cookies are still where the browser keeps them:
+    // the person signs in again in the same window and the same check runs on the same browser. The
+    // socket is dropped first, because a password is about to be typed in there and a sign-in provider
+    // refuses a window that is being driven over DevTools.
+    log("browser: still no session in that window. It stays open: accept Weverse's cookie banner in it"
+      + " (a session that never accepted one does not last), sign in there, then press the button again");
+    try { got.cdp.close(); } catch (e) {}
     await sleep(1500);
   }
 }
