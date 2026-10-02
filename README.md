@@ -1,10 +1,13 @@
 English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
 
-> **The tool says that window is not signed in? Please click Accept on Weverse's cookie bar first, then
-> sign in again in the same window.** In some browsers a sign-in that never accepted that bar does not
-> last, so it is gone again by the time the tool looks. Click **Accept** on the bar Weverse shows at the
-> bottom of the page, sign in again, and press the button again. Leave that window open: it is the
-> browser the tool reads your messages from, and it is never closed and reopened behind your back.
+> **Using a copy from before 1.8.0? In some browsers - Chrome among them - signing in there does not
+> stick.** Those versions closed the window you signed in and opened a second one to read your
+> messages, and Weverse's sign-in dies with the window it was made in, so that second window could
+> open signed out however many times you tried. Fixed in **1.8.0**, which keeps one window for both
+> jobs. Whatever version you run, please click **Accept** on Weverse's cookie bar when it appears - in
+> some browsers a sign-in that never accepted it does not last. If the tool still says the window is
+> not signed in, sign in again in that same window and press the button again, and leave it open: it
+> is the browser the tool reads your messages from.
 
 > **Heads up: UNIS Weverse DM ends on Friday 2 October 2026, 3:00 PM KST (06:00 UTC).** Weverse posted an
 > [advance notice](https://weverse.io/unis/notice/39476); buying new DM already stopped on 28 September. After

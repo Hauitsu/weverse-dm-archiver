@@ -2,11 +2,14 @@
 
 [English](README.md) · [한국어](README.ko.md) · Bahasa Indonesia
 
-> **Alat ini bilang jendelanya belum login? Klik Accept di bar cookie Weverse dulu, lalu login lagi di
-> jendela yang sama.** Di sebagian browser, login yang belum pernah menerima bar itu tidak bertahan, jadi
-> sudah hilang lagi saat alat ini memeriksa. Klik **Accept** di bar yang muncul di bagian bawah halaman
-> Weverse, login lagi, lalu tekan tombolnya lagi. Biarkan jendela itu tetap terbuka: browser itulah yang
-> dipakai alat ini untuk membaca pesanmu, dan alat ini tidak pernah menutup lalu membukanya lagi.
+> **Masih pakai salinan sebelum 1.8.0? Di sebagian browser - termasuk Chrome - login di situ tidak
+> lengket.** Versi itu menutup jendela tempat kamu login lalu membuka jendela kedua untuk membaca
+> pesanmu, sementara login Weverse mati bersama jendela tempat ia dibuat, jadi jendela kedua bisa
+> terbuka dalam keadaan logout berapa kali pun kamu coba. Sudah diperbaiki di **1.8.0**, yang memakai
+> satu jendela untuk keduanya. Versi apa pun yang kamu pakai, tolong klik **Accept** di bar cookie
+> Weverse saat muncul - di sebagian browser, login yang belum pernah menerimanya tidak bertahan. Kalau
+> alat ini masih bilang jendelanya belum login, login lagi di jendela yang sama lalu tekan tombolnya
+> lagi, dan biarkan jendela itu terbuka: itulah browser yang dipakai alat ini untuk membaca.
 
 ![Weverse DM Archiver - DM Weverse-mu, disimpan sebagai halaman yang bisa dibuka offline](assets/01-hero.svg)
 
