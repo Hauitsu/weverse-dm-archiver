@@ -2,6 +2,12 @@
 
 [English](README.md) · [한국어](README.ko.md) · Bahasa Indonesia
 
+> **Masih pakai salinan lama? Login di situ bisa tidak lengket.** Di semua rilis sampai v1.5.0 jendela
+> login ditutup begitu mendadak sehingga browser belum sempat menulis cookie baru ke disk, jadi jendela yang
+> membaca pesanmu bisa terbuka dalam keadaan logout walau kamu sudah login - dan Weverse hanya mengizinkan login
+> di jendela satunya. Sudah diperbaiki di **v1.7.0**, versi yang diberikan halaman ini. Kalau Weverse menampilkan
+> banner cookie, menerimanya adalah cara paling pasti.
+
 ![Weverse DM Archiver - DM Weverse-mu, disimpan sebagai halaman yang bisa dibuka offline](assets/01-hero.svg)
 
 DM Weverse-mu hanya hidup di aplikasi dan tidak di tempat lain. Alat ini menyimpannya ke komputer

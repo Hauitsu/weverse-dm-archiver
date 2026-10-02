@@ -1,5 +1,11 @@
 English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
 
+> **Using an older copy? Sign-in there may not stick.** In every release up to v1.5.0 the sign-in
+> window was closed so abruptly that the browser never wrote the new cookies to disk, so the window that
+> reads your messages could come up signed out even after you logged in - and Weverse only lets you log
+> in in the other window. Fixed in **v1.7.0**, which is the version this page hands you. If Weverse
+> shows its cookie banner, accepting it is the surest route.
+
 > **Heads up: UNIS Weverse DM ends on Friday 2 October 2026, 3:00 PM KST (06:00 UTC).** Weverse posted an
 > [advance notice](https://weverse.io/unis/notice/39476); buying new DM already stopped on 28 September. After
 > that date you cannot send or receive new messages, and although the messages from before it stay readable,
