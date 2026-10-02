@@ -39,8 +39,10 @@ function fromPath(name) {
   return null;
 }
 
-// First browser that really exists. config.browserPath wins so unusual setups still work.
-export function findBrowser(cfg) {
+// Every browser this machine could run, in the order they are tried: the path named in config first
+// (so an unusual setup still wins), then the known install locations, then PATH. One list, so the
+// picker in the window and findBrowser can never disagree about what is available.
+function browserCandidates(cfg) {
   const out = [];
   const explicit = cfg && cfg.browserPath ? String(cfg.browserPath) : "";
   if (explicit) out.push({ name: "config", path: path.resolve(expand(explicit)) });
@@ -50,8 +52,28 @@ export function findBrowser(cfg) {
     if (p.indexOf("/") < 0 && p.indexOf(String.fromCharCode(92)) < 0) { const hit = fromPath(p); if (hit) out.push({ name: name, path: hit }); }
     else out.push({ name: name, path: p });
   }
-  for (const c of out) { try { if (fs.existsSync(c.path)) return c; } catch (e) {} }
+  return out;
+}
+
+// First browser that really exists. config.browserPath wins so unusual setups still work.
+export function findBrowser(cfg) {
+  for (const c of browserCandidates(cfg)) { try { if (fs.existsSync(c.path)) return c; } catch (e) {} }
   return null;
+}
+
+// Every browser that really exists here, each path once, for the Advanced picker in the window: when
+// a sign-in page refuses this browser, the same page in another Chromium build is the quickest way
+// around it. Order is the order they would be tried, so the first entry is what "Automatic" picks.
+export function listBrowsers(cfg) {
+  const seen = new Set();
+  const found = [];
+  for (const c of browserCandidates(cfg)) {
+    const key = String(c.path).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    try { if (fs.existsSync(c.path)) found.push({ name: c.name, path: c.path }); } catch (e) {}
+  }
+  return found;
 }
 
 // The archiver profile. Deliberately outside the repo: it is machine state, not content.
@@ -184,10 +206,10 @@ export function killBrowser(proc) {
 
 // Close a browser we started the way a person would: ask it to quit and give the cookie store time to
 // reach the disk, and only force the tree down when it refuses. taskkill /F throws away every cookie
-// written since the last commit (Chromium commits on a timer and on a clean exit), which is exactly
-// the state a fresh sign-in leaves behind: the next window opens logged out and the person is asked to
-// sign in again for nothing. Measured on this machine: force-kill -> session and persistent cookie both
-// gone; this path -> both still there.
+// written since the last commit (Chromium commits on a timer and on a clean exit), and Weverse's
+// sign-in cookies are session cookies that never reach the disk at all: force-killing here means the
+// next run starts logged out and the person signs in again for nothing. Measured on this machine:
+// force-kill -> session and persistent cookie both gone; this path -> both still there.
 export async function closeBrowser(proc, opts) {
   const o = opts || {};
   const log = o.onLog || (() => {});

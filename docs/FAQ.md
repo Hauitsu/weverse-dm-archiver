@@ -38,16 +38,19 @@ read, reloaded, navigated or closed by this tool.
 That message comes from Google, not from Weverse, and it is about the browser rather than your
 account: Google refuses to sign anyone in from a browser that is being driven over the DevTools
 protocol, which is exactly how the tool reads the page. No flag talks it out of that, so the tool
-splits the job in two. Every run starts with a plain window that has no debugging port at all. You
-sign in **there** - Google is happy with an ordinary window - and once you press the button on the
-page (or close that window) the tool closes it, starts its automated window on the same profile and
-takes over the session that sign-in left behind. The archive itself is unchanged: same session, still
+splits the job in two. Every run opens one ordinary-looking window and nothing attaches to it until
+you say the signing in is done - Google is happy with a window that nothing is driving, even though
+the window was launched with a debugging port. You sign in **there**, and once you press the button
+on the page (or close that window) the tool reads the session out of that same window and starts
+writing.
+The archive itself is unchanged: same session, still
 kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` for next time. It asks for that click even when
 the profile already holds a session from an earlier run: a stored login can be stale, and only you
 can see whether the window really is signed in.
-If the session is still not there when you press the button, the sign-in window simply opens again - the
-tool cycles instead of failing, and only **Stop** ends it, so a login that never arrives is never reported
-as an error.
+If the session is still not there when you press the button, that same window stays open and the button
+comes back: sign in again there and press again. The tool keeps asking instead of failing, and only
+**Stop** ends it, so a login that never arrives is never reported as an error. If the sign-in page
+refuses the browser itself, open **Advanced** in the window and pick another one from the list.
 
 ## Can I keep using Weverse while it runs?
 

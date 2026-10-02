@@ -36,19 +36,20 @@ logged into elsewhere is affected.
 ## 2. Sign in
 
 The window you type in is the tool's own, and it opens when you press **Start** (section 3). Signing
-in with **Google** works, but it is Google's rule that this window has to be a plain one: Google
-refuses to sign anyone in from a browser that is being automated ("this browser or app may not be
-secure"), so the window that opens has no debugging port.
+in with **Google** works, but Google will not sign anyone in from a browser that is being automated
+("this browser or app may not be secure"). The tool starts its window with a debugging port - that port
+is what keeps a sign-in alive - but nothing attaches to that port until you press the button, so while
+you type, the window looks and behaves like any ordinary browser window.
 
-Log in to Weverse there, then press **I'm logged in - continue** on the local page (or just close that
-window): the tool closes it and takes over the session it left in the profile. That press also starts a
-short cooldown (about fifteen seconds, counted down on the page): the window is already opening again, the
-button simply stays busy until the cooldown ends, so a second press cannot race the hand-over.
+Log in to Weverse there, then press **I'm logged in - continue** on the local page. That press also
+starts a short cooldown (about fifteen seconds, counted down on the page), so a second press cannot
+race the hand-over. Leave that window open: it is the one the tool reads your messages from, and the
+tool never closes it and opens another one behind your back.
 It asks for that press on **every** run, even when the profile still has a session from last time: a
 stored login can be stale, and only you can see whether the window really is signed in. If the session
-is still not there after a press, the tool does not give up and it does not fail: the sign-in window
-comes back, again and again, until you press **Stop**. A login that never arrives is your call, never
-an error.
+is still not there after a press, the tool does not give up and it does not fail: that same window
+stays open with the button still there, so sign in again in it and press again, as often as you like.
+A login that never arrives is your call, never an error.
 
 You only sign in once - the profile is kept in `%LOCALAPPDATA%\weverse-dm-archiver\profile` - and
 later runs only need that button press.
@@ -75,11 +76,13 @@ Options:
   once: the page, the log lines and the exported chat all follow it. `auto` in `config.json`
   follows the Windows language instead.
 - **If you pressed the button but the session is not found** - the tool looks for a minute, then the
-  normal window comes back with the same button, ready for another try. A press cannot skip the session
+  button comes back on the same window, ready for another try. A press cannot skip the session
   check, so one that does not land simply keeps waiting. A minute after a press the button turns into
   **Retry** - nothing retries on its own, you decide when it is worth another look.
-- **Signing in with Google** - the button above is also the "done" signal for the normal sign-in
-  window; the moment you press it the tool closes that window and takes the session over - and if that session still is not there, the sign-in window comes back instead of the run ending.
+- **Signing in with Google** - the button above is also the "done" signal for the sign-in window;
+  the moment you press it the tool reads the session out of that same window, and if the session still
+  is not there the button comes back instead of the run ending. If the sign-in page refuses this
+  browser, open **Advanced** and pick another Chromium browser from the list it found.
 - **Also make a shareable zip** - two choices, remembered in `config.json`. **Yes** (the default)
   writes `share/weverse-dm-<room>.zip` with the public chat, its media and a README in three
   languages; only artist messages and media are inside, your own messages are left out. **No** skips

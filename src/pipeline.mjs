@@ -236,7 +236,7 @@ export const HURRY_RETRY_AFTER_MS = 60000;
 export function hurryMode(st, now) {
   if (!st || !st.loginWait || st.phase !== "browser") return "";
   const t = Number(now || Date.now());
-  // The plain sign-in window is the one case where waiting a minute first would be pointless: the
+  // The window the person signs in is the one case where waiting a minute first would be pointless: the
   // user opened it to type, so the button is there from the first second.
   if (st.plainWait) return st.hurryFirstAt && t - Number(st.hurryFirstAt) >= HURRY_RETRY_AFTER_MS ? "retry" : "ready";
   if (!st.hurryFirstAt) return t - Number(st.loginAt || 0) >= HURRY_AFTER_MS ? "ready" : "";
@@ -285,13 +285,14 @@ function auditPublic(o, dir, log) {
   log(left === 0 ? "render: public export checked, the hidden name is gone" : "warning: " + left + " occurrence(s) of the hidden name are still in the public export");
 }
 
-// Sign in by hand, then start the private browser window and wait until it can talk to the API.
-// The one thing nothing here can look inside is the plain sign-in window: it has no debugging port
-// by design, so only the person typing in it knows when the typing is done. They say so with the
-// page button (the GUI), by closing the window, or by pressing Enter where the tool runs in a
-// terminal. Returns why the wait ended so the caller can tell a stop from a timeout.
+// Sign in by hand, then attach to the window that is already open and wait until it can talk to the
+// API. That window carries a debugging port from the moment it is launched - the port is what makes
+// the sign-in stick - but nothing attaches to it until the person says the typing is done, so the
+// automation stays out of the way while they type. They say so with the page button (the GUI), by
+// closing the window, or by pressing Enter where the tool runs in a terminal. Returns why the wait
+// ended so the caller can tell a stop from a timeout.
 // That window opens on every run, even when the profile still holds a session from yesterday: a
-// stored login can be stale, and this side cannot look inside the window to know either way.
+// stored login can be stale, and the page button is how the person answers for it either way.
 // A browser left behind by an earlier run still holds the profile, and a launch on a locked
 // profile just hands its arguments to that old instance: no fresh port opens, no page appears, and
 // the run dies with "no-page". Clear the way before the first launch of a session.

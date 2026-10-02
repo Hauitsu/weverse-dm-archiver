@@ -3,7 +3,7 @@
 [English](README.md) · [한국어](README.ko.md) · Bahasa Indonesia
 
 > **Masih versi lama (sebelum 1.8.0)? Di sebagian browser - termasuk Chrome - login tidak lengket,
-> update ke 1.8.0.** Dan kalau Weverse menampilkan bar cookie, tolong klik **Accept** di situ: tanpa
+> update ke 1.8.0 atau lebih baru.** Dan kalau Weverse menampilkan bar cookie, tolong klik **Accept** di situ: tanpa
 > klik itu, login bisa hilang lagi di sebagian browser.
 
 > **Kabar baik: media masih bisa diunduh setelah 2 Oktober 2026, 15.00 KST.** Foto, video, dan voice
@@ -109,6 +109,8 @@ kamu yang bisa melihat apakah jendela itu benar-benar sudah login.
 Jendela itu juga browser yang dipakai alat ini untuk membaca, dan jendela itulah yang kamu pakai login:
 alat ini tidak menutupnya lalu membuka jendela baru di belakangmu. Jadi kalau alat ini bilang jendelanya
 belum login, login lagi di jendela yang sama - jangan ditutup - lalu tekan tombolnya lagi.
+
+Kalau login ditolak, buka bagian **Lanjutan** dan pilih browser lain.
 
 ### 5. Tunggu sampai selesai
 

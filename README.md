@@ -1,7 +1,7 @@
 English · [한국어](README.ko.md) · [Bahasa Indonesia](README.id.md)
 
 > **On a version older than 1.8.0? Signing in does not stick in some browsers, Chrome included -
-> update to 1.8.0.** And when Weverse shows its cookie bar, please click **Accept** on it: without
+> update to 1.8.0 or newer.** And when Weverse shows its cookie bar, please click **Accept** on it: without
 > that click, your sign-in can vanish again in some browsers.
 
 > **Heads up: UNIS Weverse DM ends on Friday 2 October 2026, 3:00 PM KST (06:00 UTC).** Weverse posted an
@@ -108,6 +108,8 @@ can see whether that window really is signed in.
 That window is the browser the tool reads from, and it stays the one you typed into: the tool does not
 close it and open a new one behind your back. So if it says the window is not signed in, sign in again
 in that same window - do not close it - and press the button again.
+
+If signing in is refused, open **Advanced** section and pick another browser.
 
 ### 5. Wait for it to finish
 

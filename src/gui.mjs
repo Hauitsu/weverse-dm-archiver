@@ -14,7 +14,7 @@ import { REPO, dirs, rooms, runRoom, renderRoom, srcFor, openSession, tzFor, pub
 import { rowNumbers, listSignature } from "./rowinfo.mjs";
 import { canOffer, collectReady, driveUrl, eligibleRooms, memberName } from "./collect.mjs";
 import { bundle, estimateBundle } from "./bundle.mjs";
-import { openExternal } from "./browser.mjs";
+import { openExternal, listBrowsers } from "./browser.mjs";
 import { fmtSize } from "./size.mjs";
 import { artistLabel, tzOk } from "./rooms.mjs";
 
@@ -223,6 +223,16 @@ function page() {
   const curShare = String(cfg.shareMode) === "no" ? "no" : "yes";
   const shareOpts = [["yes", "gui.shareYes"], ["no", "gui.shareNo"]]
     .map((m) => "<option value=\"" + m[0] + "\"" + (curShare === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>").join("");
+// The Advanced picker lists every Chromium browser this machine really has. "Automatic" keeps the
+// built-in order; a path that only exists in config.json (hand-written, an unusual install) gets its
+// own entry, so what the dropdown shows is always what the next run will actually start.
+const detected = listBrowsers(cfg);
+const orig = (s) => String(s || "").replace(/\\/g, "/").toLowerCase();
+const picked = cfg.browserPath ? orig(cfg.browserPath) : "";
+const browserList = detected.slice();
+if (picked && !browserList.some((b) => orig(b.path) === picked)) browserList.unshift({ name: "config", path: String(cfg.browserPath) });
+const browserOpts = ["<option value=\"\"" + (picked ? "" : " selected") + ">" + esc(tr("gui.browserAuto")) + "</option>"]
+  .concat(browserList.map((b) => "<option value=\"" + esc(b.path) + "\"" + (picked && orig(b.path) === picked ? " selected" : "") + ">" + esc(b.name + " - " + b.path) + "</option>")).join("");
   // The (i) beside "Home page": one look at what that page should look like once the signing in went
   // through, so nobody has to guess whether they are standing in the right place. The {i} token sits
   // in each translation, because where it belongs in the sentence is not the same in every language.
@@ -369,7 +379,9 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     // Small copies of the media, so the page and the gallery open quickly. On by default: it is built
     // beside the download and cached, and it is the difference between reading 29 MB and 2 GB.
     "<div class=\"grid\" style=\"margin-top:8px\"><label><input type=\"checkbox\" id=\"thumbs\"" + (String(cfg.thumbs || "auto") === "off" ? "" : " checked") + "> " + esc(tr("gui.thumbs")) + "</label>",
-    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.thumbsHint")) + "</span></span></div></details>",
+    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.thumbsHint")) + "</span></span></div>",
+    "<div class=\"grid\" style=\"margin-top:8px\"><label>" + esc(tr("gui.browser")) + " <select id=\"browser\">" + browserOpts + "</select></label>",
+    "<span class=\"tipwrap flow\"><span class=\"info\">i</span><span class=\"tip\">" + esc(tr("gui.browserPickHint")) + "</span></span></div></details>",
     "<div class=\"grid\" style=\"margin-top:14px\"><span class=\"tipwrap\"><button id=\"start\" class=\"primary\">" + esc(tr("gui.start")) + "</button>",
     "<span class=\"tip\">" + esc(tr("gui.browserHint")) + "</span></span>",
     "<button id=\"stop\" disabled>" + esc(tr("gui.stop")) + "</button>",
@@ -694,6 +706,7 @@ noteHtml.replace("<ol style=\"margin:0;", "<ol style=\"margin:0 0 16px;"),
     "el(\"#lang\").addEventListener(\"change\",function(e){setLang(e.target.value);});",
     "el(\"#tz\").addEventListener(\"change\",function(){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({language:el(\"#lang\").value,tz:el(\"#tz\").value})});});",
     "el(\"#thumbs\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({thumbs:e.target.checked?\"on\":\"off\"})});});",
+    "el(\"#browser\").addEventListener(\"change\",function(e){fetch(\"/api/config\",{method:\"POST\",headers:{\"content-type\":\"application/json\"},body:JSON.stringify({browserPath:e.target.value})});});",
     "total();",
     "setInterval(tick,1000); tick(); setInterval(paintCool,200);",
     "</script></body></html>",
@@ -812,8 +825,8 @@ async function startJob(body) {
       cfg: cfg, onLog: push, shouldStop: () => stopFlag, authTimeoutMs: 600000,
       hurry: () => { if (!state.hurry) return false; state.hurry = false; return true; },
       hurryLog: tr("gui.checkNow"),
-      // While the normal sign-in window is up nothing here can see inside it, so that button is the
-      // only way to say "done". The same click means "look again" once the automated window is back.
+      // Nothing here attaches to the window while the person is typing in it, so that button is the
+      // only way to say "done". The same click means "look again" in that same window.
       saidDone: () => { if (!state.hurry) return false; state.hurry = false; return true; },
       // Each time that window opens the button starts over as "I'm logged in - continue": the
       // person has just signed in again, so a leftover Retry from the round before would mislead.
@@ -999,7 +1012,16 @@ async function handle(req, res) {
     if (typeof b.tz === "string" && tzOk(b.tz) && b.tz !== cfg.tz) { try { cfg = saveConfig({ tz: b.tz }); } catch (e) {} }
     if (b.shareMode && SHARE_MODES.indexOf(String(b.shareMode)) >= 0) { try { cfg = saveConfig({ shareMode: String(b.shareMode) }); } catch (e) {} }
     if (b.thumbs && THUMB_MODES.indexOf(String(b.thumbs)) >= 0) { try { cfg = saveConfig({ thumbs: String(b.thumbs) }); } catch (e) {} }
-    json(200, { ok: true, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs });
+    // The browser the tool starts. Only one that really exists on this machine, or "" for the
+    // built-in order: a hand-typed path with a typo would otherwise stop every later run from
+    // starting, and the picker only offers what was detected anyway.
+    if (typeof b.browserPath === "string") {
+      const wish = b.browserPath.trim();
+      const norm = (s) => String(s || "").replace(/\\/g, "/").toLowerCase();
+      const known = wish === "" || listBrowsers(cfg).some((x) => norm(x.path) === norm(wish));
+      if (known && wish !== String(cfg.browserPath || "")) { try { cfg = saveConfig({ browserPath: wish }); } catch (e) {} }
+    }
+    json(200, { ok: true, language: cfg.language, tz: cfg.tz, thumbs: cfg.thumbs, browserPath: cfg.browserPath || "" });
     return;
   }
   if (req.method === "POST" && url === "/api/open") {
